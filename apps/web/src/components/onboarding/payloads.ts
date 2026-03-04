@@ -1,0 +1,56 @@
+import type { OnboardingFormData } from './config';
+
+const getFacilitiesPayload = (formData: OnboardingFormData) => ({
+  electricity: formData.electricity,
+  hotWater: formData.hotWater,
+  wifi: formData.wifi,
+  ac: formData.ac,
+  powerBackup: formData.powerBackup,
+  lift: formData.lift,
+  parking: formData.parking,
+  food: formData.food,
+  laundry: formData.laundry,
+  housekeeping: formData.housekeeping,
+  cctv: formData.cctv
+});
+
+export const getCreatePropertyPayload = (formData: OnboardingFormData) => ({
+  hostelName: formData.hostelName,
+  inchargeName: formData.inchargeName,
+  inchargePhone: formData.inchargePhone,
+  type: formData.type,
+  address1: formData.address1,
+  city: formData.city,
+  state: formData.state,
+  pincode: formData.pincode,
+  area: formData.area,
+  mapsLink: formData.mapsLink,
+  landmarks: formData.landmarks,
+  floors: formData.floors,
+  includeGroundFloor: formData.includeGroundFloor,
+  roomsPerFloor: formData.roomsPerFloor,
+  roomTypes: formData.roomTypes,
+  rents: formData.rents,
+  facilities: getFacilitiesPayload(formData),
+  rules: formData.rules,
+  photos: formData.photos
+});
+
+export const getUpdatePropertyPayload = (formData: OnboardingFormData) => ({
+  hostelName: formData.hostelName,
+  inchargeName: formData.inchargeName,
+  inchargePhone: formData.inchargePhone,
+  type: formData.type,
+  address1: formData.address1,
+  city: formData.city,
+  state: formData.state,
+  pincode: formData.pincode,
+  area: formData.area,
+  mapsLink: formData.mapsLink,
+  landmarks: formData.landmarks,
+  roomTypes: formData.roomTypes,
+  rents: formData.rents,
+  facilities: getFacilitiesPayload(formData),
+  rules: formData.rules,
+  photos: formData.photos
+});

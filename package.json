@@ -1,0 +1,30 @@
+{
+  "name": "bunkezy-monorepo",
+  "version": "1.0.0",
+  "packageManager": "bun@1.3.5",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "dev:backend": "turbo run dev --filter=@bunkezy/backend",
+    "dev:web": "turbo run dev --filter=@bunkezy/next",
+    "dev:mobile": "turbo run dev --filter=bunkezy-mobile",
+    "dev:mobile-landlord": "turbo run dev --filter=bunkezy-mobile-landlord",
+    "build": "turbo run build",
+    "build:web": "turbo run build --filter=@bunkezy/next",
+    "build:backend": "turbo run build --filter=@bunkezy/backend",
+    "typecheck": "turbo run typecheck",
+    "typecheck:web": "turbo run typecheck --filter=@bunkezy/next",
+    "typecheck:backend": "turbo run typecheck --filter=@bunkezy/backend",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
+    "prepare": "husky",
+    "pre-commit": "bun --filter '*' pre-commit"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "turbo": "^2.8.13"
+  }
+}

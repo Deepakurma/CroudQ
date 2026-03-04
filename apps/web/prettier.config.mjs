@@ -1,0 +1,47 @@
+/** @type {import('prettier').Config & import('prettier-plugin-tailwindcss').PluginOptions & import('@ianvs/prettier-plugin-sort-imports').PluginConfig} */
+const config = {
+  plugins: ['@ianvs/prettier-plugin-sort-imports', 'prettier-plugin-tailwindcss'],
+  singleQuote: true,
+  printWidth: 100,
+  bracketSameLine: true,
+  endOfLine: 'auto',
+  semi: true,
+  trailingComma: 'none',
+  importOrder: [
+    '<BUILTIN_MODULES>',
+    '',
+    '^(vitest/(.*)$)|^(vitest$)',
+    '^(react/(.*)$)|^(react$)',
+    '^(react-dom/(.*)$)|^(react-dom$)',
+    '^(next/(.*)$)|^(next$)',
+    '',
+    '<THIRD_PARTY_MODULES>',
+    '',
+    '^(~/config/(.*)$)|^(~/config)',
+    '^(~/trpc/(.*)$)|^(~/trpc)',
+    '^(~/app/providers/(.*)$)|^(~/app/providers$)',
+    '^(~/app/redux/(.*)$)|^(~/app/redux)',
+    '^(~/lib/(.*)$)|^(~/lib)',
+    '^(~/app/hooks/(.*)$)|^(~/app/hooks)',
+    '^(~/shared/shadcn(.*)$)|^(~/shared/shadcn$)',
+    '^(~/shared/components(.*)$)|^(~/shared/components$)',
+    '^(~/assets/(.*)$)|^(~/assets)',
+    '^(~/styles/(.*)$)|^(~/styles)',
+    '',
+    '',
+    '^~/(.*)$',
+    '',
+    '^\\../',
+    '',
+    '^\\./',
+    '',
+    '<TYPES>',
+    '',
+    '^(?!.*[.]css$)[./].*$',
+    '.css$'
+  ],
+  importOrderParserPlugins: ['typescript', 'jsx', 'decorators-legacy'],
+  importOrderTypeScriptVersion: '5.7.2'
+};
+
+export default config;
