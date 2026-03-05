@@ -8,11 +8,9 @@ applications:
             - curl -fsSL https://bun.sh/install | bash
             - export PATH="$HOME/.bun/bin:$PATH"
             - export HUSKY=0
-            - export API_INTERNAL_URL="${API_INTERNAL_URL:-$NEXT_PUBLIC_API_ENDPOINT}"
             - bun install --frozen-lockfile --linker hoisted
         build:
           commands:
-            - export API_INTERNAL_URL="${API_INTERNAL_URL:-$NEXT_PUBLIC_API_ENDPOINT}"
             - bun run build:web
       artifacts:
         baseDirectory: apps/web/.next

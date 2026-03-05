@@ -1,11 +1,10 @@
 import { type AppRouter } from '@bunkezy/backend';
 import { createTRPCClient, httpBatchLink } from '@trpc/client';
 
-const backendUrl =
-  process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_ENDPOINT ?? 'http://localhost:4000';
+const backendUrl = process.env.NEXT_PUBLIC_API_ENDPOINT ?? 'http://localhost:4000';
 
-if (process.env.NODE_ENV === 'production' && !process.env.API_INTERNAL_URL) {
-  throw new Error('API_INTERNAL_URL must be configured in production for server tRPC calls.');
+if (process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_API_ENDPOINT) {
+  throw new Error('Set NEXT_PUBLIC_API_ENDPOINT in production for tRPC calls.');
 }
 
 type ServerTrpcClientOptions = {
