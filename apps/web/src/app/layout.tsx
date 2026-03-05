@@ -75,17 +75,17 @@ export const metadata: Metadata = {
   },
   description: '--',
   keywords: ['hostels', 'hostels near me'],
-  authors: [{ name: 'StayStac' }],
-  creator: 'StayStac',
-  publisher: 'StayStac',
+  authors: [{ name: 'Bunkezy' }],
+  creator: 'Bunkezy',
+  publisher: 'Bunkezy',
   openGraph: {
-    title: 'StayStac',
+    title: 'Bunkezy',
     description: '--',
     type: 'website'
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'StayStac - --',
+    title: 'Bunkezy - --',
     description: '--'
   },
   robots: {
