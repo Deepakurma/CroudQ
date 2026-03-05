@@ -241,8 +241,8 @@ function UnifiedAuthPageContent() {
   if (isSessionChecking) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-xl items-center justify-center p-4 sm:p-5">
-        <div className="text-muted-foreground flex items-center gap-2 text-sm">
-          <Loader2 className="size-4 animate-spin" /> Checking your session...
+        <div className="text-muted-foreground flex items-center gap-2 text-xs sm:text-sm">
+          <Loader2 className="size-4 animate-spin sm:size-5" /> Checking your session...
         </div>
       </main>
     );

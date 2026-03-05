@@ -266,8 +266,8 @@ export default function JoinInvitePage() {
     return (
       <main className="mx-auto flex min-h-0 w-full max-w-2xl flex-1 flex-col gap-4 p-4 sm:p-8">
         <Card className="rounded-3xl border shadow-sm">
-          <CardContent className="text-muted-foreground flex items-center justify-center py-16 text-sm">
-            <Loader2 className="mr-2 size-4 animate-spin" /> Loading invite details...
+          <CardContent className="text-muted-foreground flex items-center justify-center py-16 text-xs sm:text-sm">
+            <Loader2 className="mr-2 size-4 animate-spin sm:size-5" /> Loading invite details...
           </CardContent>
         </Card>
       </main>

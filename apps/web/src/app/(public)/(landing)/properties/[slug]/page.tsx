@@ -109,8 +109,8 @@ export default function PropertyDetailPage() {
       <main className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-3 sm:gap-5">
         <Card className="flex w-full flex-1 flex-col justify-center rounded-3xl border shadow-sm">
           <CardHeader className="items-center space-y-3 text-center">
-            <Loader2 className="text-muted-foreground mx-auto size-6 animate-spin" />
-            <CardTitle className="text-2xl">Loading property...</CardTitle>
+            <Loader2 className="text-muted-foreground mx-auto size-5 animate-spin sm:size-6" />
+            <CardTitle className="text-base sm:text-xl">Loading property...</CardTitle>
           </CardHeader>
         </Card>
       </main>
@@ -122,7 +122,7 @@ export default function PropertyDetailPage() {
       <main className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-3 sm:gap-5">
         <Card className="flex w-full flex-1 flex-col justify-center rounded-3xl border shadow-sm">
           <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
-            <p className="text-lg font-semibold">Property not found</p>
+            <p className="text-base font-semibold sm:text-lg">Property not found</p>
             <Button asChild>
               <Link href="/">Back to Home</Link>
             </Button>

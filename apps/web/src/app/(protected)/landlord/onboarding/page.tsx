@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '~/shared/shadcn/button';
@@ -536,7 +536,8 @@ function OnboardingScreenContent() {
 
   if (isBootstrapping) {
     return (
-      <div className="text-muted-foreground mx-auto flex min-h-[420px] w-full max-w-3xl items-center justify-center p-6 text-sm">
+      <div className="text-muted-foreground mx-auto flex min-h-[420px] w-full max-w-3xl items-center justify-center gap-2 p-6 text-sm">
+        <Loader2 className="size-4 animate-spin sm:size-5" />
         Loading property details...
       </div>
     );

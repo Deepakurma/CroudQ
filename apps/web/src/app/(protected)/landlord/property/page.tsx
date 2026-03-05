@@ -218,8 +218,8 @@ export default function LandlordPropertyPage() {
     return (
       <main className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-3 p-4 sm:gap-5 sm:p-6">
         <Card className="flex w-full flex-1 flex-col justify-center rounded-3xl border shadow-sm">
-          <CardContent className="flex items-center justify-center gap-2 py-10 text-lg">
-            <Loader2 className="size-4 animate-spin" />
+          <CardContent className="flex items-center justify-center gap-2 py-10 text-sm sm:text-base">
+            <Loader2 className="size-4 animate-spin sm:size-5" />
             Loading property details...
           </CardContent>
         </Card>
@@ -233,7 +233,7 @@ export default function LandlordPropertyPage() {
         <main className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-3 p-4 sm:gap-5 sm:p-6">
           <Card className="flex w-full flex-1 flex-col justify-center rounded-3xl border shadow-sm">
             <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
-              <p className="text-lg font-semibold">Account Frozen</p>
+              <p className="text-base font-semibold sm:text-lg">Account Frozen</p>
               <p className="text-muted-foreground max-w-xl text-sm">
                 {data?.freezeReason ||
                   'Your account has been frozen by admin. Please contact support for assistance.'}
@@ -248,16 +248,16 @@ export default function LandlordPropertyPage() {
       <main className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-3 p-4 sm:gap-5 sm:p-6">
         <Card className="flex w-full flex-1 flex-col justify-center rounded-3xl border shadow-sm">
           <CardContent className="flex flex-col items-center gap-4 py-10 text-center">
-            <p className="text-lg font-semibold">No property found</p>
+            <p className="text-base font-semibold sm:text-lg">No property found</p>
             <p className="text-muted-foreground text-sm">
               You don&apos;t have a listed property yet. Start onboarding to add your first
               property.
             </p>
-            <div className="flex gap-3">
-              <Button asChild>
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+              <Button asChild className="w-full sm:w-auto">
                 <Link href="/landlord/onboarding">Add Property</Link>
               </Button>
-              <Button variant="outline" onClick={() => refetch()}>
+              <Button variant="outline" onClick={() => refetch()} className="w-full sm:w-auto">
                 Refresh
               </Button>
             </div>

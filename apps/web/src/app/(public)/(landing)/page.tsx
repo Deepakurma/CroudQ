@@ -118,19 +118,19 @@ function LandingPageContent() {
       {isLoading ? (
         <Card className="flex w-full flex-1 flex-col justify-center border-dashed text-center">
           <CardHeader className="space-y-3">
-            <Loader2 className="text-muted-foreground mx-auto size-6 animate-spin" />
-            <CardTitle className="text-2xl">Loading properties...</CardTitle>
+            <Loader2 className="text-muted-foreground mx-auto size-5 animate-spin sm:size-6" />
+            <CardTitle className="text-base sm:text-xl">Loading properties...</CardTitle>
           </CardHeader>
         </Card>
       ) : properties.length === 0 ? (
         <Card className="flex w-full flex-1 flex-col justify-center border-dashed text-center">
           <CardHeader className="space-y-4">
-            <div className="bg-muted text-muted-foreground mx-auto flex size-16 items-center justify-center rounded-3xl">
-              <MapPin className="size-8" />
+            <div className="bg-muted text-muted-foreground mx-auto flex size-14 items-center justify-center rounded-3xl sm:size-16">
+              <MapPin className="size-7 sm:size-8" />
             </div>
-            <CardTitle className="text-2xl">No results found</CardTitle>
+            <CardTitle className="text-lg sm:text-2xl">No results found</CardTitle>
           </CardHeader>
-          <CardContent className="text-muted-foreground mx-auto max-w-md text-base">
+          <CardContent className="text-muted-foreground mx-auto max-w-md text-sm sm:text-base">
             We couldn't find any properties matching your search criteria. Try adjusting your
             filters or searching in a different area.
           </CardContent>
@@ -152,8 +152,8 @@ function LandingPageContent() {
           </section>
           {supportsIntersectionObserver ? <div ref={sentinelRef} className="h-8 w-full" /> : null}
           {isFetchingNextPage ? (
-            <div className="text-muted-foreground flex items-center justify-center gap-2 py-2 text-sm">
-              <Loader2 className="size-4 animate-spin" />
+            <div className="text-muted-foreground flex items-center justify-center gap-2 py-2 text-xs sm:text-sm">
+              <Loader2 className="size-4 animate-spin sm:size-5" />
               Loading more properties...
             </div>
           ) : null}

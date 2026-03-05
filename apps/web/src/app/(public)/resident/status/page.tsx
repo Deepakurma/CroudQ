@@ -107,8 +107,8 @@ export default function JoinStatusOverviewPage() {
     <main className="m-auto w-full max-w-2xl">
       <Card className="rounded-3xl border shadow-sm">
         {isLoading ? (
-          <CardContent className="text-muted-foreground flex items-center justify-center py-16 text-sm">
-            <Loader2 className="mr-2 size-4 animate-spin" /> Checking your status...
+          <CardContent className="text-muted-foreground flex items-center justify-center py-16 text-xs sm:text-sm">
+            <Loader2 className="mr-2 size-4 animate-spin sm:size-5" /> Checking your status...
           </CardContent>
         ) : error ? (
           <CardContent className="space-y-4 py-12 text-center">
