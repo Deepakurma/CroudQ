@@ -1,6 +1,6 @@
 'use client';
 
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -24,6 +24,7 @@ const LandingLayoutContent = ({ children }: { children: React.ReactNode }) => {
   const [locationSearch, setLocationSearch] = useState('');
   const [debouncedLocationSearch, setDebouncedLocationSearch] = useState('');
   const [searchInput, setSearchInput] = useState(searchParams.get('search') ?? '');
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const isPropertyDetailPage = Boolean(pathname?.match(/^\/properties\/[^/]+$/));
   const selectedLocation = searchParams.get('location') ?? 'all';
   const { data: filteredLocations = [] } = useQuery(
@@ -67,6 +68,15 @@ const LandingLayoutContent = ({ children }: { children: React.ReactNode }) => {
 
     return () => clearTimeout(timer);
   }, [locationSearch]);
+
+  useEffect(() => {
+    if (!isSearchOpen) return;
+    const frame = requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [isSearchOpen]);
 
   const updateLocation = (location: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -115,11 +125,11 @@ const LandingLayoutContent = ({ children }: { children: React.ReactNode }) => {
               className={`relative ${isSearchOpen ? 'w-full md:max-w-[600px]' : 'hidden w-full max-w-[600px] md:block'}`}>
               <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
               <Input
+                ref={searchInputRef}
                 placeholder="Search by property, locality, or address..."
                 className="bg-accent border-input focus:bg-background focus:ring-primary/10 h-12 rounded-2xl pl-10 shadow-xs transition-all focus:ring-4"
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}
-                autoFocus={isSearchOpen}
               />
             </div>
 
