@@ -19,7 +19,7 @@ const OTP_VERIFY_ATTEMPTS_EXCEEDED_MESSAGE =
   "Verification attempt limit reached. Please request a new OTP.";
 const MSG91_VERIFY_ATTEMPT_LIMIT_CODES = new Set(["704"]);
 
-export type UserRole = "VENDOR" | "RESIDENT" | "SUPER_ADMIN";
+export type UserRole = "LANDLORD" | "RESIDENT" | "SUPER_ADMIN";
 
 export interface IdentityResolution {
   userId: string;
@@ -34,7 +34,7 @@ export interface VerifyOtpResult {
 }
 
 const resolveIdentity = async (userId: string): Promise<IdentityResolution> => {
-  const [superAdminAccount, vendorProperty, activeResident] = await Promise.all(
+  const [superAdminAccount, landlordProperty, activeResident] = await Promise.all(
     [
       db.query.superAdmins.findFirst({
         columns: { id: true },
@@ -56,11 +56,11 @@ const resolveIdentity = async (userId: string): Promise<IdentityResolution> => {
   );
   const isSuperAdmin = Boolean(superAdminAccount);
 
-  if (vendorProperty && activeResident) {
+  if (landlordProperty && activeResident) {
     throw new TRPCError({
       code: "CONFLICT",
       message:
-        "Account role conflict: this account is linked to both vendor and resident profiles. Contact support.",
+        "Account role conflict: this account is linked to both landlord and resident profiles. Contact support.",
     });
   }
 
@@ -68,8 +68,8 @@ const resolveIdentity = async (userId: string): Promise<IdentityResolution> => {
   if (isSuperAdmin) {
     roles.push("SUPER_ADMIN");
   }
-  if (vendorProperty) {
-    roles.push("VENDOR");
+  if (landlordProperty) {
+    roles.push("LANDLORD");
   } else if (activeResident) {
     roles.push("RESIDENT");
   }

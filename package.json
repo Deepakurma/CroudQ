@@ -21,7 +21,7 @@
     "lint": "turbo run lint",
     "lint:fix": "turbo run lint:fix",
     "prepare": "husky",
-    "pre-commit": "bun --filter '*' pre-commit"
+    "pre-commit": "bun --filter=@bunkezy/backend pre-commit && bun --filter=@bunkezy/next pre-commit && bun --filter=bunkezy-mobile pre-commit && bun --filter=bunkezy-mobile-landlord pre-commit"
   },
   "devDependencies": {
     "husky": "^9.1.7",

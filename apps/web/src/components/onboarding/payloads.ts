@@ -15,7 +15,7 @@ const getFacilitiesPayload = (formData: OnboardingFormData) => ({
 });
 
 export const getCreatePropertyPayload = (formData: OnboardingFormData) => ({
-  hostelName: formData.hostelName,
+  propertyName: formData.propertyName,
   inchargeName: formData.inchargeName,
   inchargePhone: formData.inchargePhone,
   type: formData.type,
@@ -37,7 +37,7 @@ export const getCreatePropertyPayload = (formData: OnboardingFormData) => ({
 });
 
 export const getUpdatePropertyPayload = (formData: OnboardingFormData) => ({
-  hostelName: formData.hostelName,
+  propertyName: formData.propertyName,
   inchargeName: formData.inchargeName,
   inchargePhone: formData.inchargePhone,
   type: formData.type,

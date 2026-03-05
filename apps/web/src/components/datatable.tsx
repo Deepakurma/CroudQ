@@ -249,8 +249,8 @@ export function DataTable<TData, TValue>({
                     className="capitalize"
                     checked={column.getIsVisible()}
                     onCheckedChange={(value) => column.toggleVisibility(!!value)}>
-                    {column.id === 'vendorDetails'
-                      ? 'Vendor Details'
+                    {column.id === 'landlordDetails'
+                      ? 'Landlord Details'
                       : column.id === 'sno'
                         ? 'S.No'
                         : column.id}

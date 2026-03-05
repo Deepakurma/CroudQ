@@ -4,6 +4,7 @@ import { router } from "../server/trpc";
 import { authRouter } from "./auth/controller";
 import { adminRouter } from "./admin/controller";
 import { complaintRouter } from "./complaint/controller";
+import { mediaRouter } from "./media/controller";
 import { noticeRouter } from "./notice/controller";
 import { propertyRouter } from "./property/controller";
 import { publicPropertyRouter } from "./publicProperty/controller";
@@ -19,6 +20,7 @@ export const appRouter = router({
     resident: residentRouter,
     complaint: complaintRouter,
     notice: noticeRouter,
+    media: mediaRouter,
 });
 
 export type AppRouter = typeof appRouter;

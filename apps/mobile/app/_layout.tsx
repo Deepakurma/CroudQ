@@ -26,7 +26,7 @@ import {
   getGlobalAuthToken,
   globalLogout,
 } from "@/context/AuthContext";
-import { TenantProvider } from "@/context/TenantContext";
+import { ResidentProvider } from "@/context/ResidentContext";
 import { useColorScheme } from "@/hooks/use-color-scheme";
 import { getBaseUrl, trpc } from "@/utils/api";
 import {
@@ -107,7 +107,7 @@ export default function RootLayout() {
       <AuthProvider>
         <trpc.Provider client={trpcClient} queryClient={queryClient}>
           <QueryClientProvider client={queryClient}>
-            <TenantProvider>
+            <ResidentProvider>
               <AuthBootstrapGate>
                 <GestureHandlerRootView style={{ flex: 1 }}>
                   <BottomSheetModalProvider>
@@ -126,7 +126,7 @@ export default function RootLayout() {
                   </BottomSheetModalProvider>
                 </GestureHandlerRootView>
               </AuthBootstrapGate>
-            </TenantProvider>
+            </ResidentProvider>
           </QueryClientProvider>
         </trpc.Provider>
       </AuthProvider>

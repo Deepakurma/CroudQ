@@ -29,13 +29,13 @@ export function UserDashboardFooter() {
               </div>
             </Link>
             <p className="text-muted-foreground text-sm">
-              Find your ideal rental property or hostel with a smooth, hassle-free search.
+              Find your ideal rental property or property with a smooth, hassle-free search.
             </p>
 
             <p className="text-sm leading-relaxed">
               Want to list your property?{' '}
               <Link
-                href={'/auth?redirect=/vendor/onboarding'}
+                href={'/auth?redirect=/landlord/onboarding'}
                 className="text-primary hover:underline">
                 Add Property +
               </Link>

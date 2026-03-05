@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const step1Schema = z.object({
-  hostelName: z.string().min(3, 'Hostel name must be at least 3 characters'),
+  propertyName: z.string().min(3, 'Property name must be at least 3 characters'),
   inchargeName: z.string().min(3, 'InchargeName name must be at least 3 characters'),
   inchargePhone: z.string().regex(/^[0-9]{10}$/, 'Invalid phone number (10 digits required)'),
   type: z.enum(['Boys', 'Girls', 'Co-living', 'PG'])
@@ -41,7 +41,7 @@ export const ROOM_TYPES = [
 ] as const;
 
 export type OnboardingFormData = {
-  hostelName: string;
+  propertyName: string;
   inchargeName: string;
   inchargePhone: string;
   type: 'Boys' | 'Girls' | 'Co-living' | 'PG';
@@ -73,7 +73,7 @@ export type OnboardingFormData = {
 };
 
 export const createInitialOnboardingFormData = (): OnboardingFormData => ({
-  hostelName: '',
+  propertyName: '',
   inchargeName: '',
   inchargePhone: '',
   type: 'Boys',

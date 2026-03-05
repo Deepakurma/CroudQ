@@ -29,7 +29,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 
-type UserRole = "VENDOR" | "RESIDENT";
+type UserRole = "LANDLORD" | "RESIDENT";
 
 export default function VerifyOtpScreen() {
   const utils = trpc.useUtils();
@@ -54,7 +54,7 @@ export default function VerifyOtpScreen() {
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const inputRefs = React.useRef<(TextInput | null)[]>([]);
 
-  const initializeVendorSession = async () => {
+  const initializeLandlordSession = async () => {
     await Promise.all([
       utils.auth.getIdentity.fetch(),
       utils.property.getAllProperties.fetch(),
@@ -80,15 +80,15 @@ export default function VerifyOtpScreen() {
         const roles = (data.identity?.roles || []) as UserRole[];
         const needsOnboarding = Boolean(data.identity?.needsOnboarding);
 
-        if (needsOnboarding || roles.includes("VENDOR")) {
-          await initializeVendorSession();
+        if (needsOnboarding || roles.includes("LANDLORD")) {
+          await initializeLandlordSession();
           return;
         }
 
         await logout();
         Toast.show({
           type: "error",
-          text1: "Use Tenant App",
+          text1: "Use Resident App",
           text2: "This app is only for landlord accounts.",
         });
       } finally {

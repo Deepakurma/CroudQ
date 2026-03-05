@@ -9,7 +9,7 @@ import { Button } from '~/shared/shadcn/button';
 export default function AdminQuickActions() {
   const router = useRouter();
   const actions = [
-    { icon: <Building2 className="size-5" />, label: 'Vendors', href: '/admin/vendors' },
+    { icon: <Building2 className="size-5" />, label: 'Landlords', href: '/admin/landlords' },
     { icon: <Network className="size-5" />, label: 'Dashboard', href: '/admin/dashboard' },
     { icon: <HelpCircle className="size-5" />, label: 'Queries', href: '/admin/queries' },
     {

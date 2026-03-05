@@ -24,7 +24,7 @@ const LandingLayoutContent = ({ children }: { children: React.ReactNode }) => {
   const [locationSearch, setLocationSearch] = useState('');
   const [debouncedLocationSearch, setDebouncedLocationSearch] = useState('');
   const [searchInput, setSearchInput] = useState(searchParams.get('search') ?? '');
-  const isHostelDetailPage = Boolean(pathname?.match(/^\/hostels\/[^/]+$/));
+  const isPropertyDetailPage = Boolean(pathname?.match(/^\/properties\/[^/]+$/));
   const selectedLocation = searchParams.get('location') ?? 'all';
   const { data: filteredLocations = [] } = useQuery(
     trpcHttp.publicProperty.locations.queryOptions({
@@ -82,7 +82,7 @@ const LandingLayoutContent = ({ children }: { children: React.ReactNode }) => {
     <div className="bg-background flex min-h-screen flex-col">
       <header className="bg-card sticky top-0 z-20 border-b p-4 backdrop-blur-md transition-all duration-300 sm:p-5">
         <div className="mx-auto flex w-full max-w-7xl flex-row items-center justify-between gap-3">
-          {isHostelDetailPage && (
+          {isPropertyDetailPage && (
             <>
               <Link
                 href="/"
@@ -95,7 +95,7 @@ const LandingLayoutContent = ({ children }: { children: React.ReactNode }) => {
 
           <Link
             href="/"
-            className={`flex items-center gap-1 transition-opacity hover:opacity-90 ${isHostelDetailPage ? 'hidden md:flex' : ''}`}>
+            className={`flex items-center gap-1 transition-opacity hover:opacity-90 ${isPropertyDetailPage ? 'hidden md:flex' : ''}`}>
             <div className="relative ml-[-5px] flex size-10 items-center justify-center overflow-hidden rounded-xl transition-all hover:opacity-90 sm:size-12">
               <Image src="/assets/Logo.png" alt="Bunkezy Logo" fill className="object-cover" />
             </div>
@@ -111,14 +111,15 @@ const LandingLayoutContent = ({ children }: { children: React.ReactNode }) => {
           <div className="relative hidden w-full max-w-[600px] md:block">
             <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
             <Input
-              placeholder="Search by hostel, locality, or address..."
+              placeholder="Search by property, locality, or address..."
               className="bg-accent border-input focus:bg-background focus:ring-primary/10 h-12 rounded-2xl pl-10 shadow-xs transition-all focus:ring-4"
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
             />
           </div>
 
-          <div className={`flex items-center gap-3 ${isHostelDetailPage ? 'hidden md:flex' : ''}`}>
+          <div
+            className={`flex items-center gap-3 ${isPropertyDetailPage ? 'hidden md:flex' : ''}`}>
             {/* Mobile Search Icon */}
             <button
               onClick={() => setIsSearchOpen(!isSearchOpen)}
@@ -205,13 +206,13 @@ const LandingLayoutContent = ({ children }: { children: React.ReactNode }) => {
       </header>
 
       {/* Mobile Search Input */}
-      {isSearchOpen && !isHostelDetailPage && (
+      {isSearchOpen && !isPropertyDetailPage && (
         <div className="bg-card animate-in fade-in slide-in-from-top-2 border-b p-4 duration-200 md:hidden">
           <div className="mx-auto w-full max-w-7xl">
             <div className="relative">
               <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2" />
               <Input
-                placeholder="Search by hostel, locality, or address..."
+                placeholder="Search by property, locality, or address..."
                 className="bg-accent border-input focus:bg-background focus:ring-primary/10 h-12 rounded-2xl pl-10 shadow-xs transition-all focus:ring-4"
                 value={searchInput}
                 onChange={(event) => setSearchInput(event.target.value)}
@@ -223,7 +224,7 @@ const LandingLayoutContent = ({ children }: { children: React.ReactNode }) => {
       )}
 
       <main className="flex min-h-0 flex-1 flex-col p-4 sm:p-5">{children}</main>
-      <div className={isHostelDetailPage ? 'hidden md:block' : ''}>
+      <div className={isPropertyDetailPage ? 'hidden md:block' : ''}>
         <UserDashboardFooter />
       </div>
     </div>

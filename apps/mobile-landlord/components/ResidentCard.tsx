@@ -7,6 +7,8 @@ import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { Typography } from "@/constants/Typography";
+import { useAuth } from "@/context/AuthContext";
+import { uploadImageToS3 } from "@/utils/s3-upload";
 import { trpc } from "@/utils/api";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
 import * as ImagePicker from "expo-image-picker";
@@ -70,6 +72,7 @@ export function ResidentCard({
   statusDate,
   readonly = false,
 }: ResidentCardProps) {
+  const { token } = useAuth();
   const [activeDialog, setActiveDialog] = useState<
     "none" | "checkout" | "markPaid"
   >("none");
@@ -253,6 +256,46 @@ export function ResidentCard({
   });
 
   const handleSave = () => {
+    const saveResident = async () => {
+      if (!token) {
+        Toast.show({
+          type: "error",
+          text1: "Session expired",
+          text2: "Please login again.",
+        });
+        return;
+      }
+
+      let profileImageToSave = editProfileImage;
+      const isLocalAsset =
+        !!editProfileImage &&
+        (editProfileImage.startsWith("file://") ||
+          editProfileImage.startsWith("content://"));
+
+      if (isLocalAsset) {
+        const uploaded = await uploadImageToS3({
+          token,
+          fileUri: editProfileImage,
+          fileName: `resident-${Date.now()}.jpg`,
+          contentType: "image/jpeg",
+          folder: "resident",
+        });
+        profileImageToSave = uploaded.fileUrl;
+      }
+
+      updateResidentMutation.mutate({
+        id: item.id,
+        name: editName,
+        phoneNumber: editPrimaryPhone,
+        rentAmount: parseInt(editRentAmount) || 0,
+        checkInDate: editCheckInDate,
+        checkOutDate: editCheckOutDate || null,
+        roomId: editRoomId || undefined, // Only send if changed/selected
+        profileImage: profileImageToSave,
+        advanceMonths: parseInt(editAdvanceMonths) || undefined,
+      });
+    };
+
     // Validate
     try {
       editResidentSchema.parse({
@@ -272,17 +315,12 @@ export function ResidentCard({
         return; // Stop execution
       }
     }
-
-    updateResidentMutation.mutate({
-      id: item.id,
-      name: editName,
-      phoneNumber: editPrimaryPhone,
-      rentAmount: parseInt(editRentAmount) || 0,
-      checkInDate: editCheckInDate,
-      checkOutDate: editCheckOutDate || null,
-      roomId: editRoomId || undefined, // Only send if changed/selected
-      profileImage: editProfileImage,
-      advanceMonths: parseInt(editAdvanceMonths) || undefined,
+    void saveResident().catch(() => {
+      Toast.show({
+        type: "error",
+        text1: "Error",
+        text2: "Could not upload resident photo. Please try again.",
+      });
     });
   };
 

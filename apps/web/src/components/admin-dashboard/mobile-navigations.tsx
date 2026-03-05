@@ -25,9 +25,9 @@ export default function AdminMobileNavigation() {
     },
     {
       icon: Building2,
-      label: 'Hostels',
-      active: pathname.startsWith('/admin/vendors'),
-      onClick: () => router.push('/admin/vendors')
+      label: 'Properties',
+      active: pathname.startsWith('/admin/landlords'),
+      onClick: () => router.push('/admin/landlords')
     },
     {
       icon: IndianRupee,

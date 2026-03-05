@@ -9,8 +9,8 @@ const OTP_ALLOWED_MESSAGES = [
   "OTP session expired. Please resend OTP.",
   "OTP session expired. Please request OTP again.",
   "Invalid OTP. Please try again.",
-  "This account is not eligible for vendor account access. Use tenant account access.",
-  "This account is not eligible for tenant account access.",
+  "This account is not eligible for landlord account access. Use resident account access.",
+  "This account is not eligible for resident account access.",
 ];
 
 const SENSITIVE_PATTERNS = ["trpcclienterror", "msg91", "error code", "code:"];
@@ -41,10 +41,10 @@ export const getOtpErrorMessage = (error: unknown, flow: OtpFlow) => {
 
   const lower = message.toLowerCase();
   if (
-    lower.includes("already a vendor") ||
+    lower.includes("already a landlord") ||
     lower.includes("already an active resident") ||
     lower.includes("role conflict") ||
-    lower.includes("linked to both vendor and resident")
+    lower.includes("linked to both landlord and resident")
   ) {
     return "This phone number is already linked to a different account type. Please use a different number or contact support.";
   }

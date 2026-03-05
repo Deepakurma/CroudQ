@@ -5,9 +5,11 @@ import { Switch } from "@/components/ui/Switch";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { Typography } from "@/constants/Typography";
+import { useAuth } from "@/context/AuthContext";
 import { trpc } from "@/utils/api";
 import { formatIndianCurrency } from "@/utils/common";
 import { calculateRentTrackingStartDate } from "@/utils/rentTracking";
+import { uploadImageToS3 } from "@/utils/s3-upload";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
@@ -79,6 +81,7 @@ export default function AddResidentScreen() {
 
   const [entryMode, setEntryMode] = useState<"manual" | "qr" | null>(null);
   const [photos, setPhotos] = useState<string[]>([]);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
   const [isRoomSelectVisible, setRoomSelectVisible] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<any>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -102,6 +105,7 @@ export default function AddResidentScreen() {
   } | null>(null);
 
   const utils = trpc.useUtils();
+  const { token } = useAuth();
 
   const resetForm = () => {
     setFormData({
@@ -153,7 +157,7 @@ export default function AddResidentScreen() {
       Toast.show({
         type: "success",
         text1: "Invite created",
-        text2: "Share this QR with tenant.",
+        text2: "Share this QR with resident.",
       });
     },
     onError: (error) => {
@@ -188,6 +192,14 @@ export default function AddResidentScreen() {
 
   const handleSubmit = () => {
     if (!validate()) return;
+    if (isUploadingPhoto) {
+      Toast.show({
+        type: "info",
+        text1: "Upload in progress",
+        text2: "Please wait for the photo upload to complete.",
+      });
+      return;
+    }
 
     createResidentMutation.mutate({
       roomId: selectedRoom?.id || "",
@@ -293,7 +305,35 @@ export default function AddResidentScreen() {
       quality: 0.8,
     });
     if (!result.canceled) {
-      setPhotos([result.assets[0].uri]);
+      if (!token) {
+        Toast.show({
+          type: "error",
+          text1: "Session expired",
+          text2: "Please login again.",
+        });
+        return;
+      }
+
+      const asset = result.assets[0];
+      setIsUploadingPhoto(true);
+      try {
+        const uploaded = await uploadImageToS3({
+          token,
+          fileUri: asset.uri,
+          fileName: asset.fileName ?? `resident-${Date.now()}.jpg`,
+          contentType: asset.mimeType ?? "image/jpeg",
+          folder: "resident",
+        });
+        setPhotos([uploaded.fileUrl]);
+      } catch {
+        Toast.show({
+          type: "error",
+          text1: "Upload failed",
+          text2: "Could not upload selected image.",
+        });
+      } finally {
+        setIsUploadingPhoto(false);
+      }
     }
   };
 
@@ -358,7 +398,7 @@ export default function AddResidentScreen() {
               </View>
               <Text style={styles.modeCardTitle}>QR Based Self-Entry</Text>
               <Text style={styles.modeCardDescription}>
-                Generate QR and tenant will submit details through web form.
+                Generate QR and resident will submit details through web form.
               </Text>
               <View style={styles.modeCtaRow}>
                 <Text style={styles.modeCtaText}>Continue QR Flow</Text>
@@ -553,10 +593,14 @@ export default function AddResidentScreen() {
             <TouchableOpacity
               style={[styles.submitBtn, { marginBottom: 30 }]}
               onPress={handleSubmit}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isUploadingPhoto}
             >
               <Text style={styles.submitBtnText}>
-                {isSubmitting ? "Adding..." : "Add Resident"}
+                {isUploadingPhoto
+                  ? "Uploading photo..."
+                  : isSubmitting
+                    ? "Adding..."
+                    : "Add Resident"}
               </Text>
             </TouchableOpacity>
           </>

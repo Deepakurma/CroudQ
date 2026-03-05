@@ -18,6 +18,7 @@ import {
   rooms,
 } from "../../db/schema";
 import { residentIdentityService } from "../../services/residentIdentityService";
+import { deleteS3Object, resolveManagedS3Key } from "../../services/s3-sender";
 import { propertyProcedure, protectedProcedure, router } from "../../server/trpc";
 import {
   approveRequestSchema,
@@ -78,7 +79,7 @@ const findActiveResidentByUserId = async (
   if (!userId) {
     throw new TRPCError({
       code: "UNAUTHORIZED",
-      message: "User identity is required for tenant access.",
+      message: "User identity is required for resident access.",
     });
   }
 
@@ -261,7 +262,7 @@ export const residentRouter = router({
         })
         .returning();
 
-      const inviteUrl = `${FRONTEND_URL}/tenant/join/${createdInvite.inviteCode}`;
+      const inviteUrl = `${FRONTEND_URL}/resident/join/${createdInvite.inviteCode}`;
       return {
         id: createdInvite.id,
         inviteCode: createdInvite.inviteCode,
@@ -894,6 +895,15 @@ export const residentRouter = router({
         return saved;
       });
 
+      const previousImageKey = resolveManagedS3Key(currentResident.profileImage);
+      const nextImageKey = resolveManagedS3Key(updated.profileImage);
+      const imageChanged =
+        previousImageKey && previousImageKey !== nextImageKey;
+
+      if (imageChanged) {
+        await deleteS3Object(previousImageKey).catch(() => undefined);
+      }
+
       return {
         ...updated,
         checkInDate: updated.checkInDate.toISOString(),
@@ -991,7 +1001,7 @@ export const residentRouter = router({
       }));
     }),
 
-  // ─── Tenant-facing procedures (JWT only, no x-property-id) ───────────────
+  // ─── Resident-facing procedures (JWT only, no x-property-id) ───────────────
 
   getMyProfile: protectedProcedure.query(async ({ ctx }) => {
     const resident = await findActiveResidentByUserId(ctx.user.id);
@@ -1048,7 +1058,7 @@ export const residentRouter = router({
 
     if (!resident) return null;
 
-    // Lazy expiration of notices for this tenant's property.
+    // Lazy expiration of notices for this resident's property.
     await db
       .update(notices)
       .set({ isActive: false, updatedAt: new Date() })

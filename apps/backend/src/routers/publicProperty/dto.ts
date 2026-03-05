@@ -16,8 +16,8 @@ export const listPublicPropertiesSchema = z
       .optional(),
     propertyType: z
       .enum([
-        "boys-hostel",
-        "girls-hostel",
+        "boys-property",
+        "girls-property",
         "pg",
         "coliving",
         "apartments",

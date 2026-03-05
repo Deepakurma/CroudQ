@@ -1,12 +1,12 @@
 import { ScreenWrapper } from "@/components/ScreenWrapper";
-import { ReceiptsHeader } from "@/components/tenant/ReceiptsHeader";
-import { ReceiptsList, TenantReceipt } from "@/components/tenant/ReceiptsList";
+import { ReceiptsHeader } from "@/components/resident/ReceiptsHeader";
+import { ReceiptsList, ResidentReceipt } from "@/components/resident/ReceiptsList";
 import { Spacing } from "@/constants/Spacing";
 import React, { useRef, useState } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { useTenant } from "@/context/TenantContext";
+import { useResident } from "@/context/ResidentContext";
 import {
   addMonths,
   format,
@@ -15,35 +15,35 @@ import {
   startOfDay,
 } from "date-fns";
 
-export default function TenantReceiptsScreen() {
+export default function ResidentReceiptsScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
   const headerHeight = insets.top + 65;
 
   const [startDate, setStartDate] = useState(() => startOfDay(new Date()));
   const [endDate, setEndDate] = useState(() => startOfDay(new Date()));
-  const { tenantProfile, refetch } = useTenant();
+  const { residentProfile, refetch } = useResident();
   const [refreshing, setRefreshing] = useState(false);
 
   React.useEffect(() => {
-    if (!tenantProfile) return;
-    setStartDate(startOfDay(new Date(tenantProfile.checkInDate)));
+    if (!residentProfile) return;
+    setStartDate(startOfDay(new Date(residentProfile.checkInDate)));
     setEndDate(
-      tenantProfile.lastPaymentDate
-        ? startOfDay(new Date(tenantProfile.lastPaymentDate))
+      residentProfile.lastPaymentDate
+        ? startOfDay(new Date(residentProfile.lastPaymentDate))
         : startOfDay(new Date()),
     );
-  }, [tenantProfile]);
+  }, [residentProfile]);
 
   // Generate synthetic receipts
   // TODO: Replace this with actual queries when a `payments` table is added to the database.
-  const receipts: TenantReceipt[] = React.useMemo(() => {
-    if (!tenantProfile) return [];
-    if (!tenantProfile.lastPaymentDate) return [];
+  const receipts: ResidentReceipt[] = React.useMemo(() => {
+    if (!residentProfile) return [];
+    if (!residentProfile.lastPaymentDate) return [];
 
-    const generated: TenantReceipt[] = [];
-    const checkIn = startOfDay(new Date(tenantProfile.checkInDate));
-    const lastPayment = startOfDay(new Date(tenantProfile.lastPaymentDate));
+    const generated: ResidentReceipt[] = [];
+    const checkIn = startOfDay(new Date(residentProfile.checkInDate));
+    const lastPayment = startOfDay(new Date(residentProfile.lastPaymentDate));
     let currentDate = checkIn;
     let i = 1;
 
@@ -54,11 +54,11 @@ export default function TenantReceiptsScreen() {
       ) {
         generated.push({
           id: `r-${i}`,
-          name: tenantProfile.name,
-          room: `Room ${tenantProfile.room.roomNumber}`,
+          name: residentProfile.name,
+          room: `Room ${residentProfile.room.roomNumber}`,
           date: format(currentDate, "dd MMM, yyyy"),
           time: "10:00 AM", // Synthetic time
-          amount: tenantProfile.rentAmount,
+          amount: residentProfile.rentAmount,
         });
       }
 
@@ -67,7 +67,7 @@ export default function TenantReceiptsScreen() {
     }
 
     return generated.reverse();
-  }, [tenantProfile, startDate, endDate]);
+  }, [residentProfile, startDate, endDate]);
 
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);

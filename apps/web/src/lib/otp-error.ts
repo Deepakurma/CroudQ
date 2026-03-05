@@ -10,8 +10,8 @@ const OTP_ALLOWED_MESSAGES = [
   'OTP session expired. Please resend OTP.',
   'OTP session expired. Please request OTP again.',
   'Invalid OTP. Please try again.',
-  'This account is not eligible for vendor account access. Use tenant account access.',
-  'This account is not eligible for tenant account access.'
+  'This account is not eligible for landlord account access. Use resident account access.',
+  'This account is not eligible for resident account access.'
 ];
 
 export const getPublicOtpErrorMessage = (error: unknown, fallback: string) => {

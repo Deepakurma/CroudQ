@@ -116,7 +116,7 @@ export const supportQueries = pgTable(
     propertyId: text("propertyId").references(() => properties.id, {
       onDelete: "set null",
     }),
-    vendorName: text("vendorName"),
+    landlordName: text("landlordName"),
     inchargeName: text("inchargeName"),
     phoneNumber: text("phoneNumber"),
     email: text("email"),
@@ -137,7 +137,7 @@ export const supportQueries = pgTable(
     createdAtIdx: index("support_queries_created_at_idx").on(table.createdAt),
     searchGinIdx: sql`CREATE INDEX support_query_search_idx ON ${table} USING gin(
       setweight(to_tsvector('english', coalesce(${table.query}, '')), 'A') ||
-      setweight(to_tsvector('english', coalesce(${table.vendorName}, '')), 'B') ||
+      setweight(to_tsvector('english', coalesce(${table.landlordName}, '')), 'B') ||
       setweight(to_tsvector('english', coalesce(${table.inchargeName}, '')), 'C') ||
       setweight(to_tsvector('english', coalesce(${table.city}, '')), 'D') ||
       setweight(to_tsvector('english', coalesce(${table.address}, '')), 'D')

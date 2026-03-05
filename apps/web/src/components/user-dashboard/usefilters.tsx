@@ -13,8 +13,8 @@ export type SharingFilter =
   | '6-sharing';
 export type PropertyTypeFilter =
   | 'all'
-  | 'boys-hostel'
-  | 'girls-hostel'
+  | 'boys-property'
+  | 'girls-property'
   | 'pg'
   | 'coliving'
   | 'apartments';

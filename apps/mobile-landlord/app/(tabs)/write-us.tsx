@@ -48,14 +48,14 @@ export default function WriteUsScreen() {
     data: myQueries,
     isLoading,
     refetch,
-  } = trpc.admin.listMyVendorQueries.useQuery();
+  } = trpc.admin.listMyLandlordQueries.useQuery();
   const utils = trpc.useUtils();
 
-  const submitMutation = trpc.admin.submitVendorQuery.useMutation({
+  const submitMutation = trpc.admin.submitLandlordQuery.useMutation({
     onSuccess: () => {
       setQuery("");
       setError("");
-      utils.admin.listMyVendorQueries.invalidate();
+      utils.admin.listMyLandlordQueries.invalidate();
       Toast.show({
         type: "success",
         text1: "Query submitted",
@@ -70,9 +70,9 @@ export default function WriteUsScreen() {
       });
     },
   });
-  const deleteMutation = trpc.admin.deleteMyVendorQuery.useMutation({
+  const deleteMutation = trpc.admin.deleteMyLandlordQuery.useMutation({
     onSuccess: () => {
-      utils.admin.listMyVendorQueries.invalidate();
+      utils.admin.listMyLandlordQueries.invalidate();
       setQueryToDeleteId(null);
       Toast.show({
         type: "success",

@@ -9,7 +9,7 @@ export default function AboutUsPage() {
         <div className="space-y-2 text-center">
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">About Bunkezy</h1>
           <p className="text-muted-foreground sm:text-md mx-auto max-w-2xl text-sm">
-            Reimagining student and professional living with premium, hassle-free hostel
+            Reimagining student and professional living with premium, hassle-free property
             experiences.
           </p>
         </div>
@@ -71,13 +71,13 @@ export default function AboutUsPage() {
         <div className="prose prose-slate dark:prose-invert text-muted-foreground max-w-none space-y-4">
           <h2 className="text-foreground text-2xl font-semibold tracking-tight">Our Story</h2>
           <p className="leading-relaxed">
-            Founded with a vision to organize the fragmented hostel sector, Bunkezy started as a
+            Founded with a vision to organize the fragmented property sector, Bunkezy started as a
             solution to the common problems faced by students and working professionals migrating to
             new cities. We noticed the lack of transparency, substandard living conditions, and
             unpredictable amenities in traditional paying guest accommodations.
           </p>
           <p className="leading-relaxed">
-            Today, Bunkezy is building a network of premium hostels that guarantee quality,
+            Today, Bunkezy is building a network of premium properties that guarantee quality,
             security, and a vibrant community. Whether you're a student preparing for exams or a
             professional starting a new job, Bunkezy is your trusted partner for a comfortable stay
             away from home.

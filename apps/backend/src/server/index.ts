@@ -57,7 +57,7 @@ export async function createServer(
     }
 
     const hasAuthCookie = Boolean(
-      req.cookies?.bunkezy_vendor_token || req.cookies?.bunkezy_tenant_token,
+      req.cookies?.bunkezy_landlord_token || req.cookies?.bunkezy_resident_token,
     );
     const hasBearerToken =
       req.headers.authorization?.startsWith("Bearer ") ?? false;

@@ -17,7 +17,7 @@ import { trpcClient } from '~/utils/trpc';
 import type { KeyboardEvent } from 'react';
 
 const OTP_LENGTH = 4;
-const DEFAULT_REDIRECT = '/vendor/onboarding';
+const DEFAULT_REDIRECT = '/landlord/onboarding';
 const GENERIC_SEND_OTP_ERROR = 'Unable to send OTP right now. Please try again.';
 const GENERIC_VERIFY_OTP_ERROR = 'Unable to verify OTP right now. Please try again.';
 const GENERIC_RESEND_OTP_ERROR = 'Unable to resend OTP right now. Please try again.';
@@ -30,7 +30,7 @@ const sanitizeRedirect = (raw: string | null): string => {
     return DEFAULT_REDIRECT;
   }
 
-  const allowedPrefixes = ['/vendor', '/admin'];
+  const allowedPrefixes = ['/landlord', '/admin'];
   if (allowedPrefixes.some((prefix) => value.startsWith(prefix))) {
     return value;
   }
@@ -38,7 +38,7 @@ const sanitizeRedirect = (raw: string | null): string => {
   return DEFAULT_REDIRECT;
 };
 
-const isGenericRoleRootRedirect = (path: string) => path === '/vendor' || path === '/admin';
+const isGenericRoleRootRedirect = (path: string) => path === '/landlord' || path === '/admin';
 
 function UnifiedAuthPageContent() {
   const router = useRouter();
@@ -47,7 +47,7 @@ function UnifiedAuthPageContent() {
 
   const requestedRedirect = searchParams.get('redirect');
   const redirect = sanitizeRedirect(requestedRedirect);
-  const isOnboardingIntent = redirect.startsWith('/vendor/onboarding');
+  const isOnboardingIntent = redirect.startsWith('/landlord/onboarding');
 
   const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -68,15 +68,15 @@ function UnifiedAuthPageContent() {
 
     const checkExistingSession = async () => {
       try {
-        const payload = await trpcClient.auth.getVendorWebSession.query();
+        const payload = await trpcClient.auth.getLandlordWebSession.query();
         let targetPath =
           requestedRedirect && !isGenericRoleRootRedirect(redirect)
             ? redirect
             : (payload?.nextPath ?? DEFAULT_REDIRECT);
 
         if (
-          targetPath.startsWith('/vendor/onboarding') &&
-          payload?.nextPath === '/vendor/property'
+          targetPath.startsWith('/landlord/onboarding') &&
+          payload?.nextPath === '/landlord/property'
         ) {
           targetPath = payload.nextPath;
         }
@@ -160,14 +160,14 @@ function UnifiedAuthPageContent() {
 
     setIsLoading(true);
     try {
-      const payload = await trpcClient.auth.verifyVendorWebOTP.mutate({
+      const payload = await trpcClient.auth.verifyLandlordWebOTP.mutate({
         phoneNumber,
         otp: otpValue,
         reqId
       });
 
-      const isVendor = Array.isArray(payload?.identity?.roles)
-        ? payload.identity.roles.includes('VENDOR')
+      const isLandlord = Array.isArray(payload?.identity?.roles)
+        ? payload.identity.roles.includes('LANDLORD')
         : false;
       const isSuperAdmin = Array.isArray(payload?.identity?.roles)
         ? payload.identity.roles.includes('SUPER_ADMIN')
@@ -177,7 +177,7 @@ function UnifiedAuthPageContent() {
           ? redirect
           : (payload?.nextPath ?? DEFAULT_REDIRECT);
 
-      if (targetPath.startsWith('/vendor') && !isVendor) {
+      if (targetPath.startsWith('/landlord') && !isLandlord) {
         targetPath = payload?.nextPath ?? DEFAULT_REDIRECT;
       }
 
@@ -186,9 +186,9 @@ function UnifiedAuthPageContent() {
       }
 
       if (
-        targetPath.startsWith('/vendor/onboarding') &&
-        isVendor &&
-        payload?.nextPath === '/vendor/property'
+        targetPath.startsWith('/landlord/onboarding') &&
+        isLandlord &&
+        payload?.nextPath === '/landlord/property'
       ) {
         targetPath = payload.nextPath;
       }

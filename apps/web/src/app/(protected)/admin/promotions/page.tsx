@@ -29,7 +29,7 @@ type SessionType = 'active' | 'scheduled' | 'expired';
 
 export interface Promotion {
   id: string;
-  vendorName: string;
+  landlordName: string;
   phoneNumber: string;
   email?: string;
   city: string;
@@ -120,7 +120,7 @@ const renderSessionBadge = (type: SessionType) => {
 
 const mockPromotions: Promotion[] = Array.from({ length: 20 }).map((_, index) => ({
   id: (index + 1).toString(),
-  vendorName: 'Elite Supplies Co',
+  landlordName: 'Elite Supplies Co',
   phoneNumber: '9876543210',
   city: 'Mumbai',
   pincode: 500075,
@@ -145,7 +145,7 @@ const columns: ColumnDef<Promotion>[] = [
     accessorKey: 'details',
     header: 'Details',
     cell: ({ row }) => {
-      const name = row.original.vendorName;
+      const name = row.original.landlordName;
       const phoneno = row.original.phoneNumber;
       const email = row.original.email;
       const joined = row.original.createdAt;
@@ -170,18 +170,18 @@ const columns: ColumnDef<Promotion>[] = [
     accessorKey: 'address',
     header: 'Address',
     cell: ({ row }) => {
-      const vendor = row.original;
+      const landlord = row.original;
       return (
         <div className="text-md flex min-w-[200px] flex-col gap-2 font-medium whitespace-normal">
-          <Link className="text-green-600 hover:underline" href={vendor.googleUrl}>
+          <Link className="text-green-600 hover:underline" href={landlord.googleUrl}>
             View on google maps ↗
           </Link>
-          <span className="text-foreground/80">{vendor.address},</span>
+          <span className="text-foreground/80">{landlord.address},</span>
           <div>
-            <span>{vendor.city},</span>
-            <span> {vendor.state},</span>
+            <span>{landlord.city},</span>
+            <span> {landlord.state},</span>
           </div>
-          <span>{vendor.pincode}</span>
+          <span>{landlord.pincode}</span>
         </div>
       );
     }
@@ -228,11 +228,11 @@ const columns: ColumnDef<Promotion>[] = [
   {
     id: 'actions',
     header: '',
-    cell: ({ row }) => <RowActions vendor={row.original} />
+    cell: ({ row }) => <RowActions landlord={row.original} />
   }
 ];
 
-function RowActions({ vendor }: { vendor: Promotion }) {
+function RowActions({ landlord }: { landlord: Promotion }) {
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
@@ -246,7 +246,7 @@ function RowActions({ vendor }: { vendor: Promotion }) {
       <AlertDialogContent>
         <AlertDialogTitle>End Promotion</AlertDialogTitle>
         <AlertDialogDescription>
-          Are you sure you want to end this promotion for <strong>{vendor.vendorName}?</strong>
+          Are you sure you want to end this promotion for <strong>{landlord.landlordName}?</strong>
         </AlertDialogDescription>
         <div className="flex justify-end gap-2">
           <AlertDialogCancel>Cancel</AlertDialogCancel>

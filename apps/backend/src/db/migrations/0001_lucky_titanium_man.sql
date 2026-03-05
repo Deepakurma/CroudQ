@@ -39,7 +39,7 @@ CREATE INDEX IF NOT EXISTS "checkout_search_idx" ON "checkout" USING gin ((
 
 CREATE INDEX IF NOT EXISTS "support_query_search_idx" ON "support_query" USING gin ((
     setweight(to_tsvector('english', coalesce("query", '')), 'A') ||
-    setweight(to_tsvector('english', coalesce("vendorName", '')), 'B') ||
+    setweight(to_tsvector('english', coalesce("landlordName", '')), 'B') ||
     setweight(to_tsvector('english', coalesce("inchargeName", '')), 'C') ||
     setweight(to_tsvector('english', coalesce("city", '')), 'D') ||
     setweight(to_tsvector('english', coalesce("address", '')), 'D')

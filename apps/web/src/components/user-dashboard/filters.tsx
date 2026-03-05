@@ -46,9 +46,9 @@ const sharingOptions: Array<{ label: string; value: SharingFilter }> = [
 ];
 
 const propertyTypeOptions: Array<{ label: string; value: PropertyTypeFilter }> = [
-  { label: 'Hostel Types', value: 'all' },
-  { label: 'Boys Hostel', value: 'boys-hostel' },
-  { label: 'Girls Hostel', value: 'girls-hostel' },
+  { label: 'Property Types', value: 'all' },
+  { label: 'Boys Property', value: 'boys-property' },
+  { label: 'Girls Property', value: 'girls-property' },
   { label: 'PG', value: 'pg' },
   { label: 'Coliving', value: 'coliving' },
   { label: 'Apartments', value: 'apartments' }
@@ -69,7 +69,7 @@ export function Filters({
       <div className="flex w-full items-center justify-between gap-5 sm:justify-start sm:gap-10">
         <div className="flex items-center gap-2 text-[15px] font-medium sm:text-lg">
           <SlidersHorizontal className="size-4 sm:size-5" />
-          <span>Filter Hostels</span>
+          <span>Filter Properties</span>
         </div>
         {hasAppliedFilters && (
           <Button

@@ -35,7 +35,7 @@ import { DataTable } from '~/components/datatable';
 
 import type { ColumnDef } from '@tanstack/react-table';
 
-type SentTo = 'vendors' | 'users' | 'both';
+type SentTo = 'landlords' | 'users' | 'both';
 type SentVia = 'in-app' | 'sms';
 
 export interface Announcement {
@@ -54,8 +54,8 @@ const ANNOUNCEMENT_BADGE_CONFIG: Record<
     icon: React.ElementType;
   }
 > = {
-  vendors: {
-    label: 'Vendors',
+  landlords: {
+    label: 'Landlords',
     className: 'bg-emerald-100 text-emerald-700 border-emerald-200',
     icon: Building2
   },
@@ -160,7 +160,7 @@ const columns: ColumnDef<Announcement>[] = [
 
 export default function page() {
   const [message, setMessage] = React.useState('');
-  const [audience, setAudience] = React.useState<'all' | 'users' | 'vendors'>('all');
+  const [audience, setAudience] = React.useState<'all' | 'users' | 'landlords'>('all');
   const [channels, setChannels] = React.useState({
     inApp: true,
     sms: false
@@ -199,14 +199,14 @@ export default function page() {
 
             <Select
               value={audience}
-              onValueChange={(v) => setAudience(v as 'all' | 'users' | 'vendors')}>
+              onValueChange={(v) => setAudience(v as 'all' | 'users' | 'landlords')}>
               <SelectTrigger className="h-8 w-[140px] text-sm font-medium">
                 <SelectValue placeholder="Audience" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All</SelectItem>
                 <SelectItem value="users">Users</SelectItem>
-                <SelectItem value="vendors">Vendors</SelectItem>
+                <SelectItem value="landlords">Landlords</SelectItem>
               </SelectContent>
             </Select>
           </CardHeader>
@@ -298,7 +298,7 @@ export default function page() {
           filters={{
             value: filter,
             options: [
-              { label: 'Vendors', value: 'vendors', icon: Building2 },
+              { label: 'Landlords', value: 'landlords', icon: Building2 },
               { label: 'Users', value: 'users', icon: Users2 },
               { label: 'Both', value: 'both', icon: Merge },
               { label: 'Show All', value: '', icon: Eye }

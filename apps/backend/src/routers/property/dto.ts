@@ -21,7 +21,7 @@ const facilitiesSchema = z.object({
 });
 
 export const createPropertySchema = z.object({
-  hostelName: z.string().trim().min(3).max(120),
+  propertyName: z.string().trim().min(3).max(120),
   inchargeName: z.string().trim().min(3).max(80),
   inchargePhone: z.string().regex(/^[0-9]{10}$/),
   type: z.string().trim().min(1).max(50),
@@ -98,7 +98,7 @@ export const addRoomSchema = z.object({
 });
 
 export const updatePropertySchema = z.object({
-  hostelName: z.string().trim().min(3).max(120),
+  propertyName: z.string().trim().min(3).max(120),
   inchargeName: z.string().trim().min(3).max(80),
   inchargePhone: z.string().regex(/^[0-9]{10}$/),
   type: z.string().trim().min(1).max(50),

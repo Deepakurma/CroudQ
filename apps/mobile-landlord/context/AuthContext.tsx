@@ -20,7 +20,7 @@ interface User {
   activeRole?: UserRole | null;
 }
 
-export type UserRole = "VENDOR" | "RESIDENT";
+export type UserRole = "LANDLORD" | "RESIDENT";
 
 interface LoginIdentity {
   userId: string;

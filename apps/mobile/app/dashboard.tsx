@@ -5,7 +5,7 @@ import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { Typography } from "@/constants/Typography";
 import { useAuth } from "@/context/AuthContext";
-import { useTenant } from "@/context/TenantContext";
+import { useResident } from "@/context/ResidentContext";
 import { format } from "date-fns";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
@@ -37,7 +37,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { trpc } from "@/utils/api";
 
-export default function TenantDashboardScreen() {
+export default function ResidentDashboardScreen() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { logout } = useAuth();
@@ -45,10 +45,10 @@ export default function TenantDashboardScreen() {
     useState(false);
   const [isLogoutDialogOpen, setIsLogoutDialogOpen] = useState(false);
 
-  const { tenantProfile, isLoading, isError } = useTenant();
+  const { residentProfile, isLoading, isError } = useResident();
   const { data: latestNotice, isLoading: isNoticeLoading } =
     trpc.resident.getMyLatestActiveNotice.useQuery(undefined, {
-      enabled: !!tenantProfile,
+      enabled: !!residentProfile,
       staleTime: 60_000,
       retry: false,
     });
@@ -96,7 +96,7 @@ export default function TenantDashboardScreen() {
     );
   }
 
-  if (!tenantProfile) {
+  if (!residentProfile) {
     return (
       <View style={styles.container}>
         <EmptyState
@@ -108,7 +108,7 @@ export default function TenantDashboardScreen() {
     );
   }
 
-  const profileName = tenantProfile.name || "Tenant";
+  const profileName = residentProfile.name || "Resident";
 
   return (
     <View style={styles.container}>
@@ -176,9 +176,9 @@ export default function TenantDashboardScreen() {
           <View style={styles.detailsCard}>
             <View style={styles.profileSection}>
               <View style={styles.avatarContainer}>
-                {tenantProfile.profileImage ? (
+                {residentProfile.profileImage ? (
                   <Image
-                    source={{ uri: tenantProfile.profileImage }}
+                    source={{ uri: residentProfile.profileImage }}
                     style={styles.avatar}
                   />
                 ) : (
@@ -195,15 +195,15 @@ export default function TenantDashboardScreen() {
                 <View style={{ flexDirection: "row", gap: 8, marginTop: 4 }}>
                   <View style={styles.sheetTag}>
                     <Text style={styles.sheetTagText}>
-                      Room {tenantProfile.room.roomNumber}
+                      Room {residentProfile.room.roomNumber}
                     </Text>
                   </View>
                   <View style={styles.sheetTag}>
                     <Text style={styles.sheetTagText}>
-                      {tenantProfile.room.type?.name || "Shared"}
+                      {residentProfile.room.type?.name || "Shared"}
                     </Text>
                   </View>
-                  {tenantProfile.room.ac && (
+                  {residentProfile.room.ac && (
                     <View style={styles.acTag}>
                       <Text style={styles.acTagText}>AC</Text>
                     </View>
@@ -215,19 +215,19 @@ export default function TenantDashboardScreen() {
             <InfoRow
               icon={<Phone size={18} color={Colors.textSecondary} />}
               label="Mobile Number"
-              value={tenantProfile.phoneNumber}
+              value={residentProfile.phoneNumber}
             />
             <InfoRow
               icon={<CalendarClock size={18} color={Colors.textSecondary} />}
               label="Check-in Date"
-              value={format(new Date(tenantProfile.checkInDate), "dd MMM yyyy")}
+              value={format(new Date(residentProfile.checkInDate), "dd MMM yyyy")}
             />
-            {tenantProfile.checkOutDate && (
+            {residentProfile.checkOutDate && (
               <InfoRow
                 icon={<CalendarClock size={18} color={Colors.textSecondary} />}
                 label="Check-out Date"
                 value={format(
-                  new Date(tenantProfile.checkOutDate),
+                  new Date(residentProfile.checkOutDate),
                   "dd MMM yyyy",
                 )}
                 isLast
@@ -244,7 +244,7 @@ export default function TenantDashboardScreen() {
                 <Text style={styles.rentDueLabel}>Next Rent Due</Text>
                 <Text style={styles.rentDueDate}>
                   {format(
-                    new Date(tenantProfile.nextRentDueDate),
+                    new Date(residentProfile.nextRentDueDate),
                     "dd MMM yyyy",
                   )}
                 </Text>
@@ -257,7 +257,7 @@ export default function TenantDashboardScreen() {
               <View>
                 <Text style={styles.rentAmountSub}>Amount to Pay</Text>
                 <Text style={styles.rentAmountText}>
-                  ₹ {tenantProfile.rentAmount.toLocaleString("en-IN")}
+                  ₹ {residentProfile.rentAmount.toLocaleString("en-IN")}
                 </Text>
               </View>
               <TouchableOpacity
@@ -290,9 +290,9 @@ export default function TenantDashboardScreen() {
               icon={<Phone size={21} color="#0f7619" />}
               iconBg="#e8f7ec"
               onPress={() => {
-                if (tenantProfile.property.inchargePhone) {
+                if (residentProfile.property.inchargePhone) {
                   Linking.openURL(
-                    `tel:+91${tenantProfile.property.inchargePhone}`,
+                    `tel:+91${residentProfile.property.inchargePhone}`,
                   );
                 } else {
                   Linking.openURL("tel:+919876543210");
@@ -339,17 +339,17 @@ export default function TenantDashboardScreen() {
         >
           <View style={styles.headerContent}>
             <View style={{ zIndex: 100 }}>
-              <View style={[styles.hostelSelector]}>
-                <View style={styles.hostelLeft}>
-                  <View style={styles.hostelIcon}>
+              <View style={[styles.propertySelector]}>
+                <View style={styles.propertyLeft}>
+                  <View style={styles.propertyIcon}>
                     <Building2 size={24} color={Colors.primary} />
                   </View>
                   <View style={{ flexDirection: "column" }}>
-                    <Text style={[styles.hostelLabel, { opacity: 0.8 }]}>
+                    <Text style={[styles.propertyLabel, { opacity: 0.8 }]}>
                       Your Current Stay
                     </Text>
-                    <Text style={[styles.hostelName]} numberOfLines={1}>
-                      {tenantProfile.property.name}
+                    <Text style={[styles.propertyName]} numberOfLines={1}>
+                      {residentProfile.property.name}
                     </Text>
                   </View>
                 </View>
@@ -628,7 +628,7 @@ const styles = StyleSheet.create({
     height: 44,
   },
 
-  hostelSelector: {
+  propertySelector: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: Spacing.xs,
@@ -649,13 +649,13 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
 
-  hostelLeft: {
+  propertyLeft: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.s,
   },
 
-  hostelIcon: {
+  propertyIcon: {
     padding: Spacing.xs,
     borderRadius: 14,
     backgroundColor: Colors.accent,
@@ -663,13 +663,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
 
-  hostelLabel: {
+  propertyLabel: {
     fontFamily: Typography.font.regular,
     fontSize: Typography.size.xs,
     color: Colors.textSecondary,
   },
 
-  hostelName: {
+  propertyName: {
     fontFamily: Typography.font.semibold,
     fontSize: Typography.size.m,
     color: Colors.primary,

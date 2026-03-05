@@ -4,10 +4,10 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { Building2, ClipboardList, Clock } from 'lucide-react';
 
+import { LandlordAnalytics } from '~/components/admin-dashboard/landlord-analytics';
+import { LandlordIntelligence } from '~/components/admin-dashboard/landlord-intelligence';
 import AdminQuickActions from '~/components/admin-dashboard/quick-actions';
 import { Analytics } from '~/components/admin-dashboard/users-analytics';
-import { VendorAnalytics } from '~/components/admin-dashboard/vendor-analytics';
-import { VendorIntelligence } from '~/components/admin-dashboard/vendor-intelligence';
 import PulseCard from '~/components/pulsecard';
 import { trpcClient } from '~/utils/trpc';
 
@@ -17,19 +17,19 @@ export default function page() {
   const [isLoading, setIsLoading] = useState(true);
   const [dashboard, setDashboard] = useState<{
     summary: {
-      totalVendors: number;
+      totalLandlords: number;
       pendingRenewals: number;
       totalQueries: number;
       totalCapacity: number;
     };
-    vendorAnalytics: {
+    landlordAnalytics: {
       today: { previous: number; current: number };
       week: { previous: number; current: number };
       month: { previous: number; current: number };
     };
     cityDistribution: Array<{
       name: string;
-      vendors: number;
+      landlords: number;
       occupancy: string;
       capacity: number;
       revenue: string;
@@ -55,9 +55,9 @@ export default function page() {
   const pulseData: PulseCardProps[] = useMemo(
     () => [
       {
-        label: 'Total Vendors',
-        value: dashboard?.summary.totalVendors ?? 0,
-        sub: 'No of Vendors onboarded',
+        label: 'Total Landlords',
+        value: dashboard?.summary.totalLandlords ?? 0,
+        sub: 'No of Landlords onboarded',
         button: 'Add+',
         buttonLink: '#',
         color: 'green',
@@ -68,14 +68,14 @@ export default function page() {
         value: dashboard?.summary.pendingRenewals ?? 0,
         sub: 'Requires Action',
         button: 'View All',
-        buttonLink: '/admin/vendors',
+        buttonLink: '/admin/landlords',
         color: 'red',
         icon: Clock
       },
       {
         label: 'Queries',
         value: dashboard?.summary.totalQueries ?? 0,
-        sub: 'Vendor queries received',
+        sub: 'Landlord queries received',
         color: 'orange',
         icon: ClipboardList
       }
@@ -94,10 +94,10 @@ export default function page() {
         </div>
       </div>
 
-      <VendorAnalytics analytics={dashboard?.vendorAnalytics} isLoading={isLoading} />
+      <LandlordAnalytics analytics={dashboard?.landlordAnalytics} isLoading={isLoading} />
       <Analytics />
 
-      <VendorIntelligence data={dashboard?.cityDistribution} isLoading={isLoading} />
+      <LandlordIntelligence data={dashboard?.cityDistribution} isLoading={isLoading} />
 
       <div className="grid grid-cols-1 gap-0 px-4 sm:gap-4 lg:gap-6">
         <AdminQuickActions />

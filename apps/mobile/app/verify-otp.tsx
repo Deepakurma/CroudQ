@@ -29,7 +29,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 
-type UserRole = "VENDOR" | "RESIDENT";
+type UserRole = "LANDLORD" | "RESIDENT";
 
 export default function VerifyOtpScreen() {
   const utils = trpc.useUtils();
@@ -88,7 +88,7 @@ export default function VerifyOtpScreen() {
         Toast.show({
           type: "error",
           text1: "Use Landlord App",
-          text2: "This app is only for tenant accounts.",
+          text2: "This app is only for resident accounts.",
         });
       } finally {
         setPostLoginInitializing(false);

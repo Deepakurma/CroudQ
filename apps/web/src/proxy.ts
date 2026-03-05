@@ -1,34 +1,34 @@
 import { NextResponse } from 'next/server';
 
 import {
-  ROLE_HINT_COOKIE_NAME,
-  TENANT_AUTH_COOKIE_NAME,
-  VENDOR_AUTH_COOKIE_NAME
+  LANDLORD_AUTH_COOKIE_NAME,
+  RESIDENT_AUTH_COOKIE_NAME,
+  ROLE_HINT_COOKIE_NAME
 } from '~/lib/auth-cookies';
 
 import type { NextRequest } from 'next/server';
 
 export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
-  const isVendorProtectedPath = pathname.startsWith('/vendor') || pathname.startsWith('/admin');
-  const isTenantProtectedPath = pathname.startsWith('/tenant/status');
+  const isLandlordProtectedPath = pathname.startsWith('/landlord') || pathname.startsWith('/admin');
+  const isResidentProtectedPath = pathname.startsWith('/resident/status');
 
-  if (!isVendorProtectedPath && !isTenantProtectedPath) {
+  if (!isLandlordProtectedPath && !isResidentProtectedPath) {
     return NextResponse.next();
   }
 
-  const vendorToken = request.cookies.get(VENDOR_AUTH_COOKIE_NAME)?.value;
-  const tenantToken = request.cookies.get(TENANT_AUTH_COOKIE_NAME)?.value;
+  const landlordToken = request.cookies.get(LANDLORD_AUTH_COOKIE_NAME)?.value;
+  const residentToken = request.cookies.get(RESIDENT_AUTH_COOKIE_NAME)?.value;
   const roleHint = request.cookies.get(ROLE_HINT_COOKIE_NAME)?.value;
 
-  if (isVendorProtectedPath) {
-    if (vendorToken) {
+  if (isLandlordProtectedPath) {
+    if (landlordToken) {
       if (pathname.startsWith('/admin') && roleHint !== 'SUPER_ADMIN') {
         const signInUrl = new URL('/auth', request.url);
         signInUrl.searchParams.set('redirect', pathname);
         return NextResponse.redirect(signInUrl);
       }
-      if (pathname.startsWith('/vendor') && roleHint === 'RESIDENT') {
+      if (pathname.startsWith('/landlord') && roleHint === 'RESIDENT') {
         const signInUrl = new URL('/auth', request.url);
         signInUrl.searchParams.set('redirect', pathname);
         return NextResponse.redirect(signInUrl);
@@ -38,33 +38,33 @@ export function proxy(request: NextRequest) {
 
     const redirectTarget = `${pathname}${request.nextUrl.search}`;
     const signInUrl = new URL('/auth', request.url);
-    signInUrl.searchParams.set('redirect', redirectTarget || '/vendor/onboarding');
+    signInUrl.searchParams.set('redirect', redirectTarget || '/landlord/onboarding');
 
     return NextResponse.redirect(signInUrl);
   }
 
-  if (tenantToken) {
+  if (residentToken) {
     if (roleHint && roleHint !== 'RESIDENT') {
-      const signInUrl = new URL('/tenant/auth', request.url);
+      const signInUrl = new URL('/resident/auth', request.url);
       signInUrl.searchParams.set('redirect', pathname);
       return NextResponse.redirect(signInUrl);
     }
     return NextResponse.next();
   }
 
-  if (vendorToken) {
-    const signInUrl = new URL('/tenant/auth', request.url);
+  if (landlordToken) {
+    const signInUrl = new URL('/resident/auth', request.url);
     signInUrl.searchParams.set('redirect', pathname);
     return NextResponse.redirect(signInUrl);
   }
 
   const redirectTarget = `${pathname}${request.nextUrl.search}`;
-  const signInUrl = new URL('/tenant/auth', request.url);
-  signInUrl.searchParams.set('redirect', redirectTarget || '/tenant/status');
+  const signInUrl = new URL('/resident/auth', request.url);
+  signInUrl.searchParams.set('redirect', redirectTarget || '/resident/status');
 
   return NextResponse.redirect(signInUrl);
 }
 
 export const config = {
-  matcher: ['/vendor/:path*', '/admin/:path*', '/tenant/status']
+  matcher: ['/landlord/:path*', '/admin/:path*', '/resident/status']
 };

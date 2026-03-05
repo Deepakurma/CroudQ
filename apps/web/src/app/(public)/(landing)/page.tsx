@@ -10,7 +10,7 @@ import { Button } from '~/shared/shadcn/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '~/shared/shadcn/card';
 
 import { Filters } from '~/components/user-dashboard/filters';
-import { HostelCard } from '~/components/user-dashboard/hostel-card';
+import { PropertyCard } from '~/components/user-dashboard/property-card';
 import { useFilters } from '~/components/user-dashboard/usefilters';
 import { trpcClient } from '~/utils/trpc';
 
@@ -61,7 +61,7 @@ function LandingPageContent() {
     getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined
   });
 
-  const hostels = useMemo(() => {
+  const properties = useMemo(() => {
     return data?.pages.flatMap((page) => page.items) ?? [];
   }, [data]);
 
@@ -111,7 +111,7 @@ function LandingPageContent() {
 
       {selectedLocation !== 'all' && (
         <div className="mx-auto flex w-full max-w-7xl items-center gap-2 text-xl font-medium sm:text-2xl">
-          Hostels in {selectedLocation}
+          Properties in {selectedLocation}
         </div>
       )}
 
@@ -119,10 +119,10 @@ function LandingPageContent() {
         <Card className="flex w-full flex-1 flex-col justify-center border-dashed text-center">
           <CardHeader className="space-y-3">
             <Loader2 className="text-muted-foreground mx-auto size-6 animate-spin" />
-            <CardTitle className="text-2xl">Loading hostels...</CardTitle>
+            <CardTitle className="text-2xl">Loading properties...</CardTitle>
           </CardHeader>
         </Card>
-      ) : hostels.length === 0 ? (
+      ) : properties.length === 0 ? (
         <Card className="flex w-full flex-1 flex-col justify-center border-dashed text-center">
           <CardHeader className="space-y-4">
             <div className="bg-muted text-muted-foreground mx-auto flex size-16 items-center justify-center rounded-3xl">
@@ -131,8 +131,8 @@ function LandingPageContent() {
             <CardTitle className="text-2xl">No results found</CardTitle>
           </CardHeader>
           <CardContent className="text-muted-foreground mx-auto max-w-md text-base">
-            We couldn't find any hostels matching your search criteria. Try adjusting your filters
-            or searching in a different area.
+            We couldn't find any properties matching your search criteria. Try adjusting your
+            filters or searching in a different area.
           </CardContent>
           <CardFooter className="justify-center">
             <Button
@@ -146,15 +146,15 @@ function LandingPageContent() {
       ) : (
         <>
           <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {hostels.map((hostel) => (
-              <HostelCard key={hostel.id} hostel={hostel} />
+            {properties.map((property) => (
+              <PropertyCard key={property.id} property={property} />
             ))}
           </section>
           {supportsIntersectionObserver ? <div ref={sentinelRef} className="h-8 w-full" /> : null}
           {isFetchingNextPage ? (
             <div className="text-muted-foreground flex items-center justify-center gap-2 py-2 text-sm">
               <Loader2 className="size-4 animate-spin" />
-              Loading more hostels...
+              Loading more properties...
             </div>
           ) : null}
           {!supportsIntersectionObserver && hasNextPage ? (

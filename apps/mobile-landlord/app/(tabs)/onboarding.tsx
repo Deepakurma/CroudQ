@@ -15,7 +15,9 @@ import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { Typography } from "@/constants/Typography";
 import { useProperty } from "@/context/PropertyContext";
+import { useAuth } from "@/context/AuthContext";
 import { trpc } from "@/utils/api";
+import { uploadImageToS3 } from "@/utils/s3-upload";
 import { getTrpcErrorLogMessage } from "@/utils/trpc-error";
 import { validateSchema } from "@/utils/validation";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
@@ -84,6 +86,7 @@ export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = insets.top + 65;
   const { setSelectedPropertyId } = useProperty();
+  const { token } = useAuth();
   const utils = trpc.useUtils();
   const navigation = useNavigation();
 
@@ -103,6 +106,7 @@ export default function OnboardingScreen() {
   const [currRule, setCurrRule] = useState("");
 
   const [formData, setFormData] = useState(createInitialOnboardingFormData());
+  const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -117,13 +121,13 @@ export default function OnboardingScreen() {
 
   useEffect(() => {
     if (isEditMode && propertyData) {
-      const allowedHostelTypes: OnboardingFormData["type"][] = [
+      const allowedPropertyTypes: OnboardingFormData["type"][] = [
         "Boys",
         "Girls",
         "Co-living",
         "PG",
       ];
-      const nextType = allowedHostelTypes.includes(
+      const nextType = allowedPropertyTypes.includes(
         propertyData.type as OnboardingFormData["type"],
       )
         ? (propertyData.type as OnboardingFormData["type"])
@@ -142,7 +146,7 @@ export default function OnboardingScreen() {
 
       setFormData((prev) => ({
         ...prev,
-        hostelName: propertyData.name,
+        propertyName: propertyData.name,
         inchargeName: propertyData.inchargeName || "",
         inchargePhone: propertyData.inchargePhone || "",
         type: nextType,
@@ -208,7 +212,7 @@ export default function OnboardingScreen() {
     if (step === 1) {
       schema = step1Schema;
       data = {
-        hostelName: formData.hostelName,
+        propertyName: formData.propertyName,
         inchargeName: formData.inchargeName,
         inchargePhone: formData.inchargePhone,
         type: formData.type,
@@ -359,11 +363,43 @@ export default function OnboardingScreen() {
     });
 
     if (!result.canceled) {
-      const newPhotos = result.assets.map((asset) => asset.uri);
-      setFormData((prev) => ({
-        ...prev,
-        photos: [...prev.photos, ...newPhotos],
-      }));
+      if (!token) {
+        Toast.show({
+          type: "error",
+          text1: "Session expired",
+          text2: "Please login again.",
+        });
+        return;
+      }
+
+      setIsUploadingPhotos(true);
+      try {
+        const uploadedPhotos: string[] = [];
+        for (const asset of result.assets) {
+          if (!asset.uri) continue;
+          const uploaded = await uploadImageToS3({
+            token,
+            fileUri: asset.uri,
+            fileName: asset.fileName ?? `property-${Date.now()}.jpg`,
+            contentType: asset.mimeType ?? "image/jpeg",
+            folder: "properties",
+          });
+          uploadedPhotos.push(uploaded.fileUrl);
+        }
+
+        setFormData((prev) => ({
+          ...prev,
+          photos: [...prev.photos, ...uploadedPhotos],
+        }));
+      } catch {
+        Toast.show({
+          type: "error",
+          text1: "Upload failed",
+          text2: "Could not upload selected images.",
+        });
+      } finally {
+        setIsUploadingPhotos(false);
+      }
     }
   };
 
@@ -602,9 +638,15 @@ export default function OnboardingScreen() {
             <View style={{ flex: 1 }} /> // Spacer if no back button
           )}
 
-          <TouchableOpacity style={styles.nextButton} onPress={nextStep}>
+          <TouchableOpacity
+            style={styles.nextButton}
+            onPress={nextStep}
+            disabled={isUploadingPhotos}
+          >
             <Text style={styles.nextButtonText}>
-              {currentStep === STEPS.length
+              {isUploadingPhotos
+                ? "Uploading photos..."
+                : currentStep === STEPS.length
                 ? isEditMode
                   ? "Update Property"
                   : "Submit Registration"

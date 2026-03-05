@@ -4,16 +4,16 @@ import { db } from "../../db";
 import { properties, revokedTokens, superAdmins, users } from "../../db/schema";
 import { authService } from "../../services/authService";
 import { protectedProcedure, publicProcedure, router } from "../../server/trpc";
-import { clearAllAuthCookies, setTenantAuthCookies, setVendorAuthCookies } from "../../utils/authCookies";
+import { clearAllAuthCookies, setResidentAuthCookies, setLandlordAuthCookies } from "../../utils/authCookies";
 import { verifyJwt } from "../../utils/jwt";
 import { retryOtpSchema, sendOtpSchema, setupSuperAdminSchema, verifyOtpSchema } from "./dto";
 
-const hasVendorWebAccess = (identity: { roles: string[]; needsOnboarding: boolean }) =>
+const hasLandlordWebAccess = (identity: { roles: string[]; needsOnboarding: boolean }) =>
     identity.roles.includes("SUPER_ADMIN") ||
-    identity.roles.includes("VENDOR") ||
+    identity.roles.includes("LANDLORD") ||
     identity.needsOnboarding;
 
-const hasTenantWebAccess = (identity: { roles: string[] }) =>
+const hasResidentWebAccess = (identity: { roles: string[] }) =>
     identity.roles.includes("RESIDENT");
 
 export const authRouter = router({
@@ -39,22 +39,22 @@ export const authRouter = router({
             return authService.verifyOTP(input.phoneNumber, input.otp, input.reqId);
         }),
 
-    verifyVendorWebOTP: publicProcedure
+    verifyLandlordWebOTP: publicProcedure
         .input(verifyOtpSchema)
         .mutation(async ({ input, ctx }) => {
             const result = await authService.verifyOTP(input.phoneNumber, input.otp, input.reqId);
             const isSuperAdmin = result.identity.roles.includes("SUPER_ADMIN");
-            const isVendor = result.identity.roles.includes("VENDOR");
-            const canAccessVendorWeb = hasVendorWebAccess(result.identity);
+            const isLandlord = result.identity.roles.includes("LANDLORD");
+            const canAccessLandlordWeb = hasLandlordWebAccess(result.identity);
 
-            if (!canAccessVendorWeb) {
+            if (!canAccessLandlordWeb) {
                 throw new TRPCError({
                     code: "FORBIDDEN",
-                    message: "This account is not eligible for vendor account access. Use tenant account access.",
+                    message: "This account is not eligible for landlord account access. Use resident account access.",
                 });
             }
 
-            setVendorAuthCookies(ctx.res, result.token, isSuperAdmin ? "SUPER_ADMIN" : "VENDOR");
+            setLandlordAuthCookies(ctx.res, result.token, isSuperAdmin ? "SUPER_ADMIN" : "LANDLORD");
 
             if (isSuperAdmin) {
                 return {
@@ -64,7 +64,7 @@ export const authRouter = router({
                 };
             }
 
-            const vendorProperty = await db.query.properties.findFirst({
+            const landlordProperty = await db.query.properties.findFirst({
                 columns: { id: true },
                 where: eq(properties.userId, result.identity.userId),
             });
@@ -72,29 +72,29 @@ export const authRouter = router({
             return {
                 success: true,
                 identity: result.identity,
-                nextPath: vendorProperty ? "/vendor/property" : "/vendor/onboarding",
+                nextPath: landlordProperty ? "/landlord/property" : "/landlord/onboarding",
             };
         }),
 
-    verifyTenantWebOTP: publicProcedure
+    verifyResidentWebOTP: publicProcedure
         .input(verifyOtpSchema)
         .mutation(async ({ input, ctx }) => {
             const result = await authService.verifyOTP(input.phoneNumber, input.otp, input.reqId);
-            const canAccessTenantWeb = hasTenantWebAccess(result.identity);
+            const canAccessResidentWeb = hasResidentWebAccess(result.identity);
 
-            if (!canAccessTenantWeb) {
+            if (!canAccessResidentWeb) {
                 throw new TRPCError({
                     code: "FORBIDDEN",
-                    message: "This account is not eligible for tenant account access.",
+                    message: "This account is not eligible for resident account access.",
                 });
             }
 
-            setTenantAuthCookies(ctx.res, result.token);
+            setResidentAuthCookies(ctx.res, result.token);
 
             return {
                 success: true,
                 identity: result.identity,
-                nextPath: "/tenant/status",
+                nextPath: "/resident/status",
             };
         }),
 
@@ -125,15 +125,15 @@ export const authRouter = router({
         return authService.resolveIdentity(ctx.user.id);
     }),
 
-    getVendorWebSession: protectedProcedure.query(async ({ ctx }) => {
+    getLandlordWebSession: protectedProcedure.query(async ({ ctx }) => {
         const identity = await authService.resolveIdentity(ctx.user.id);
         const isSuperAdmin = identity.roles.includes("SUPER_ADMIN");
-        const canAccessVendorWeb = hasVendorWebAccess(identity);
+        const canAccessLandlordWeb = hasLandlordWebAccess(identity);
 
-        if (!canAccessVendorWeb) {
+        if (!canAccessLandlordWeb) {
             throw new TRPCError({
                 code: "FORBIDDEN",
-                message: "Vendor session required.",
+                message: "Landlord session required.",
             });
         }
 
@@ -144,31 +144,31 @@ export const authRouter = router({
             };
         }
 
-        const vendorProperty = await db.query.properties.findFirst({
+        const landlordProperty = await db.query.properties.findFirst({
             columns: { id: true },
             where: eq(properties.userId, ctx.user.id),
         });
 
         return {
             identity,
-            nextPath: vendorProperty ? "/vendor/property" : "/vendor/onboarding",
+            nextPath: landlordProperty ? "/landlord/property" : "/landlord/onboarding",
         };
     }),
 
-    getTenantWebSession: protectedProcedure.query(async ({ ctx }) => {
+    getResidentWebSession: protectedProcedure.query(async ({ ctx }) => {
         const identity = await authService.resolveIdentity(ctx.user.id);
-        const canAccessTenantWeb = hasTenantWebAccess(identity);
+        const canAccessResidentWeb = hasResidentWebAccess(identity);
 
-        if (!canAccessTenantWeb) {
+        if (!canAccessResidentWeb) {
             throw new TRPCError({
                 code: "FORBIDDEN",
-                message: "Tenant session required.",
+                message: "Resident session required.",
             });
         }
 
         return {
             identity,
-            nextPath: "/tenant/status",
+            nextPath: "/resident/status",
         };
     }),
 

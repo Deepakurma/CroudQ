@@ -113,7 +113,7 @@ export default function ProfileScreen() {
 
   const data = propertyData
     ? {
-        hostelName: propertyData.name,
+        propertyName: propertyData.name,
         inchargeName: propertyData.inchargeName || "",
         inchargePhone: propertyData.inchargePhone || "",
         type: propertyData.type || "Boys",
@@ -206,10 +206,10 @@ export default function ProfileScreen() {
               )}
               <View style={styles.headerOverlay} />
               <View style={styles.headerInfo}>
-                <Text style={styles.hostelName}>{data.hostelName}</Text>
+                <Text style={styles.propertyName}>{data.propertyName}</Text>
                 <View style={styles.badgeRow}>
                   <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{data.type} Hostel</Text>
+                    <Text style={styles.badgeText}>{data.type} Property</Text>
                   </View>
                   <View style={styles.locationBadge}>
                     <MapPin size={12} color={Colors.white} />
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.m,
     fontFamily: Typography.font.semibold,
   },
-  hostelName: {
+  propertyName: {
     fontSize: Typography.size["2xl"],
     fontFamily: Typography.font.bold,
     color: Colors.white,

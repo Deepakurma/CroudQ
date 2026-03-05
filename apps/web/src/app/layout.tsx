@@ -74,7 +74,7 @@ export const metadata: Metadata = {
     icon: '/favicon.ico'
   },
   description: '--',
-  keywords: ['hostels', 'hostels near me'],
+  keywords: ['properties', 'properties near me'],
   authors: [{ name: 'Bunkezy' }],
   creator: 'Bunkezy',
   publisher: 'Bunkezy',

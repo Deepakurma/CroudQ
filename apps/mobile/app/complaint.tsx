@@ -1,10 +1,10 @@
 import { ScreenWrapper } from "@/components/ScreenWrapper";
 import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
-import { ComplaintComposer } from "@/components/tenant/ComplaintComposer";
+import { ComplaintComposer } from "@/components/resident/ComplaintComposer";
 import {
   ComplaintList,
-  TenantComplaintItem,
-} from "@/components/tenant/ComplaintList";
+  ResidentComplaintItem,
+} from "@/components/resident/ComplaintList";
 import React, { useRef, useState } from "react";
 import { Animated, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -13,7 +13,7 @@ import { trpc } from "@/utils/api";
 import { format } from "date-fns";
 import Toast from "react-native-toast-message";
 
-export default function TenantComplaintScreen() {
+export default function ResidentComplaintScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
   const headerHeight = insets.top + 65;
@@ -67,7 +67,7 @@ export default function TenantComplaintScreen() {
     });
   };
 
-  const mappedComplaints: TenantComplaintItem[] =
+  const mappedComplaints: ResidentComplaintItem[] =
     complaintsData?.map((c) => ({
       id: c.id,
       date: format(new Date(c.createdAt), "dd/MM/yyyy"),

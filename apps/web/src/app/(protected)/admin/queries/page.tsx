@@ -22,7 +22,7 @@ import type { ColumnDef } from '@tanstack/react-table';
 
 export interface Query {
   id: string;
-  vendorName: string;
+  landlordName: string;
   inchargeName: string;
   phoneNumber: string;
   dateJoined: Date;
@@ -38,7 +38,7 @@ export interface Query {
 
 type QueryApiItem = {
   id: string;
-  vendorName?: string | null;
+  landlordName?: string | null;
   inchargeName?: string | null;
   phoneNumber?: string | null;
   createdAt: string | Date;
@@ -61,7 +61,7 @@ const columns: ColumnDef<Query>[] = [
     accessorKey: 'details',
     header: 'Details',
     cell: ({ row }) => {
-      const name = row.original.vendorName;
+      const name = row.original.landlordName;
       const incharge = row.original.inchargeName;
       const phoneno = row.original.phoneNumber;
       const email = row.original.email;
@@ -88,18 +88,18 @@ const columns: ColumnDef<Query>[] = [
     accessorKey: 'address',
     header: 'Address',
     cell: ({ row }) => {
-      const vendor = row.original;
+      const landlord = row.original;
       return (
         <div className="text-md flex min-w-[200px] flex-col gap-2 font-medium whitespace-normal">
-          <Link className="text-green-600 hover:underline" href={vendor.googleUrl}>
+          <Link className="text-green-600 hover:underline" href={landlord.googleUrl}>
             View on google maps ↗
           </Link>
-          <span className="text-foreground/80">{vendor.address},</span>
+          <span className="text-foreground/80">{landlord.address},</span>
           <div>
-            <span>{vendor.city},</span>
-            <span> {vendor.state},</span>
+            <span>{landlord.city},</span>
+            <span> {landlord.state},</span>
           </div>
-          <span>{vendor.pincode}</span>
+          <span>{landlord.pincode}</span>
         </div>
       );
     }
@@ -192,7 +192,7 @@ export default function page() {
 
         const mapped = (payload as QueryApiItem[]).map((item) => ({
           id: item.id,
-          vendorName: item.vendorName || 'N/A',
+          landlordName: item.landlordName || 'N/A',
           inchargeName: item.inchargeName || 'N/A',
           phoneNumber: item.phoneNumber || 'N/A',
           dateJoined: new Date(item.createdAt),

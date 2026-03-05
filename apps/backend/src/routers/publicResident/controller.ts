@@ -6,7 +6,7 @@ import { db } from "../../db";
 import { residentJoinRequests, residents, users } from "../../db/schema";
 import { authService } from "../../services/authService";
 import { protectedProcedure, publicProcedure, router } from "../../server/trpc";
-import { setTenantAuthCookies } from "../../utils/authCookies";
+import { setResidentAuthCookies } from "../../utils/authCookies";
 import { signJoinSubmitToken, verifyJoinSubmitToken } from "../../utils/jwt";
 import { normalizeIndianPhone } from "../../utils/phone";
 import {
@@ -257,11 +257,11 @@ export const publicResidentRouter = router({
     .mutation(async ({ input, ctx }) => {
       const result = await authService.verifyOTP(input.phoneNumber, input.otp, input.reqId);
       const roles = result.identity.roles;
-      if (roles.includes("VENDOR") || roles.includes("SUPER_ADMIN")) {
+      if (roles.includes("LANDLORD") || roles.includes("SUPER_ADMIN")) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message:
-            "This phone number is linked to a vendor account and cannot be used for tenant self-onboarding.",
+            "This phone number is linked to a landlord account and cannot be used for resident self-onboarding.",
         });
       }
 
@@ -278,7 +278,7 @@ export const publicResidentRouter = router({
         phoneNumber: normalizeIndianPhone(input.phoneNumber),
         inviteCode: input.inviteCode,
       });
-      setTenantAuthCookies(ctx.res, result.token);
+      setResidentAuthCookies(ctx.res, result.token);
 
       return {
         success: true,

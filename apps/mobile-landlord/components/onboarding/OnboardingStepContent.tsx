@@ -77,14 +77,14 @@ export function OnboardingStepContent({
     case 1:
       return (
         <View style={styles.formSection}>
-          <Text style={styles.sectionTitle}>Basic Hostel Information</Text>
+          <Text style={styles.sectionTitle}>Basic Property Information</Text>
 
           <AppTextInput
-            label="Hostel / Property Name *"
-            placeholder="e.g. Sunshine Boys Hostel"
-            value={formData.hostelName}
-            onChangeText={(t) => updateField("hostelName", t)}
-            error={errors.hostelName}
+            label="Property / Property Name *"
+            placeholder="e.g. Sunshine Boys Property"
+            value={formData.propertyName}
+            onChangeText={(t) => updateField("propertyName", t)}
+            error={errors.propertyName}
           />
 
           <AppTextInput
@@ -109,7 +109,7 @@ export function OnboardingStepContent({
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Hostel Type</Text>
+            <Text style={styles.label}>Property Type</Text>
             <View style={styles.typeSelector}>
               {["Boys", "Girls", "Co-living", "PG"].map((type) => (
                 <TouchableOpacity
@@ -201,7 +201,7 @@ export function OnboardingStepContent({
               error={errors.mapsLink}
             />
             <Text style={styles.helperText}>
-              Optional. Helps tenants find you easily.
+              Optional. Helps residents find you easily.
             </Text>
           </View>
 
@@ -526,7 +526,7 @@ export function OnboardingStepContent({
         <View style={styles.formSection}>
           <Text style={styles.sectionTitle}>Rules & Policies (Optional)</Text>
           <Text style={styles.helperText}>
-            Set clear expectations for your tenants.
+            Set clear expectations for your residents.
           </Text>
 
           <View style={styles.inputGroup}>
@@ -568,7 +568,7 @@ export function OnboardingStepContent({
         <View style={styles.formSection}>
           <Text style={styles.sectionTitle}>Photos & Media</Text>
           <Text style={styles.helperText}>
-            Upload good quality photos to attract more tenants.
+            Upload good quality photos to attract more residents.
           </Text>
 
           <TouchableOpacity style={styles.uploadBox} onPress={pickImage}>
@@ -577,7 +577,7 @@ export function OnboardingStepContent({
             ) : (
               <>
                 <Camera size={40} color={Colors.textSecondary} />
-                <Text style={styles.uploadText}>Hostel Front View (Required)</Text>
+                <Text style={styles.uploadText}>Property Front View (Required)</Text>
                 <Text style={styles.uploadSubText}>Tap to upload</Text>
               </>
             )}
@@ -613,8 +613,8 @@ export function OnboardingStepContent({
           <View style={styles.reviewSection}>
             <Text style={styles.reviewSectionHeader}>Basic Details</Text>
             <View style={styles.reviewRow}>
-              <Text style={styles.reviewLabel}>Hostel Name</Text>
-              <Text style={styles.reviewValue}>{formData.hostelName || "N/A"}</Text>
+              <Text style={styles.reviewLabel}>Property Name</Text>
+              <Text style={styles.reviewValue}>{formData.propertyName || "N/A"}</Text>
             </View>
             <View style={styles.reviewRow}>
               <Text style={styles.reviewLabel}>Type</Text>

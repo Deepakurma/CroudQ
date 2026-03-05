@@ -70,10 +70,10 @@ export default function AdminSidebar() {
     },
     {
       icon: Building2,
-      label: 'Vendors',
-      active: pathname.startsWith('/admin/vendors'),
+      label: 'Landlords',
+      active: pathname.startsWith('/admin/landlords'),
       onClick: () => {
-        router.push('/admin/vendors');
+        router.push('/admin/landlords');
       }
     },
     {
@@ -94,7 +94,7 @@ export default function AdminSidebar() {
     },
     {
       icon: HelpCircle,
-      label: 'Vendor Queries',
+      label: 'Landlord Queries',
       active: pathname.startsWith('/admin/queries'),
       onClick: () => {
         router.push('/admin/queries');

@@ -7,8 +7,8 @@ import { users } from "../db/schema";
 import { verifyJwt } from "../utils/jwt";
 
 const AUTH_COOKIE_NAMES = [
-    "bunkezy_vendor_token",
-    "bunkezy_tenant_token",
+    "bunkezy_landlord_token",
+    "bunkezy_resident_token",
 ];
 
 type CookieBag = Record<string, string | undefined>;
@@ -46,11 +46,11 @@ const resolveCookieIntentFromReferer = (referer?: string) => {
 
     try {
         const pathname = new URL(referer).pathname;
-        if (pathname.startsWith("/vendor") || pathname.startsWith("/admin")) {
-            return "vendor";
+        if (pathname.startsWith("/landlord") || pathname.startsWith("/admin")) {
+            return "landlord";
         }
-        if (pathname.startsWith("/tenant")) {
-            return "tenant";
+        if (pathname.startsWith("/resident")) {
+            return "resident";
         }
     } catch {
         return null;
@@ -75,34 +75,34 @@ export async function createContext({ req, res }: CreateFastifyContextOptions) {
     const parsedCookies = (req as { cookies?: CookieBag }).cookies;
     const roleHint = parsedCookies?.bunkezy_role_hint?.trim();
 
-    const vendorTokenFromParsed = parsedCookies?.bunkezy_vendor_token?.trim() || null;
-    const tenantTokenFromParsed = parsedCookies?.bunkezy_tenant_token?.trim() || null;
-    const vendorTokenFromHeader = getNamedCookieFromHeader(req.headers.cookie, "bunkezy_vendor_token");
-    const tenantTokenFromHeader = getNamedCookieFromHeader(req.headers.cookie, "bunkezy_tenant_token");
+    const landlordTokenFromParsed = parsedCookies?.bunkezy_landlord_token?.trim() || null;
+    const residentTokenFromParsed = parsedCookies?.bunkezy_resident_token?.trim() || null;
+    const landlordTokenFromHeader = getNamedCookieFromHeader(req.headers.cookie, "bunkezy_landlord_token");
+    const residentTokenFromHeader = getNamedCookieFromHeader(req.headers.cookie, "bunkezy_resident_token");
 
-    const vendorToken = vendorTokenFromParsed || vendorTokenFromHeader;
-    const tenantToken = tenantTokenFromParsed || tenantTokenFromHeader;
+    const landlordToken = landlordTokenFromParsed || landlordTokenFromHeader;
+    const residentToken = residentTokenFromParsed || residentTokenFromHeader;
 
     let cookieToken: string | null = null;
-    if (vendorToken && tenantToken) {
-        if (vendorToken === tenantToken) {
-            cookieToken = vendorToken;
+    if (landlordToken && residentToken) {
+        if (landlordToken === residentToken) {
+            cookieToken = landlordToken;
         } else {
             const intent = resolveCookieIntentFromReferer(req.headers.referer);
-            if (intent === "vendor") {
-                cookieToken = vendorToken;
-            } else if (intent === "tenant") {
-                cookieToken = tenantToken;
+            if (intent === "landlord") {
+                cookieToken = landlordToken;
+            } else if (intent === "resident") {
+                cookieToken = residentToken;
             } else if (roleHint === "RESIDENT") {
-                cookieToken = tenantToken;
-            } else if (roleHint === "VENDOR" || roleHint === "SUPER_ADMIN") {
-                cookieToken = vendorToken;
+                cookieToken = residentToken;
+            } else if (roleHint === "LANDLORD" || roleHint === "SUPER_ADMIN") {
+                cookieToken = landlordToken;
             } else {
-                cookieToken = getFirstValidToken([vendorToken, tenantToken]);
+                cookieToken = getFirstValidToken([landlordToken, residentToken]);
             }
         }
-    } else if (vendorToken || tenantToken) {
-        cookieToken = vendorToken || tenantToken;
+    } else if (landlordToken || residentToken) {
+        cookieToken = landlordToken || residentToken;
     } else {
         cookieToken = getTokenFromCookieHeader(req.headers.cookie);
     }

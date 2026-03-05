@@ -160,8 +160,8 @@ function AuthBootstrapGate({ children }: { children: ReactNode }) {
   const isPublicRoute =
     firstSegment === "login" || firstSegment === "verify-otp";
   const needsOnboarding = Boolean(user?.needsOnboarding);
-  const hasVendorRole = Boolean(user?.roles?.includes("VENDOR"));
-  const hasLandlordAccess = needsOnboarding || hasVendorRole;
+  const hasLandlordRole = Boolean(user?.roles?.includes("LANDLORD"));
+  const hasLandlordAccess = needsOnboarding || hasLandlordRole;
 
   if (isLoading) {
     return null;
@@ -184,7 +184,7 @@ function AuthBootstrapGate({ children }: { children: ReactNode }) {
     if (needsOnboarding) {
       return <Redirect href="/onboarding" />;
     }
-    if (hasVendorRole) {
+    if (hasLandlordRole) {
       return <Redirect href="/home" />;
     }
     return <Redirect href="/login" />;

@@ -1,5 +1,5 @@
 {
-  "id": "5fd1f84a-4d59-475b-88c2-a3132eda1c7e",
+  "id": "c489c855-94ec-49af-85ad-cc46238592b5",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -2307,8 +2307,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "vendorName": {
-          "name": "vendorName",
+        "landlordName": {
+          "name": "landlordName",
           "type": "text",
           "primaryKey": false,
           "notNull": false

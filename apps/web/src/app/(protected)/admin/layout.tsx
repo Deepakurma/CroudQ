@@ -2,7 +2,7 @@ import React from 'react';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 
-import { VENDOR_AUTH_COOKIE_NAME } from '~/lib/auth-cookies';
+import { LANDLORD_AUTH_COOKIE_NAME } from '~/lib/auth-cookies';
 import { createServerTrpcClient } from '~/lib/server-trpc-client';
 import { SidebarProvider } from '~/shared/shadcn/sidebar';
 
@@ -16,7 +16,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const cookieStore = await cookies();
-  const token = cookieStore.get(VENDOR_AUTH_COOKIE_NAME)?.value;
+  const token = cookieStore.get(LANDLORD_AUTH_COOKIE_NAME)?.value;
   if (!token) {
     redirect('/auth?redirect=/admin/dashboard');
   }

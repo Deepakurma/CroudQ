@@ -30,7 +30,7 @@ interface StatProp {
 }
 
 function getGrowthMetrics(previous: number, current: number) {
-  // These cards represent growth snapshots; show "Decreased" only on true vendor base drop.
+  // These cards represent growth snapshots; show "Decreased" only on true landlord base drop.
   // When there is no increase versus previous period, keep it as 0% increase.
   if (current <= previous) {
     return { isDecrease: false, percentage: '0.0%' };
@@ -108,7 +108,7 @@ export function AnalyticsCard({ stat, data, colors }: AnalyticsCardProps) {
                           x={viewBox.cx}
                           y={(viewBox.cy || 0) + 4}
                           className="fill-muted-foreground text-sm">
-                          Vendors
+                          Landlords
                         </tspan>
                       </text>
                     );

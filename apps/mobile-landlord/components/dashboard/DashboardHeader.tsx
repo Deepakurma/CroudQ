@@ -16,7 +16,7 @@ import React, { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { EdgeInsets } from "react-native-safe-area-context";
 
-// Removed HOSTEL_OPTIONS
+// Removed PROPERTY_OPTIONS
 
 interface DashboardHeaderProps {
   insets: EdgeInsets;
@@ -35,7 +35,7 @@ export function DashboardHeader({
   utils,
   setSelectedPropertyId,
 }: DashboardHeaderProps) {
-  // const [selectedHostel, setSelectedHostel] = useState(HOSTEL_OPTIONS[0]); // Managed by parent
+  // const [selectedProperty, setSelectedProperty] = useState(PROPERTY_OPTIONS[0]); // Managed by parent
   const [isDropdownVisible, setIsDropdownVisible] = useState(false);
   const [isProfileDropdownVisible, setIsProfileDropdownVisible] =
     useState(false);
@@ -45,7 +45,7 @@ export function DashboardHeader({
 
   const selectedProperty =
     properties.find((p) => p.id === selectedPropertyId) || properties[0];
-  const selectedHostelName = selectedProperty?.name || "Add Property";
+  const selectedPropertyName = selectedProperty?.name || "Add Property";
 
   const toggleProfileDropdown = () => {
     setIsProfileDropdownVisible(!isProfileDropdownVisible);
@@ -95,7 +95,7 @@ export function DashboardHeader({
     }
   };
 
-  const selectHostel = (id: string) => {
+  const selectProperty = (id: string) => {
     onSelectProperty(id);
     setIsDropdownVisible(false);
   };
@@ -116,15 +116,15 @@ export function DashboardHeader({
         ]}
       >
         <View style={styles.headerContent}>
-          {/* Hostel Selector */}
+          {/* Property Selector */}
           <View style={{ zIndex: 100 }}>
             <TouchableOpacity activeOpacity={0.8} onPress={toggleDropdown}>
-              <View style={styles.hostelSelector}>
-                <View style={styles.hostelIconBox}>
+              <View style={styles.propertySelector}>
+                <View style={styles.propertyIconBox}>
                   <Building2 size={20} color={Colors.primary} />
                 </View>
-                <Text style={[styles.hostelName, { color: Colors.primary }]}>
-                  {selectedHostelName}
+                <Text style={[styles.propertyName, { color: Colors.primary }]}>
+                  {selectedPropertyName}
                 </Text>
                 <View
                   style={{
@@ -151,7 +151,7 @@ export function DashboardHeader({
                     <TouchableOpacity
                       key={option.id}
                       style={styles.dropdownOption}
-                      onPress={() => selectHostel(option.id)}
+                      onPress={() => selectProperty(option.id)}
                     >
                       <Text
                         style={[
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     height: 44,
   },
-  hostelSelector: {
+  propertySelector: {
     flexDirection: "row",
     alignItems: "center",
     padding: Spacing.xs,
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     shadowRadius: 25,
     elevation: 1,
   },
-  hostelIconBox: {
+  propertyIconBox: {
     width: 28,
     height: 28,
     borderRadius: 14,
@@ -333,7 +333,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: Colors.accent,
   },
-  hostelName: {
+  propertyName: {
     fontFamily: Typography.font.semibold,
     fontSize: Typography.size.m,
   },

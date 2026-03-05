@@ -1,10 +1,10 @@
 import type { FastifyReply } from "fastify";
 
-export const VENDOR_AUTH_COOKIE_NAME = "bunkezy_vendor_token";
-export const TENANT_AUTH_COOKIE_NAME = "bunkezy_tenant_token";
+export const LANDLORD_AUTH_COOKIE_NAME = "bunkezy_landlord_token";
+export const RESIDENT_AUTH_COOKIE_NAME = "bunkezy_resident_token";
 export const ROLE_HINT_COOKIE_NAME = "bunkezy_role_hint";
 
-type RoleHint = "SUPER_ADMIN" | "VENDOR" | "RESIDENT";
+type RoleHint = "SUPER_ADMIN" | "LANDLORD" | "RESIDENT";
 type CookieReply = FastifyReply & {
     setCookie: (name: string, value: string, options: Record<string, unknown>) => void;
     clearCookie: (name: string, options: Record<string, unknown>) => void;
@@ -44,19 +44,19 @@ const clearAuthCookie = (reply: FastifyReply, name: string) => {
     });
 };
 
-export const setVendorAuthCookies = (
+export const setLandlordAuthCookies = (
     reply: FastifyReply,
     token: string,
-    role: "SUPER_ADMIN" | "VENDOR",
+    role: "SUPER_ADMIN" | "LANDLORD",
 ) => {
-    setAuthCookie(reply, VENDOR_AUTH_COOKIE_NAME, token);
-    clearAuthCookie(reply, TENANT_AUTH_COOKIE_NAME);
+    setAuthCookie(reply, LANDLORD_AUTH_COOKIE_NAME, token);
+    clearAuthCookie(reply, RESIDENT_AUTH_COOKIE_NAME);
     setAuthCookie(reply, ROLE_HINT_COOKIE_NAME, role);
 };
 
-export const setTenantAuthCookies = (reply: FastifyReply, token: string) => {
-    setAuthCookie(reply, TENANT_AUTH_COOKIE_NAME, token);
-    clearAuthCookie(reply, VENDOR_AUTH_COOKIE_NAME);
+export const setResidentAuthCookies = (reply: FastifyReply, token: string) => {
+    setAuthCookie(reply, RESIDENT_AUTH_COOKIE_NAME, token);
+    clearAuthCookie(reply, LANDLORD_AUTH_COOKIE_NAME);
     setAuthCookie(reply, ROLE_HINT_COOKIE_NAME, "RESIDENT");
 };
 
@@ -65,7 +65,7 @@ export const setRoleHintCookie = (reply: FastifyReply, role: RoleHint) => {
 };
 
 export const clearAllAuthCookies = (reply: FastifyReply) => {
-    clearAuthCookie(reply, VENDOR_AUTH_COOKIE_NAME);
-    clearAuthCookie(reply, TENANT_AUTH_COOKIE_NAME);
+    clearAuthCookie(reply, LANDLORD_AUTH_COOKIE_NAME);
+    clearAuthCookie(reply, RESIDENT_AUTH_COOKIE_NAME);
     clearAuthCookie(reply, ROLE_HINT_COOKIE_NAME);
 };

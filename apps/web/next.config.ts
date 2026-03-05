@@ -1,16 +1,12 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-  // Temporary permissive image config for development.
   images: {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**'
-      },
-      {
-        protocol: 'http',
-        hostname: '**'
+        hostname: 'bunkezy-storage.s3.ap-south-1.amazonaws.com',
+        pathname: '/**'
       }
     ]
   }

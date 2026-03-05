@@ -1,3 +1,5 @@
+import Image from 'next/image';
+
 import {
   AirVent,
   Brush as BrushCleaning,
@@ -40,6 +42,9 @@ type OnboardingStepContentProps = {
   updateRoomsPerFloor: (index: number, value: string) => void;
   toggleRoomType: (type: string) => void;
   updateRent: (type: string, value: string) => void;
+  handlePhotoSelection: (files: FileList | null) => void;
+  removePhoto: (index: number) => void;
+  isUploadingPhotos: boolean;
 };
 
 export function OnboardingStepContent({
@@ -56,23 +61,26 @@ export function OnboardingStepContent({
   removeListItem,
   updateRoomsPerFloor,
   toggleRoomType,
-  updateRent
+  updateRent,
+  handlePhotoSelection,
+  removePhoto,
+  isUploadingPhotos
 }: OnboardingStepContentProps) {
   switch (currentStep) {
     case 1:
       return (
         <div className="flex flex-col gap-6">
-          <h2 className="text-xl font-bold">Basic Hostel Information</h2>
+          <h2 className="text-xl font-bold">Basic Property Information</h2>
 
           <div className="space-y-2">
-            <Label>Hostel / Property Name *</Label>
+            <Label>Property / Property Name *</Label>
             <Input
-              placeholder="e.g. Sunshine Boys Hostel"
-              value={formData.hostelName}
-              onChange={(e) => updateField('hostelName', e.target.value)}
-              className={errors.hostelName ? 'border-red-500' : ''}
+              placeholder="e.g. Sunshine Boys Property"
+              value={formData.propertyName}
+              onChange={(e) => updateField('propertyName', e.target.value)}
+              className={errors.propertyName ? 'border-red-500' : ''}
             />
-            {errors.hostelName && <p className="text-sm text-red-500">{errors.hostelName}</p>}
+            {errors.propertyName && <p className="text-sm text-red-500">{errors.propertyName}</p>}
           </div>
 
           <div className="space-y-2">
@@ -99,7 +107,7 @@ export function OnboardingStepContent({
           </div>
 
           <div className="space-y-2">
-            <Label>Hostel Type</Label>
+            <Label>Property Type</Label>
             <div className="flex flex-wrap gap-2 text-sm">
               {['Boys', 'Girls', 'Co-living', 'PG'].map((type) => (
                 <Button
@@ -186,7 +194,7 @@ export function OnboardingStepContent({
               onChange={(e) => updateField('mapsLink', e.target.value)}
             />
             <p className="text-muted-foreground text-xs">
-              Optional. Helps tenants find you easily.
+              Optional. Helps residents find you easily.
             </p>
           </div>
 
@@ -458,7 +466,7 @@ export function OnboardingStepContent({
           <div>
             <h2 className="text-xl font-bold">Rules & Policies (Optional)</h2>
             <p className="text-muted-foreground text-sm">
-              Set clear expectations for your tenants.
+              Set clear expectations for your residents.
             </p>
           </div>
 
@@ -515,24 +523,48 @@ export function OnboardingStepContent({
           <div>
             <h2 className="text-xl font-bold">Photos & Media</h2>
             <p className="text-muted-foreground text-sm">
-              Upload good quality photos to attract more tenants.
+              Upload good quality photos to attract more residents.
             </p>
           </div>
 
-          <div className="border-border bg-muted/30 flex h-48 flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed">
-            <Camera className="text-muted-foreground size-10" />
-            <span className="font-medium">Hostel Front View (Required)</span>
-            <span className="text-muted-foreground text-sm">
-              Photo upload via API removed for web flow
-            </span>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Room Photos</Label>
-            <div className="flex flex-wrap gap-4">
-              <div className="border-border bg-muted flex size-20 items-center justify-center rounded-lg border">
-                <Plus className="text-muted-foreground size-6" />
-              </div>
+          <div className="space-y-3">
+            <Label htmlFor="property-photos">Property Photos</Label>
+            <Input
+              id="property-photos"
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(event) => handlePhotoSelection(event.target.files)}
+              disabled={isUploadingPhotos}
+            />
+            <p className="text-muted-foreground text-xs">
+              {isUploadingPhotos
+                ? 'Uploading photos...'
+                : 'Upload JPG/PNG/WebP images. They are stored directly in S3.'}
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {formData.photos.map((photo, index) => (
+                <div key={`${photo}-${index}`} className="relative">
+                  <Image
+                    src={photo}
+                    alt={`Property photo ${index + 1}`}
+                    className="h-20 w-20 rounded-lg border object-cover"
+                  />
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="icon"
+                    className="absolute -top-2 -right-2 h-6 w-6"
+                    onClick={() => removePhoto(index)}>
+                    <Trash2 className="size-3" />
+                  </Button>
+                </div>
+              ))}
+              {formData.photos.length === 0 && (
+                <div className="border-border bg-muted flex size-20 items-center justify-center rounded-lg border">
+                  <Plus className="text-muted-foreground size-6" />
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -553,8 +585,8 @@ export function OnboardingStepContent({
             </h3>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between border-b pb-2">
-                <span className="text-muted-foreground">Hostel Name</span>
-                <span className="font-medium">{formData.hostelName || 'N/A'}</span>
+                <span className="text-muted-foreground">Property Name</span>
+                <span className="font-medium">{formData.propertyName || 'N/A'}</span>
               </div>
               <div className="flex justify-between border-b pb-2">
                 <span className="text-muted-foreground">Type</span>

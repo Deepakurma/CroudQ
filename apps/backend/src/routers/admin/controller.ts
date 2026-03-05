@@ -8,10 +8,10 @@ import {
     idSchema,
     listFeedbacksSchema,
     listQueriesSchema,
-    listVendorsSchema,
-    setVendorFreezeSchema,
+    listLandlordsSchema,
+    setLandlordFreezeSchema,
     submitFeedbackSchema,
-    submitVendorQuerySchema,
+    submitLandlordQuerySchema,
 } from "./dto";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -34,7 +34,7 @@ const getLastTwelveMonths = (baseDate: Date): Array<{ key: string; label: string
     return result;
 };
 
-const getVendorsForAdmin = async (limit: number = 100, offset: number = 0, q?: string) => {
+const getLandlordsForAdmin = async (limit: number = 100, offset: number = 0, q?: string) => {
     let filteredPropertyIds: string[] | null = null;
     if (q) {
         const matchedPropertyRows = await db
@@ -118,7 +118,7 @@ const getVendorsForAdmin = async (limit: number = 100, offset: number = 0, q?: s
         return {
             id: property.id,
             userId: property.userId,
-            vendorName: property.name,
+            landlordName: property.name,
             inchargeName: property.inchargeName || "N/A",
             phoneNumber: property.inchargePhone || "N/A",
             city: property.city || "N/A",
@@ -152,8 +152,8 @@ const getVendorsForAdmin = async (limit: number = 100, offset: number = 0, q?: s
     });
 };
 
-const getVendorAccountStats = async () => {
-    const [allUsers, activeResidentUsers, superAdminUsers, vendorPropertyUsers] = await Promise.all([
+const getLandlordAccountStats = async () => {
+    const [allUsers, activeResidentUsers, superAdminUsers, landlordPropertyUsers] = await Promise.all([
         db.select({ id: users.id }).from(users),
         db
             .select({ userId: residents.userId })
@@ -171,16 +171,16 @@ const getVendorAccountStats = async () => {
         blockedUserIds.add(row.userId);
     }
 
-    const vendorAccountUserIds = allUsers
+    const landlordAccountUserIds = allUsers
         .map((row) => row.id)
         .filter((userId) => !blockedUserIds.has(userId));
-    const vendorPropertyUserIds = vendorPropertyUsers
+    const landlordPropertyUserIds = landlordPropertyUsers
         .map((row) => row.userId)
         .filter((userId) => !blockedUserIds.has(userId));
 
     return {
-        totalVendorAccounts: vendorAccountUserIds.length,
-        convertedVendorAccounts: new Set(vendorPropertyUserIds).size,
+        totalLandlordAccounts: landlordAccountUserIds.length,
+        convertedLandlordAccounts: new Set(landlordPropertyUserIds).size,
     };
 };
 
@@ -190,7 +190,7 @@ export const adminRouter = router({
             where: input?.q
                 ? sql`(
                     setweight(to_tsvector('english', coalesce(${supportQueries.query}, '')), 'A') ||
-                    setweight(to_tsvector('english', coalesce(${supportQueries.vendorName}, '')), 'B') ||
+                    setweight(to_tsvector('english', coalesce(${supportQueries.landlordName}, '')), 'B') ||
                     setweight(to_tsvector('english', coalesce(${supportQueries.inchargeName}, '')), 'C') ||
                     setweight(to_tsvector('english', coalesce(${supportQueries.city}, '')), 'D') ||
                     setweight(to_tsvector('english', coalesce(${supportQueries.address}, '')), 'D')
@@ -243,8 +243,8 @@ export const adminRouter = router({
             return { success: true };
         }),
 
-    setVendorFreeze: superAdminProcedure
-        .input(setVendorFreezeSchema)
+    setLandlordFreeze: superAdminProcedure
+        .input(setLandlordFreezeSchema)
         .mutation(async ({ input }) => {
             const updated = await db
                 .update(properties)
@@ -259,35 +259,35 @@ export const adminRouter = router({
                 .returning({ id: properties.id, isFrozen: properties.isFrozen });
 
             if (updated.length === 0) {
-                throw new TRPCError({ code: "NOT_FOUND", message: "Vendor not found." });
+                throw new TRPCError({ code: "NOT_FOUND", message: "Landlord not found." });
             }
 
             return { success: true, isFrozen: updated[0].isFrozen };
         }),
 
-    listVendors: superAdminProcedure
-        .input(listVendorsSchema)
+    listLandlords: superAdminProcedure
+        .input(listLandlordsSchema)
         .query(async ({ input }) => {
         const limit = input?.limit ?? 100;
         const offset = input?.offset ?? 0;
-        const [vendors, stats] = await Promise.all([
-            getVendorsForAdmin(limit, offset, input?.q?.trim()),
-            getVendorAccountStats(),
+        const [landlords, stats] = await Promise.all([
+            getLandlordsForAdmin(limit, offset, input?.q?.trim()),
+            getLandlordAccountStats(),
         ]);
         return {
-            vendors,
+            landlords,
             stats,
         };
     }),
 
     getDashboardSummary: superAdminProcedure.query(async () => {
-        const vendors = await getVendorsForAdmin(200, 0);
+        const landlords = await getLandlordsForAdmin(200, 0);
 
         const now = new Date();
-        const vendorCreatedDates = vendors.map((vendor) => vendor.createdAt);
+        const landlordCreatedDates = landlords.map((landlord) => landlord.createdAt);
 
-        const totalCapacity = vendors.reduce((sum, vendor) => sum + vendor.totalCapacity, 0);
-        const pendingRenewals = vendors.filter((vendor) => vendor.status === "Pending Renewal").length;
+        const totalCapacity = landlords.reduce((sum, landlord) => sum + landlord.totalCapacity, 0);
+        const pendingRenewals = landlords.filter((landlord) => landlord.status === "Pending Renewal").length;
         let totalQueries = 0;
         try {
             const [queriesRow] = await db
@@ -313,13 +313,13 @@ export const adminRouter = router({
             openIssues = 0;
         }
 
-        const cityMap = new Map<string, { vendors: number; totalCapacity: number; activeResidents: number }>();
-        for (const vendor of vendors) {
-            const city = vendor.city || "Unknown";
-            const current = cityMap.get(city) || { vendors: 0, totalCapacity: 0, activeResidents: 0 };
-            current.vendors += 1;
-            current.totalCapacity += vendor.totalCapacity;
-            current.activeResidents += vendor.activeResidents;
+        const cityMap = new Map<string, { landlords: number; totalCapacity: number; activeResidents: number }>();
+        for (const landlord of landlords) {
+            const city = landlord.city || "Unknown";
+            const current = cityMap.get(city) || { landlords: 0, totalCapacity: 0, activeResidents: 0 };
+            current.landlords += 1;
+            current.totalCapacity += landlord.totalCapacity;
+            current.activeResidents += landlord.activeResidents;
             cityMap.set(city, current);
         }
 
@@ -330,13 +330,13 @@ export const adminRouter = router({
                     : "0%";
                 return {
                     name,
-                    vendors: value.vendors,
+                    landlords: value.landlords,
                     capacity: value.totalCapacity,
                     occupancy,
                     revenue: "N/A",
                 };
             })
-            .sort((a, b) => b.vendors - a.vendors)
+            .sort((a, b) => b.landlords - a.landlords)
             .slice(0, 10);
 
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -346,32 +346,32 @@ export const adminRouter = router({
         const monthStart = new Date(now.getTime() - 30 * DAY_MS);
         const prevMonthStart = new Date(now.getTime() - 60 * DAY_MS);
 
-        const vendorAnalytics = {
+        const landlordAnalytics = {
             today: {
-                previous: countInRange(vendorCreatedDates, yesterdayStart, todayStart),
-                current: countInRange(vendorCreatedDates, todayStart, now),
+                previous: countInRange(landlordCreatedDates, yesterdayStart, todayStart),
+                current: countInRange(landlordCreatedDates, todayStart, now),
             },
             week: {
-                previous: countInRange(vendorCreatedDates, prevWeekStart, weekStart),
-                current: countInRange(vendorCreatedDates, weekStart, now),
+                previous: countInRange(landlordCreatedDates, prevWeekStart, weekStart),
+                current: countInRange(landlordCreatedDates, weekStart, now),
             },
             month: {
-                previous: countInRange(vendorCreatedDates, prevMonthStart, monthStart),
-                current: countInRange(vendorCreatedDates, monthStart, now),
+                previous: countInRange(landlordCreatedDates, prevMonthStart, monthStart),
+                current: countInRange(landlordCreatedDates, monthStart, now),
             },
         };
 
         return {
             summary: {
-                totalVendors: vendors.length,
+                totalLandlords: landlords.length,
                 pendingRenewals,
                 totalQueries,
                 openIssues,
                 totalCapacity,
             },
-            vendorAnalytics,
+            landlordAnalytics,
             cityDistribution,
-            vendors,
+            landlords,
         };
     }),
 
@@ -380,7 +380,7 @@ export const adminRouter = router({
         const months = getLastTwelveMonths(now);
         const windowStart = new Date(months[0].year, months[0].month - 1, 1);
 
-        const vendorRows = await db
+        const landlordRows = await db
             .select({
                 createdAt: properties.createdAt,
             })
@@ -394,12 +394,12 @@ export const adminRouter = router({
             .from(users)
             .where(gte(users.createdAt, windowStart));
 
-        const vendorCountByMonth = new Map<string, number>();
-        for (const row of vendorRows) {
+        const landlordCountByMonth = new Map<string, number>();
+        for (const row of landlordRows) {
             const month = row.createdAt.getMonth() + 1;
             const year = row.createdAt.getFullYear();
             const key = `${year}-${month}`;
-            vendorCountByMonth.set(key, (vendorCountByMonth.get(key) || 0) + 1);
+            landlordCountByMonth.set(key, (landlordCountByMonth.get(key) || 0) + 1);
         }
 
         const userCountByMonth = new Map<string, number>();
@@ -410,9 +410,9 @@ export const adminRouter = router({
             userCountByMonth.set(key, (userCountByMonth.get(key) || 0) + 1);
         }
 
-        const vendorSeries = months.map((item) => ({
+        const landlordSeries = months.map((item) => ({
             month: item.label,
-            stat: vendorCountByMonth.get(item.key) || 0,
+            stat: landlordCountByMonth.get(item.key) || 0,
         }));
 
         const userSeries = months.map((item) => ({
@@ -421,23 +421,23 @@ export const adminRouter = router({
         }));
 
         return {
-            vendors: vendorSeries,
+            landlords: landlordSeries,
             users: userSeries,
             description: `${months[0].label} ${months[0].year} - ${months[months.length - 1].label} ${months[months.length - 1].year}`,
         };
     }),
 
-    submitVendorQuery: protectedProcedure
-        .input(submitVendorQuerySchema)
+    submitLandlordQuery: protectedProcedure
+        .input(submitLandlordQuerySchema)
         .mutation(async ({ input, ctx }) => {
-            const vendorProperty = await db.query.properties.findFirst({
+            const landlordProperty = await db.query.properties.findFirst({
                 where: eq(properties.userId, ctx.user.id),
             });
 
-            if (!vendorProperty) {
+            if (!landlordProperty) {
                 throw new TRPCError({
                     code: "FORBIDDEN",
-                    message: "Only vendor accounts can submit queries from this endpoint.",
+                    message: "Only landlord accounts can submit queries from this endpoint.",
                 });
             }
 
@@ -446,15 +446,15 @@ export const adminRouter = router({
                 .values({
                     id: crypto.randomUUID(),
                     userId: ctx.user.id,
-                    propertyId: vendorProperty.id,
-                    vendorName: vendorProperty.name,
-                    inchargeName: vendorProperty.inchargeName,
-                    phoneNumber: vendorProperty.inchargePhone,
-                    city: vendorProperty.city,
-                    state: vendorProperty.state,
-                    pincode: vendorProperty.pincode,
-                    address: vendorProperty.addressLine1,
-                    googleUrl: vendorProperty.mapsLink,
+                    propertyId: landlordProperty.id,
+                    landlordName: landlordProperty.name,
+                    inchargeName: landlordProperty.inchargeName,
+                    phoneNumber: landlordProperty.inchargePhone,
+                    city: landlordProperty.city,
+                    state: landlordProperty.state,
+                    pincode: landlordProperty.pincode,
+                    address: landlordProperty.addressLine1,
+                    googleUrl: landlordProperty.mapsLink,
                     query: input.query,
                     updatedAt: new Date(),
                 })
@@ -463,7 +463,7 @@ export const adminRouter = router({
             return created;
         }),
 
-    listMyVendorQueries: protectedProcedure.query(async ({ ctx }) => {
+    listMyLandlordQueries: protectedProcedure.query(async ({ ctx }) => {
         return db.query.supportQueries.findMany({
             where: eq(supportQueries.userId, ctx.user.id),
             orderBy: desc(supportQueries.createdAt),
@@ -471,7 +471,7 @@ export const adminRouter = router({
         });
     }),
 
-    deleteMyVendorQuery: protectedProcedure
+    deleteMyLandlordQuery: protectedProcedure
         .input(idSchema)
         .mutation(async ({ input, ctx }) => {
             const deleted = await db

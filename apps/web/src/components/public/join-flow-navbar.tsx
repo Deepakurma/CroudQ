@@ -19,7 +19,7 @@ export default function JoinFlowNavbar() {
     } catch {
       toast.error('Failed to logout');
     } finally {
-      router.replace('/tenant/auth');
+      router.replace('/resident/auth');
       router.refresh();
     }
   };
