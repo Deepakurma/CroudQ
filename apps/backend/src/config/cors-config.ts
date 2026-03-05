@@ -1,6 +1,10 @@
 import { type FastifyCorsOptions } from "@fastify/cors";
 
-const ALLOWED_ORIGINS = ["http://localhost:3000", "https://bunkezy.com"];
+const ALLOWED_ORIGINS = [
+  "http://localhost:3000",
+  "https://www.bunkezy.com",
+  "https://bunkezy.com",
+];
 
 export const isAllowedOrigin = (origin: string) => {
   return ALLOWED_ORIGINS.includes(origin);
