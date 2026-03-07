@@ -151,7 +151,13 @@ function LandingPageContent() {
               <PropertyCard key={property.id} property={property} />
             ))}
           </section>
-          {supportsIntersectionObserver ? <div ref={sentinelRef} className="h-8 w-full" /> : null}
+          {/* {supportsIntersectionObserver ? <div ref={sentinelRef} className="h-8 w-full" /> : null} */}
+          {supportsIntersectionObserver ? (
+            <div
+              ref={sentinelRef}
+              className="pointer-events-none absolute bottom-0 left-0 h-px w-px"
+            />
+          ) : null}
           {isFetchingNextPage ? (
             <div className="text-muted-foreground flex items-center justify-center gap-2 py-2 text-xs sm:text-sm">
               <Loader2 className="size-4 animate-spin sm:size-5" />
