@@ -47,7 +47,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:reset": "bun --env-file=.env scripts/reset-db.ts"
+    "db:reset": "bun --env-file=.env scripts/reset-db.ts",
+    "db:check-tables": "bun --env-file=.env scripts/checkTables.ts"
   },
   "lint-staged": {
     "*.{js,ts}": [
