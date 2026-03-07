@@ -540,7 +540,7 @@ export function OnboardingStepContent({
             <p className="text-muted-foreground text-xs">
               {isUploadingPhotos
                 ? 'Uploading photos...'
-                : 'Upload JPG/PNG/WebP images. They are stored directly in S3.'}
+                : 'Upload JPG/PNG/WebP images. They will be uploaded after you click submit.'}
             </p>
             <div className="flex flex-wrap gap-3">
               {formData.photos.map((photo, index) => (
@@ -549,6 +549,7 @@ export function OnboardingStepContent({
                     src={photo}
                     alt={`Property photo ${index + 1}`}
                     className="h-20 w-20 rounded-lg border object-cover"
+                    unoptimized={photo.startsWith('blob:')}
                   />
                   <Button
                     type="button"

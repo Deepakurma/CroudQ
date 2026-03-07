@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { ArrowLeft, Loader2 } from 'lucide-react';
@@ -89,6 +89,10 @@ function OnboardingScreenContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isBootstrapping, setIsBootstrapping] = useState(false);
   const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
+  const [pendingPhotoUploads, setPendingPhotoUploads] = useState<
+    Array<{ file: File; previewUrl: string }>
+  >([]);
+  const pendingPhotoUploadsRef = useRef<Array<{ file: File; previewUrl: string }>>([]);
 
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
 
@@ -104,12 +108,29 @@ function OnboardingScreenContent() {
   );
 
   const resetForm = () => {
+    for (const pendingPhoto of pendingPhotoUploadsRef.current) {
+      URL.revokeObjectURL(pendingPhoto.previewUrl);
+    }
+    pendingPhotoUploadsRef.current = [];
+    setPendingPhotoUploads([]);
     setFormData(createInitialOnboardingFormData());
     setErrors({});
     setCurrLandmark('');
     setCurrRule('');
     setCurrentStep(1);
   };
+
+  useEffect(() => {
+    pendingPhotoUploadsRef.current = pendingPhotoUploads;
+  }, [pendingPhotoUploads]);
+
+  useEffect(() => {
+    return () => {
+      for (const pendingPhoto of pendingPhotoUploadsRef.current) {
+        URL.revokeObjectURL(pendingPhoto.previewUrl);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let isCancelled = false;
@@ -359,7 +380,7 @@ function OnboardingScreenContent() {
     }));
   };
 
-  const handlePhotoSelection = async (files: FileList | null) => {
+  const handlePhotoSelection = (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
     const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/jpg']);
@@ -377,57 +398,98 @@ function OnboardingScreenContent() {
       }
     }
 
+    const newPendingPhotos = selectedFiles.map((file) => ({
+      file,
+      previewUrl: URL.createObjectURL(file)
+    }));
+
+    setPendingPhotoUploads((prev) => [...prev, ...newPendingPhotos]);
+    setFormData((prev) => ({
+      ...prev,
+      photos: [...prev.photos, ...newPendingPhotos.map((photo) => photo.previewUrl)]
+    }));
+    toast.success(`${newPendingPhotos.length} photo(s) selected`);
+  };
+
+  const removePhoto = (index: number) => {
+    setFormData((prev) => {
+      const removedPhotoUrl = prev.photos[index];
+      if (removedPhotoUrl?.startsWith('blob:')) {
+        setPendingPhotoUploads((pendingPhotos) => {
+          const matchingPendingPhoto = pendingPhotos.find(
+            (pendingPhoto) => pendingPhoto.previewUrl === removedPhotoUrl
+          );
+          if (matchingPendingPhoto) {
+            URL.revokeObjectURL(matchingPendingPhoto.previewUrl);
+          }
+
+          return pendingPhotos.filter(
+            (pendingPhoto) => pendingPhoto.previewUrl !== removedPhotoUrl
+          );
+        });
+      }
+
+      return {
+        ...prev,
+        photos: prev.photos.filter((_, i) => i !== index)
+      };
+    });
+  };
+
+  const uploadPendingPhotosIfAny = async (): Promise<string[]> => {
+    if (!pendingPhotoUploadsRef.current.length) {
+      return formData.photos;
+    }
+
     setIsUploadingPhotos(true);
     try {
-      const uploadedUrls: string[] = [];
+      const uploadedPhotoUrlByPreview = new Map<string, string>();
 
-      for (const file of selectedFiles) {
+      for (const pendingPhoto of pendingPhotoUploadsRef.current) {
         const { uploadUrl, fileUrl } = await trpcClient.media.generateUploadUrl.mutate({
           folder: 'properties',
-          fileName: file.name,
-          contentType: file.type
+          fileName: pendingPhoto.file.name,
+          contentType: pendingPhoto.file.type
         });
 
         const uploadResult = await fetch(uploadUrl, {
           method: 'PUT',
           headers: {
-            'Content-Type': file.type
+            'Content-Type': pendingPhoto.file.type
           },
-          body: file
+          body: pendingPhoto.file
         });
 
         if (!uploadResult.ok) {
-          throw new Error(`Failed to upload ${file.name}`);
+          throw new Error(`Failed to upload ${pendingPhoto.file.name}`);
         }
 
-        uploadedUrls.push(fileUrl);
+        uploadedPhotoUrlByPreview.set(pendingPhoto.previewUrl, fileUrl);
       }
 
-      setFormData((prev) => ({
-        ...prev,
-        photos: [...prev.photos, ...uploadedUrls]
-      }));
-      toast.success(`${uploadedUrls.length} photo(s) uploaded`);
-    } catch (error) {
-      toast.error(getErrorMessage(error));
+      const nextPhotos = formData.photos.map(
+        (photo) => uploadedPhotoUrlByPreview.get(photo) ?? photo
+      );
+
+      for (const pendingPhoto of pendingPhotoUploadsRef.current) {
+        URL.revokeObjectURL(pendingPhoto.previewUrl);
+      }
+
+      pendingPhotoUploadsRef.current = [];
+      setPendingPhotoUploads([]);
+      setFormData((prev) => ({ ...prev, photos: nextPhotos }));
+      return nextPhotos;
     } finally {
       setIsUploadingPhotos(false);
     }
   };
 
-  const removePhoto = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      photos: prev.photos.filter((_, i) => i !== index)
-    }));
-  };
-
-  const submitEditPropertyUpdate = async () => {
+  const submitEditPropertyUpdate = async (photos: string[]) => {
     if (!propertyClient) {
       throw new Error('Property context missing for edit flow');
     }
 
-    await propertyClient.property.update.mutate(getUpdatePropertyPayload(formData));
+    await propertyClient.property.update.mutate(getUpdatePropertyPayload({ ...formData, photos }));
     await queryClient.invalidateQueries({ queryKey: ['landlord-property-summary'] });
 
     toast.success('Property updated successfully');
@@ -436,8 +498,8 @@ function OnboardingScreenContent() {
     router.refresh();
   };
 
-  const submitCreateProperty = async () => {
-    await trpcClient.property.create.mutate(getCreatePropertyPayload(formData));
+  const submitCreateProperty = async (photos: string[]) => {
+    await trpcClient.property.create.mutate(getCreatePropertyPayload({ ...formData, photos }));
     await queryClient.invalidateQueries({ queryKey: ['landlord-property-summary'] });
 
     toast.success('Property created successfully');
@@ -488,6 +550,8 @@ function OnboardingScreenContent() {
 
     setIsSubmitting(true);
     try {
+      const photos = await uploadPendingPhotosIfAny();
+
       if (isEditMode) {
         if (!propertyClient) {
           throw new Error('Property context missing for edit flow');
@@ -504,9 +568,9 @@ function OnboardingScreenContent() {
           });
         }
 
-        await submitEditPropertyUpdate();
+        await submitEditPropertyUpdate(photos);
       } else {
-        await submitCreateProperty();
+        await submitCreateProperty(photos);
       }
     } catch (error) {
       const errorMessage = getErrorMessage(error).toLowerCase();

@@ -58,6 +58,7 @@ export default function JoinInvitePage() {
   const [durationMonths, setDurationMonths] = useState('');
   const [profileImage, setProfileImage] = useState<string>('');
   const [profileImageName, setProfileImageName] = useState<string>('');
+  const [selectedProfileImageFile, setSelectedProfileImageFile] = useState<File | null>(null);
 
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
@@ -190,13 +191,46 @@ export default function JoinInvitePage() {
 
     setIsSubmitting(true);
     try {
+      let profileImageUrl = profileImage || undefined;
+      if (selectedProfileImageFile) {
+        setIsUploadingPhoto(true);
+        try {
+          const { uploadUrl, fileUrl } = await trpcClient.media.generateUploadUrl.mutate({
+            folder: 'resident',
+            fileName: selectedProfileImageFile.name,
+            contentType: selectedProfileImageFile.type
+          });
+
+          const uploadResult = await fetch(uploadUrl, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': selectedProfileImageFile.type
+            },
+            body: selectedProfileImageFile
+          });
+
+          if (!uploadResult.ok) {
+            throw new Error('Upload failed');
+          }
+
+          profileImageUrl = fileUrl;
+          setProfileImage(fileUrl);
+          setSelectedProfileImageFile(null);
+        } catch {
+          setErrorMessage('Could not upload selected image.');
+          return;
+        } finally {
+          setIsUploadingPhoto(false);
+        }
+      }
+
       await trpcClient.publicResident.submitRequest.mutate({
         inviteCode,
         name: name.trim(),
         phoneNumber: normalizedPhone,
         verificationToken,
         durationMonths: durationMonths ? Number(durationMonths) : undefined,
-        profileImage: profileImage || undefined
+        profileImage: profileImageUrl
       });
 
       router.replace('/resident/status');
@@ -210,56 +244,27 @@ export default function JoinInvitePage() {
   };
 
   const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const uploadPhoto = async () => {
-      const file = event.target.files?.[0];
-      if (!file) return;
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-      if (!verificationToken) {
-        setErrorMessage('Please verify OTP first, then upload photo.');
-        return;
-      }
+    if (!verificationToken) {
+      setErrorMessage('Please verify OTP first, then upload photo.');
+      return;
+    }
 
-      if (!file.type.startsWith('image/')) {
-        setErrorMessage('Please upload a valid image file.');
-        return;
-      }
+    if (!file.type.startsWith('image/')) {
+      setErrorMessage('Please upload a valid image file.');
+      return;
+    }
 
-      if (file.size > 5 * 1024 * 1024) {
-        setErrorMessage('Photo size should be under 5MB.');
-        return;
-      }
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage('Photo size should be under 5MB.');
+      return;
+    }
 
-      setIsUploadingPhoto(true);
-      try {
-        const { uploadUrl, fileUrl } = await trpcClient.media.generateUploadUrl.mutate({
-          folder: 'resident',
-          fileName: file.name,
-          contentType: file.type
-        });
-
-        const uploadResult = await fetch(uploadUrl, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': file.type
-          },
-          body: file
-        });
-
-        if (!uploadResult.ok) {
-          throw new Error('Upload failed');
-        }
-
-        setProfileImage(fileUrl);
-        setProfileImageName(file.name);
-        setErrorMessage('');
-      } catch {
-        setErrorMessage('Could not upload selected image.');
-      } finally {
-        setIsUploadingPhoto(false);
-      }
-    };
-
-    void uploadPhoto();
+    setSelectedProfileImageFile(file);
+    setProfileImageName(file.name);
+    setErrorMessage('');
   };
 
   if (isLoadingInvite) {
@@ -398,6 +403,10 @@ export default function JoinInvitePage() {
                     )}
                     {isUploadingPhoto ? (
                       <p className="text-muted-foreground text-xs">Uploading photo...</p>
+                    ) : selectedProfileImageFile ? (
+                      <p className="text-muted-foreground text-xs">
+                        Photo will upload when you submit.
+                      </p>
                     ) : null}
                   </div>
                 </div>
