@@ -97,7 +97,8 @@ function LandingPageContent() {
   };
 
   return (
-    <main className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-6 sm:gap-8">
+    // <main className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-6 sm:gap-8">
+    <main className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col">
       <Filters
         pricingFilter={pricingFilter}
         onPricingFilterChange={setPricingFilter}
