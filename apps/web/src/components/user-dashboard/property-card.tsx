@@ -119,7 +119,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
           <span className="text-foreground/90 text-[13px] font-medium">+ more</span>
         </div>
       </CardContent>
-      <CardFooter className="justify-between gap-5 px-4 md:px-6">
+      <CardFooter className="mt-auto justify-between gap-5 px-4 md:px-6">
         <div className="flex flex-col">
           <span className="text-muted-foreground text-[10px] sm:text-xs">Starting from</span>
           <div className="flex flex-row items-center gap-0.5">
@@ -129,7 +129,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
           </div>
         </div>
 
-        <Button asChild className="group-hover:shadow-primary/20 mt-auto flex-1">
+        <Button asChild className="group-hover:shadow-primary/20 flex-1">
           <Link href={`/properties/${property.slug}`}>View Full Details</Link>
         </Button>
       </CardFooter>

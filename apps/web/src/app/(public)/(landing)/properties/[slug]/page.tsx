@@ -185,7 +185,7 @@ export default function PropertyDetailPage() {
       <div className="grid items-start gap-3 sm:gap-5 lg:grid-cols-3">
         <Card className="rounded-3xl border shadow-sm lg:col-span-2">
           <CardContent className="space-y-7">
-            <div className="-mx-2 space-y-3">
+            <div className="-mx-2 space-y-3 sm:mx-0">
               <h1 className="text-xl font-bold tracking-tight md:text-2xl lg:text-4xl">
                 {property.name}
               </h1>
@@ -204,7 +204,7 @@ export default function PropertyDetailPage() {
               </div>
             </div>
 
-            <div className="bg-muted/30 flex items-center justify-between gap-3 rounded-2xl border px-4 py-4">
+            <div className="bg-muted/30 -mx-2 flex items-center justify-between gap-3 rounded-2xl border px-4 py-4 sm:mx-0">
               <div className="flex items-center gap-3">
                 <div className="bg-primary/10 rounded-xl p-2.5">
                   <Phone className="text-primary size-4.5" />
