@@ -75,7 +75,7 @@ export function OnboardingStepContent({
           <div className="space-y-2">
             <Label>Property / Property Name *</Label>
             <Input
-              placeholder="e.g. Sunshine Boys Property"
+              placeholder="e.g. Sunshine Boys Hostel"
               value={formData.propertyName}
               onChange={(e) => updateField('propertyName', e.target.value)}
               className={errors.propertyName ? 'border-red-500' : ''}

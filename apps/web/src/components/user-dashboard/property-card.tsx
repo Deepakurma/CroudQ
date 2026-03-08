@@ -18,8 +18,8 @@ type PropertyCardProps = {
 };
 
 const propertyTypeLabelMap: Record<string, string> = {
-  'boys-property': 'Boys Property',
-  'girls-property': 'Girls Property',
+  'boys-hostel': 'Boys Hostel',
+  'girls-hostel': 'Girls Hostel',
   pg: 'PG',
   coliving: 'Coliving',
   apartments: 'Apartments'
@@ -129,7 +129,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
           </div>
         </div>
 
-        <Button asChild className="group-hover:shadow-primary/20 flex-1">
+        <Button asChild className="group-hover:shadow-primary/20 mt-auto flex-1">
           <Link href={`/properties/${property.slug}`}>View Full Details</Link>
         </Button>
       </CardFooter>

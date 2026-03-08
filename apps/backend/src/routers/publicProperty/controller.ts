@@ -31,8 +31,8 @@ const amenityKeys = [
 const normalizePropertyType = (value: string | null | undefined) => {
   const key = (value ?? "").trim().toLowerCase();
 
-  if (key.includes("boys")) return "boys-property";
-  if (key.includes("girls")) return "girls-property";
+  if (key.includes("boys")) return "boys-hostel";
+  if (key.includes("girls")) return "girls-hostel";
   if (key.includes("coliv")) return "coliving";
   if (key.includes("apartment")) return "apartments";
   if (key.includes("pg")) return "pg";
@@ -283,9 +283,9 @@ export const publicPropertyRouter = router({
 
       if (input?.propertyType) {
         const typeKeyword =
-          input.propertyType === "boys-property"
+          input.propertyType === "boys-hostel"
             ? "boys"
-            : input.propertyType === "girls-property"
+            : input.propertyType === "girls-hostel"
               ? "girls"
               : input.propertyType === "coliving"
                 ? "coliv"
@@ -457,9 +457,12 @@ export const publicPropertyRouter = router({
 
   locations: publicProcedure.input(listLocationsSchema).query(async ({ input }) => {
     const limit = input?.limit ?? 100;
+    const normalizedCity = sql<string>`lower(btrim(${properties.city}))`;
+    const displayCity = sql<string>`initcap(lower(btrim(${properties.city})))`;
+
     const rows = await db
       .select({
-        city: properties.city,
+        city: displayCity,
       })
       .from(properties)
       .where(
@@ -470,8 +473,8 @@ export const publicPropertyRouter = router({
                   @@ websearch_to_tsquery('english', ${input.q})`
           : sql`${properties.city} IS NOT NULL AND btrim(${properties.city}) <> ''`,
       )
-      .groupBy(properties.city)
-      .orderBy(asc(properties.city))
+      .groupBy(normalizedCity, displayCity)
+      .orderBy(asc(displayCity))
       .limit(limit);
 
     return rows

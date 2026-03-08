@@ -81,7 +81,7 @@ export function OnboardingStepContent({
 
           <AppTextInput
             label="Property / Property Name *"
-            placeholder="e.g. Sunshine Boys Property"
+            placeholder="e.g. Sunshine Boys Hostel"
             value={formData.propertyName}
             onChangeText={(t) => updateField("propertyName", t)}
             error={errors.propertyName}

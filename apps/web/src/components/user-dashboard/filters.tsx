@@ -47,8 +47,8 @@ const sharingOptions: Array<{ label: string; value: SharingFilter }> = [
 
 const propertyTypeOptions: Array<{ label: string; value: PropertyTypeFilter }> = [
   { label: 'Property Types', value: 'all' },
-  { label: 'Boys Property', value: 'boys-property' },
-  { label: 'Girls Property', value: 'girls-property' },
+  { label: 'Boys Hostel', value: 'boys-hostel' },
+  { label: 'Girls Hostel', value: 'girls-hostel' },
   { label: 'PG', value: 'pg' },
   { label: 'Coliving', value: 'coliving' },
   { label: 'Apartments', value: 'apartments' }

@@ -185,7 +185,7 @@ export default function PropertyDetailPage() {
       <div className="grid items-start gap-3 sm:gap-5 lg:grid-cols-3">
         <Card className="rounded-3xl border shadow-sm lg:col-span-2">
           <CardContent className="space-y-7">
-            <div className="space-y-3">
+            <div className="-mx-2 space-y-3">
               <h1 className="text-xl font-bold tracking-tight md:text-2xl lg:text-4xl">
                 {property.name}
               </h1>
