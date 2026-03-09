@@ -27,9 +27,23 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogTrigger
+} from '~/shared/shadcn/alert-dialog';
 import { Button } from '~/shared/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '~/shared/shadcn/card';
 
+import {
+  isSafeLandlordImageSrc,
+  LandlordImageFallback
+} from '~/components/shared/landlord-image-fallback';
 import { PropertyImageCarousel } from '~/components/user-dashboard/property-image-carousel';
 import { createPropertyScopedTrpcClient, trpcClient } from '~/utils/trpc';
 
@@ -42,6 +56,7 @@ type PropertySummaryResponse = {
     name: string;
     isFrozen?: boolean;
     freezeReason?: string | null;
+    deletionScheduledFor?: string | null;
   };
   details?: {
     name: string;
@@ -62,13 +77,6 @@ type PropertySummaryResponse = {
     totalCapacity: number;
     photos: string[] | null;
   } | null;
-};
-
-const getSafeImageSrc = (src: string) => {
-  if (!src || src.startsWith('file:') || src.startsWith('blob:')) {
-    return '/assets/Full-Logo.jpeg';
-  }
-  return src;
 };
 
 const getFacilityIcon = (key: string) => {
@@ -119,6 +127,8 @@ const getFacilityLabel = (key: string) => {
 export default function LandlordPropertyPage() {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isCancellingDeletion, setIsCancellingDeletion] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const { data, isLoading, refetch } = useQuery<PropertySummaryResponse>({
     queryKey: ['landlord-property-summary'],
@@ -192,31 +202,72 @@ export default function LandlordPropertyPage() {
       .map(([key]) => key);
   }, [data]);
 
+  const scheduledDeletionDate = useMemo(() => {
+    const value = data?.selectedProperty?.deletionScheduledFor;
+    if (!value) return null;
+
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }, [data?.selectedProperty?.deletionScheduledFor]);
+
+  const scheduledDeletionLabel = useMemo(() => {
+    if (!scheduledDeletionDate) return null;
+    return new Intl.DateTimeFormat('en-IN', {
+      dateStyle: 'medium',
+      timeStyle: 'short'
+    }).format(scheduledDeletionDate);
+  }, [scheduledDeletionDate]);
+
   const handleDeleteProperty = async () => {
     if (!data?.selectedProperty?.id) return;
-    const isConfirmed = window.confirm(
-      'Are you sure you want to delete this property? This action cannot be undone.'
-    );
-    if (!isConfirmed) return;
 
     setIsDeleting(true);
     try {
       const propertyClient = createPropertyScopedTrpcClient(data.selectedProperty.id);
-      await propertyClient.property.deleteProperty.mutate();
+      const result = await propertyClient.property.deleteProperty.mutate();
+      const scheduledFor = result?.scheduledFor ? new Date(result.scheduledFor) : null;
+      const formattedScheduledFor =
+        scheduledFor && !Number.isNaN(scheduledFor.getTime())
+          ? new Intl.DateTimeFormat('en-IN', { dateStyle: 'medium', timeStyle: 'short' }).format(
+              scheduledFor
+            )
+          : '3 days';
 
-      toast.success('Property deleted successfully');
-      router.replace('/landlord/onboarding');
+      if (result?.alreadyScheduled) {
+        toast.success(`Property deletion is already scheduled for ${formattedScheduledFor}.`);
+      } else {
+        toast.success(`Property deletion scheduled for ${formattedScheduledFor}.`);
+      }
+      setIsDeleteDialogOpen(false);
+      await refetch();
       router.refresh();
     } catch {
-      toast.error('Could not delete property right now. Please try again.');
+      toast.error('Could not schedule property deletion right now. Please try again.');
     } finally {
       setIsDeleting(false);
     }
   };
 
+  const handleCancelPropertyDeletion = async () => {
+    if (!data?.selectedProperty?.id) return;
+
+    setIsCancellingDeletion(true);
+    try {
+      const propertyClient = createPropertyScopedTrpcClient(data.selectedProperty.id);
+      await propertyClient.property.cancelPropertyDeletion.mutate();
+      toast.success('Property deletion cancelled.');
+      await refetch();
+      router.refresh();
+    } catch {
+      toast.error('Could not cancel property deletion right now. Please try again.');
+    } finally {
+      setIsCancellingDeletion(false);
+    }
+  };
+
   if (isLoading) {
     return (
-      <main className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-3 p-4 sm:gap-5 sm:p-6">
+      <main className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-3 sm:gap-5">
         <Card className="flex w-full flex-1 flex-col justify-center rounded-3xl border shadow-sm">
           <CardContent className="flex items-center justify-center gap-2 py-10 text-sm sm:text-base">
             <Loader2 className="size-4 animate-spin sm:size-5" />
@@ -271,12 +322,10 @@ export default function LandlordPropertyPage() {
   const address = [detail.addressLine1, detail.area, detail.city, detail.state, detail.pincode]
     .filter(Boolean)
     .join(', ');
-  const images = detail.photos?.length
-    ? detail.photos.map((photo) => getSafeImageSrc(photo))
-    : ['/assets/Full-Logo.jpeg'];
+  const images = detail.photos?.length ? detail.photos : [''];
 
   return (
-    <main className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-3">
+    <main className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-3 sm:gap-5">
       <div className="bg-primary/95 text-primary-foreground flex items-center gap-4 rounded-3xl px-4 py-4 sm:mb-3 sm:px-5">
         <div className="bg-primary-foreground/20 rounded-xl p-2.5">
           <Hand className="size-5" />
@@ -289,6 +338,24 @@ export default function LandlordPropertyPage() {
         </div>
       </div>
 
+      {scheduledDeletionDate && scheduledDeletionLabel ? (
+        <Card className="border-destructive/30 bg-destructive/5 rounded-3xl shadow-sm">
+          <CardContent className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm font-medium">
+              Property deletion is scheduled for {scheduledDeletionLabel}. You can cancel before
+              this time.
+            </p>
+            <Button
+              variant="outline"
+              className="border-destructive/40 text-destructive hover:bg-destructive/10 w-full sm:w-auto"
+              onClick={handleCancelPropertyDeletion}
+              disabled={isCancellingDeletion}>
+              {isCancellingDeletion ? 'Cancelling...' : 'Cancel Deletion'}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <section className="overflow-hidden rounded-3xl border shadow-sm">
         <div className="md:hidden">
           <PropertyImageCarousel images={images} propertyName={detail.name} />
@@ -296,14 +363,18 @@ export default function LandlordPropertyPage() {
 
         <div className="hidden h-[460px] gap-3 overflow-hidden md:grid md:grid-cols-4 md:grid-rows-2">
           <div className="group relative col-span-2 row-span-2 h-full w-full overflow-hidden">
-            <Image
-              src={images[0]}
-              alt={detail.name}
-              fill
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
-              sizes="(max-width: 768px) 100vw, 50vw"
-              priority
-            />
+            {isSafeLandlordImageSrc(images[0]) ? (
+              <Image
+                src={images[0]}
+                alt={detail.name}
+                fill
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                sizes="(max-width: 768px) 100vw, 50vw"
+                priority
+              />
+            ) : (
+              <LandlordImageFallback className="h-full w-full" />
+            )}
           </div>
           {images.slice(1, 5).map((image, index) => (
             <div
@@ -311,13 +382,17 @@ export default function LandlordPropertyPage() {
               className={`group relative h-full w-full overflow-hidden ${
                 index === 0 && images.length === 2 ? 'col-span-2 row-span-2' : ''
               }`}>
-              <Image
-                src={image}
-                alt={`${detail.name} image ${index + 2}`}
-                fill
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
-                sizes="25vw"
-              />
+              {isSafeLandlordImageSrc(image) ? (
+                <Image
+                  src={image}
+                  alt={`${detail.name} image ${index + 2}`}
+                  fill
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  sizes="25vw"
+                />
+              ) : (
+                <LandlordImageFallback className="h-full w-full" />
+              )}
             </div>
           ))}
         </div>
@@ -468,22 +543,56 @@ export default function LandlordPropertyPage() {
               <CardTitle className="text-base font-semibold lg:text-lg">Property Actions</CardTitle>
             </CardHeader>
             <CardContent className="flex flex-row flex-wrap justify-between gap-2">
-              <Button asChild variant="outline" className="flex-1 justify-start">
-                <Link
-                  href="/landlord/onboarding?mode=edit"
-                  className="inline-flex items-center gap-2">
+              {scheduledDeletionDate ? (
+                <Button variant="outline" className="flex-1 justify-start" disabled>
                   <PencilLine className="size-4" />
                   Edit Property
-                </Link>
-              </Button>
-              <Button
-                variant={'ghost'}
-                className="bg-destructive/20 text-destructive flex-1 justify-start"
-                onClick={handleDeleteProperty}
-                disabled={isDeleting}>
-                <Trash2 className="size-4" />
-                {isDeleting ? 'Deleting...' : 'Delete Property'}
-              </Button>
+                </Button>
+              ) : (
+                <Button asChild variant="outline" className="flex-1 justify-start">
+                  <Link
+                    href="/landlord/onboarding?mode=edit"
+                    className="inline-flex items-center gap-2">
+                    <PencilLine className="size-4" />
+                    Edit Property
+                  </Link>
+                </Button>
+              )}
+              {scheduledDeletionDate ? (
+                <Button
+                  variant={'ghost'}
+                  className="bg-destructive/20 text-destructive flex-1 justify-start"
+                  onClick={handleCancelPropertyDeletion}
+                  disabled={isCancellingDeletion}>
+                  <Trash2 className="size-4" />
+                  {isCancellingDeletion ? 'Cancelling...' : 'Cancel Deletion'}
+                </Button>
+              ) : (
+                <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      variant={'ghost'}
+                      className="bg-destructive/20 text-destructive flex-1 justify-start"
+                      disabled={isDeleting}>
+                      <Trash2 className="size-4" />
+                      {isDeleting ? 'Scheduling...' : 'Delete Property'}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogTitle>Schedule Property Deletion?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This property will be deleted after 3 days. You can cancel deletion anytime
+                      before the deadline.
+                    </AlertDialogDescription>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel disabled={isDeleting}>Keep Property</AlertDialogCancel>
+                      <AlertDialogAction onClick={handleDeleteProperty} disabled={isDeleting}>
+                        {isDeleting ? 'Scheduling...' : 'Yes, Schedule Deletion'}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
             </CardContent>
           </Card>
         </div>

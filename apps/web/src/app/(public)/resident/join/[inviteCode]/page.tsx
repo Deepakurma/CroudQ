@@ -17,6 +17,22 @@ import { trpcClient } from '~/utils/trpc';
 
 import type { ChangeEvent } from 'react';
 
+const ALLOWED_IMAGE_CONTENT_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif'
+] as const;
+type AllowedImageContentType = (typeof ALLOWED_IMAGE_CONTENT_TYPES)[number];
+
+const toAllowedImageContentType = (value: string): AllowedImageContentType => {
+  if ((ALLOWED_IMAGE_CONTENT_TYPES as readonly string[]).includes(value)) {
+    return value as AllowedImageContentType;
+  }
+  throw new Error('Unsupported image format. Use JPEG, PNG, WEBP, HEIC, or HEIF.');
+};
+
 interface InvitePayload {
   inviteState: 'active' | 'expired' | 'closed';
   allowSubmission: boolean;
@@ -195,16 +211,18 @@ export default function JoinInvitePage() {
       if (selectedProfileImageFile) {
         setIsUploadingPhoto(true);
         try {
-          const { uploadUrl, fileUrl } = await trpcClient.media.generateUploadUrl.mutate({
-            folder: 'resident',
+          const contentType = toAllowedImageContentType(selectedProfileImageFile.type);
+          const { uploadUrl, fileUrl } = await trpcClient.publicResident.generateUploadUrl.mutate({
+            inviteCode,
             fileName: selectedProfileImageFile.name,
-            contentType: selectedProfileImageFile.type
+            contentType,
+            fileSizeBytes: selectedProfileImageFile.size
           });
 
           const uploadResult = await fetch(uploadUrl, {
             method: 'PUT',
             headers: {
-              'Content-Type': selectedProfileImageFile.type
+              'Content-Type': contentType
             },
             body: selectedProfileImageFile
           });
@@ -257,8 +275,8 @@ export default function JoinInvitePage() {
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setErrorMessage('Photo size should be under 5MB.');
+    if (file.size > 10 * 1024 * 1024) {
+      setErrorMessage('Photo size should be under 10MB.');
       return;
     }
 
@@ -399,7 +417,7 @@ export default function JoinInvitePage() {
                     {profileImageName ? (
                       <p className="text-xs text-green-700">Selected: {profileImageName}</p>
                     ) : (
-                      <p className="text-muted-foreground text-xs">Max size: 5MB</p>
+                      <p className="text-muted-foreground text-xs">Max size: 10MB</p>
                     )}
                     {isUploadingPhoto ? (
                       <p className="text-muted-foreground text-xs">Uploading photo...</p>

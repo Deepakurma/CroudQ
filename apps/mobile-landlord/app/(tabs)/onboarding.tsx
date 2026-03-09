@@ -85,7 +85,7 @@ export default function OnboardingScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
   const headerHeight = insets.top + 65;
-  const { setSelectedPropertyId } = useProperty();
+  const { selectedPropertyId, setSelectedPropertyId } = useProperty();
   const { token } = useAuth();
   const utils = trpc.useUtils();
   const navigation = useNavigation();
@@ -374,11 +374,16 @@ export default function OnboardingScreen() {
 
       setIsUploadingPhotos(true);
       try {
+        if (!selectedPropertyId) {
+          throw new Error("Property context is missing.");
+        }
+
         const uploadedPhotos: string[] = [];
         for (const asset of result.assets) {
           if (!asset.uri) continue;
           const uploaded = await uploadImageToS3({
             token,
+            propertyId: selectedPropertyId,
             fileUri: asset.uri,
             fileName: asset.fileName ?? `property-${Date.now()}.jpg`,
             contentType: asset.mimeType ?? "image/jpeg",

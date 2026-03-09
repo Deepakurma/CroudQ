@@ -18,7 +18,7 @@ import {
   rooms,
 } from "../../db/schema";
 import { residentIdentityService } from "../../services/residentIdentityService";
-import { deleteS3Object, resolveManagedS3Key } from "../../services/s3-sender";
+import { deleteS3Object, resolveManagedS3KeyForProperty } from "../../services/s3-sender";
 import { propertyProcedure, protectedProcedure, router } from "../../server/trpc";
 import {
   approveRequestSchema,
@@ -895,13 +895,24 @@ export const residentRouter = router({
         return saved;
       });
 
-      const previousImageKey = resolveManagedS3Key(currentResident.profileImage);
-      const nextImageKey = resolveManagedS3Key(updated.profileImage);
+      const previousImageKey = resolveManagedS3KeyForProperty(
+        currentResident.profileImage,
+        ctx.propertyId,
+      );
+      const nextImageKey = resolveManagedS3KeyForProperty(
+        updated.profileImage,
+        ctx.propertyId,
+      );
       const imageChanged =
         previousImageKey && previousImageKey !== nextImageKey;
 
       if (imageChanged) {
-        await deleteS3Object(previousImageKey).catch(() => undefined);
+        await deleteS3Object(previousImageKey).catch((error) => {
+          console.error("Failed to delete old resident profile image", {
+            key: previousImageKey,
+            error,
+          });
+        });
       }
 
       return {

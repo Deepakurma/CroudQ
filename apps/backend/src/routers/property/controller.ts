@@ -2,16 +2,19 @@ import { TRPCError } from "@trpc/server";
 import { and, desc, eq, inArray, or, sql } from "drizzle-orm";
 import { db } from "../../db";
 import {
-    checkouts,
     properties,
     propertyFacilities,
     propertyRoomTypes,
-    residentJoinRequests,
     residents,
     rooms
 } from "../../db/schema";
+import {
+    cancelPropertyDeletion,
+    PROPERTY_DELETION_GRACE_DAYS,
+    schedulePropertyDeletion,
+} from "../../services/property-deletion";
 import { roleGuardService } from "../../services/roleGuardService";
-import { deleteS3Object, resolveManagedS3Key } from "../../services/s3-sender";
+import { deleteS3Object, resolveManagedS3KeyForProperty } from "../../services/s3-sender";
 import { propertyProcedure, protectedProcedure, router } from "../../server/trpc";
 import {
     addRoomSchema,
@@ -641,6 +644,7 @@ export const propertyRouter = router({
                     name: properties.name,
                     isFrozen: properties.isFrozen,
                     freezeReason: properties.freezeReason,
+                    deletionScheduledFor: properties.deletionScheduledFor,
                 })
                 .from(properties)
                 .where(eq(properties.userId, ctx.user.id))
@@ -747,12 +751,12 @@ export const propertyRouter = router({
 
                 const previousKeys = new Set(
                     (currentProperty.photos || [])
-                        .map((photo) => resolveManagedS3Key(photo))
+                        .map((photo) => resolveManagedS3KeyForProperty(photo, ctx.propertyId))
                         .filter((value): value is string => Boolean(value)),
                 );
                 const nextKeys = new Set(
                     input.photos
-                        .map((photo) => resolveManagedS3Key(photo))
+                        .map((photo) => resolveManagedS3KeyForProperty(photo, ctx.propertyId))
                         .filter((value): value is string => Boolean(value)),
                 );
 
@@ -861,7 +865,17 @@ export const propertyRouter = router({
             });
 
             if (keysToDelete.length > 0) {
-                await Promise.allSettled(keysToDelete.map((key) => deleteS3Object(key)));
+                const deleteResults = await Promise.allSettled(
+                    keysToDelete.map((key) => deleteS3Object(key)),
+                );
+                deleteResults.forEach((result, index) => {
+                    if (result.status === "rejected") {
+                        console.error("Failed to delete S3 object after property update", {
+                            key: keysToDelete[index],
+                            error: result.reason,
+                        });
+                    }
+                });
             }
 
             return { success: true };
@@ -1255,74 +1269,31 @@ export const propertyRouter = router({
         }),
 
     deleteProperty: propertyProcedure.mutation(async ({ ctx }) => {
-        const keysToDelete = await db.transaction(async (tx) => {
-            const propertyRecord = await tx.query.properties.findFirst({
-                where: and(
-                    eq(properties.id, ctx.propertyId),
-                    eq(properties.userId, ctx.user.id),
-                ),
+        const scheduled = await schedulePropertyDeletion(ctx.propertyId, ctx.user.id);
+
+        if (!scheduled) {
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Property not found or access denied",
             });
+        }
 
-            if (!propertyRecord) {
-                throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "Property not found or access denied",
-                });
-            }
+        return {
+            success: true,
+            graceDays: PROPERTY_DELETION_GRACE_DAYS,
+            scheduledFor: scheduled.scheduledFor,
+            alreadyScheduled: scheduled.alreadyScheduled,
+        };
+    }),
 
-            const [residentImages, checkoutImages, joinRequestImages] = await Promise.all([
-                tx
-                    .select({ image: residents.profileImage })
-                    .from(residents)
-                    .where(eq(residents.propertyId, ctx.propertyId)),
-                tx
-                    .select({ image: checkouts.profileImage })
-                    .from(checkouts)
-                    .where(eq(checkouts.propertyId, ctx.propertyId)),
-                tx
-                    .select({ image: residentJoinRequests.submittedProfileImage })
-                    .from(residentJoinRequests)
-                    .where(eq(residentJoinRequests.propertyId, ctx.propertyId)),
-            ]);
+    cancelPropertyDeletion: propertyProcedure.mutation(async ({ ctx }) => {
+        const cancelled = await cancelPropertyDeletion(ctx.propertyId, ctx.user.id);
 
-            const keySet = new Set<string>();
-            const addKey = (value: string | null | undefined) => {
-                const key = resolveManagedS3Key(value);
-                if (key) {
-                    keySet.add(key);
-                }
-            };
-
-            for (const photo of propertyRecord.photos || []) {
-                addKey(photo);
-            }
-            for (const item of residentImages) {
-                addKey(item.image);
-            }
-            for (const item of checkoutImages) {
-                addKey(item.image);
-            }
-            for (const item of joinRequestImages) {
-                addKey(item.image);
-            }
-
-            const deleted = await tx
-                .delete(properties)
-                .where(and(eq(properties.id, ctx.propertyId), eq(properties.userId, ctx.user.id)))
-                .returning({ id: properties.id });
-
-            if (deleted.length === 0) {
-                throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message: "Property not found or access denied",
-                });
-            }
-
-            return Array.from(keySet);
-        });
-
-        if (keysToDelete.length > 0) {
-            await Promise.allSettled(keysToDelete.map((key) => deleteS3Object(key)));
+        if (!cancelled) {
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Property not found or access denied",
+            });
         }
 
         return { success: true };

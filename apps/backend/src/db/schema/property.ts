@@ -36,6 +36,8 @@ export const properties = pgTable(
     description: text("description"),
     isFrozen: boolean("isFrozen").notNull().default(false),
     freezeReason: text("freezeReason"),
+    deletionRequestedAt: timestamp("deletionRequestedAt"),
+    deletionScheduledFor: timestamp("deletionScheduledFor"),
     userId: text("userId")
       .notNull()
       .references(() => users.id),
@@ -44,6 +46,9 @@ export const properties = pgTable(
   },
   (table) => ({
     userIdIdx: index("properties_user_id_idx").on(table.userId),
+    deletionScheduledForIdx: index("properties_deletion_scheduled_for_idx").on(
+      table.deletionScheduledFor,
+    ),
     searchGinIdx: sql`CREATE INDEX property_search_idx ON ${table} USING gin(
       setweight(to_tsvector('english', coalesce(${table.name}, '')), 'A') ||
       setweight(to_tsvector('english', coalesce(${table.area}, '')), 'B') ||

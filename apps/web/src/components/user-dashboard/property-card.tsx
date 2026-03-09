@@ -8,6 +8,11 @@ import { Button } from '~/shared/shadcn/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '~/shared/shadcn/card';
 import { Separator } from '~/shared/shadcn/separator';
 
+import {
+  isSafeLandlordImageSrc,
+  LandlordImageFallback
+} from '~/components/shared/landlord-image-fallback';
+
 import type { PublicPropertySummary } from '~/types/property';
 
 type PropertyCardProps = {
@@ -21,15 +26,7 @@ const propertyTypeLabelMap: Record<string, string> = {
   'boys-hostel': 'Boys Hostel',
   'girls-hostel': 'Girls Hostel',
   pg: 'PG',
-  coliving: 'Coliving',
-  apartments: 'Apartments'
-};
-
-const getSafeImageSrc = (src: string | undefined) => {
-  if (!src || src.startsWith('file:') || src.startsWith('blob:')) {
-    return '/assets/Full-Logo.jpeg';
-  }
-  return src;
+  coliving: 'Coliving'
 };
 
 const getFacilityIcon = (key: string) => {
@@ -77,13 +74,17 @@ export function PropertyCard({ property }: PropertyCardProps) {
     <Card className="group md:hover:shadow-primary/10 gap-3 overflow-hidden rounded-3xl border pt-0 pb-4 shadow-sm transition-all duration-500 md:gap-4 md:pb-6 md:hover:-translate-y-1 md:hover:shadow-2xl">
       {' '}
       <div className="relative aspect-[16/10] w-full overflow-hidden">
-        <Image
-          src={getSafeImageSrc(property.images[0])}
-          alt={property.name}
-          fill
-          className="object-cover transition-transform duration-700 group-hover:scale-110"
-          sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
-        />
+        {isSafeLandlordImageSrc(property.images[0]) ? (
+          <Image
+            src={property.images[0]}
+            alt={property.name}
+            fill
+            className="object-cover transition-transform duration-700 group-hover:scale-110"
+            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+          />
+        ) : (
+          <LandlordImageFallback className="h-full w-full" />
+        )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
         <Badge
           variant="secondary"
@@ -116,7 +117,9 @@ export function PropertyCard({ property }: PropertyCardProps) {
               </Badge>
             );
           })}
-          <span className="text-foreground/90 text-[13px] font-medium">+ more</span>
+          {property.amenities.length > 5 ? (
+            <span className="text-foreground/90 text-[13px] font-medium">+ more</span>
+          ) : null}
         </div>
       </CardContent>
       <CardFooter className="mt-auto justify-between gap-5 px-4 md:px-6">

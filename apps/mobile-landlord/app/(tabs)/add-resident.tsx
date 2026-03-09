@@ -6,6 +6,7 @@ import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { Typography } from "@/constants/Typography";
 import { useAuth } from "@/context/AuthContext";
+import { useProperty } from "@/context/PropertyContext";
 import { trpc } from "@/utils/api";
 import { formatIndianCurrency } from "@/utils/common";
 import { calculateRentTrackingStartDate } from "@/utils/rentTracking";
@@ -106,6 +107,7 @@ export default function AddResidentScreen() {
 
   const utils = trpc.useUtils();
   const { token } = useAuth();
+  const { selectedPropertyId } = useProperty();
 
   const resetForm = () => {
     setFormData({
@@ -317,8 +319,13 @@ export default function AddResidentScreen() {
       const asset = result.assets[0];
       setIsUploadingPhoto(true);
       try {
+        if (!selectedPropertyId) {
+          throw new Error("Property context is missing.");
+        }
+
         const uploaded = await uploadImageToS3({
           token,
+          propertyId: selectedPropertyId,
           fileUri: asset.uri,
           fileName: asset.fileName ?? `resident-${Date.now()}.jpg`,
           contentType: asset.mimeType ?? "image/jpeg",

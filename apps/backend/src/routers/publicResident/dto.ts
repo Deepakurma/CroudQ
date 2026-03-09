@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { contentTypeSchema } from "../media/dto";
+import { MAX_IMAGE_UPLOAD_SIZE_BYTES } from "../../services/s3-sender";
 
 export const inviteCodeSchema = z
   .string()
@@ -27,8 +29,20 @@ export const verifyInviteOtpSchema = z.object({
 
 export const getJoinStatusSchema = z.object({ inviteCode: inviteCodeSchema });
 
+export const generatePublicJoinUploadUrlSchema = z.object({
+  inviteCode: inviteCodeSchema,
+  fileName: z.string().trim().min(1).max(255),
+  contentType: contentTypeSchema,
+  fileSizeBytes: z
+    .number()
+    .int()
+    .positive()
+    .max(MAX_IMAGE_UPLOAD_SIZE_BYTES),
+});
+
 export type InviteCodeType = z.infer<typeof inviteCodeSchema>;
 export type SubmitRequestType = z.infer<typeof submitRequestSchema>;
 export type GetInviteByCodeType = z.infer<typeof getInviteByCodeSchema>;
 export type VerifyInviteOtpType = z.infer<typeof verifyInviteOtpSchema>;
 export type GetJoinStatusType = z.infer<typeof getJoinStatusSchema>;
+export type GeneratePublicJoinUploadUrlType = z.infer<typeof generatePublicJoinUploadUrlSchema>;

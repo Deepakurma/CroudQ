@@ -26,13 +26,20 @@ export const getBaseUrl = () => {
   return localhost;
 };
 
-export const createServerTrpcClient = (token?: string) =>
+export const createServerTrpcClient = (token?: string, propertyId?: string) =>
   createTRPCClient<AppRouter>({
     links: [
       httpBatchLink({
         url: `${getBaseUrl()}/trpc`,
         headers() {
-          return token ? { authorization: `Bearer ${token}` } : {};
+          const headers: Record<string, string> = {};
+          if (token) {
+            headers.authorization = `Bearer ${token}`;
+          }
+          if (propertyId) {
+            headers["x-property-id"] = propertyId;
+          }
+          return headers;
         },
       }),
     ],

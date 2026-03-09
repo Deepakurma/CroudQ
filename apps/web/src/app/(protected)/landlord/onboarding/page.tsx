@@ -26,6 +26,22 @@ import {
 import type { OnboardingFormData } from '../../../../components/onboarding/config';
 import type { ZodIssue } from 'zod';
 
+const ALLOWED_IMAGE_CONTENT_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/heic',
+  'image/heif'
+] as const;
+type AllowedImageContentType = (typeof ALLOWED_IMAGE_CONTENT_TYPES)[number];
+
+const toAllowedImageContentType = (value: string): AllowedImageContentType => {
+  if ((ALLOWED_IMAGE_CONTENT_TYPES as readonly string[]).includes(value)) {
+    return value as AllowedImageContentType;
+  }
+  throw new Error('Unsupported image format. Use JPEG, PNG, WEBP, HEIC, or HEIF.');
+};
+
 const getErrorMessage = (error: unknown) => {
   if (error && typeof error === 'object' && 'message' in error) {
     const message = (error as { message?: string }).message;
@@ -34,6 +50,15 @@ const getErrorMessage = (error: unknown) => {
     }
   }
   return 'Something went wrong';
+};
+
+const isStructureOccupiedError = (error: unknown) => {
+  const errorMessage = getErrorMessage(error).toLowerCase();
+  return (
+    errorMessage.includes('higher room slots are occupied') ||
+    errorMessage.includes('cannot remove floors with occupied rooms') ||
+    errorMessage.includes('currently assigned to rooms')
+  );
 };
 
 const normalizeRoomsPerFloorForStepInput = ({
@@ -383,12 +408,11 @@ function OnboardingScreenContent() {
   const handlePhotoSelection = (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
-    const allowedTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/jpg']);
     const selectedFiles = Array.from(files);
     const maxSizeBytes = 10 * 1024 * 1024;
 
     for (const file of selectedFiles) {
-      if (!allowedTypes.has(file.type)) {
+      if (!(ALLOWED_IMAGE_CONTENT_TYPES as readonly string[]).includes(file.type)) {
         toast.error(`Unsupported file type: ${file.name}`);
         return;
       }
@@ -443,19 +467,25 @@ function OnboardingScreenContent() {
 
     setIsUploadingPhotos(true);
     try {
+      if (!propertyClient) {
+        throw new Error('Property context missing for image upload.');
+      }
+
       const uploadedPhotoUrlByPreview = new Map<string, string>();
 
       for (const pendingPhoto of pendingPhotoUploadsRef.current) {
-        const { uploadUrl, fileUrl } = await trpcClient.media.generateUploadUrl.mutate({
+        const contentType = toAllowedImageContentType(pendingPhoto.file.type);
+        const { uploadUrl, fileUrl } = await propertyClient.media.generateUploadUrl.mutate({
           folder: 'properties',
           fileName: pendingPhoto.file.name,
-          contentType: pendingPhoto.file.type
+          contentType,
+          fileSizeBytes: pendingPhoto.file.size
         });
 
         const uploadResult = await fetch(uploadUrl, {
           method: 'PUT',
           headers: {
-            'Content-Type': pendingPhoto.file.type
+            'Content-Type': contentType
           },
           body: pendingPhoto.file
         });
@@ -528,14 +558,8 @@ function OnboardingScreenContent() {
           setCurrentStep((prev) => prev + 1);
           window.scrollTo({ top: 0, behavior: 'smooth' });
         } catch (error) {
-          const errorMessage = getErrorMessage(error).toLowerCase();
-          const isStructureOccupiedError =
-            errorMessage.includes('higher room slots are occupied') ||
-            errorMessage.includes('cannot remove floors with occupied rooms') ||
-            errorMessage.includes('currently assigned to rooms');
-
           toast.error(
-            isStructureOccupiedError
+            isStructureOccupiedError(error)
               ? 'Rooms cannot be changed because residents exist in those rooms.'
               : 'Failed to validate room changes. Please try again.'
           );
@@ -573,14 +597,8 @@ function OnboardingScreenContent() {
         await submitCreateProperty(photos);
       }
     } catch (error) {
-      const errorMessage = getErrorMessage(error).toLowerCase();
-      const isStructureOccupiedError =
-        errorMessage.includes('higher room slots are occupied') ||
-        errorMessage.includes('cannot remove floors with occupied rooms') ||
-        errorMessage.includes('currently assigned to rooms');
-
       toast.error(
-        isStructureOccupiedError
+        isStructureOccupiedError(error)
           ? 'Rooms cannot be changed because residents exist in those rooms.'
           : isEditMode
             ? 'Failed to update property. Please try again.'

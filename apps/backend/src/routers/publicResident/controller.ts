@@ -5,11 +5,17 @@ import { and, desc, eq, or } from "drizzle-orm";
 import { db } from "../../db";
 import { residentJoinRequests, residents, users } from "../../db/schema";
 import { authService } from "../../services/authService";
+import {
+  createS3ObjectKey,
+  generateUploadUrl,
+  getS3FileUrl,
+} from "../../services/s3-sender";
 import { protectedProcedure, publicProcedure, router } from "../../server/trpc";
 import { setResidentAuthCookies } from "../../utils/authCookies";
 import { signJoinSubmitToken, verifyJoinSubmitToken } from "../../utils/jwt";
 import { normalizeIndianPhone } from "../../utils/phone";
 import {
+  generatePublicJoinUploadUrlSchema,
   getInviteByCodeSchema,
   getJoinStatusSchema,
   submitRequestSchema,
@@ -70,6 +76,43 @@ const markInviteExpiredIfNeeded = async (request: typeof residentJoinRequests.$i
 };
 
 export const publicResidentRouter = router({
+  generateUploadUrl: publicProcedure
+    .input(generatePublicJoinUploadUrlSchema)
+    .mutation(async ({ input }) => {
+      const request = await db.query.residentJoinRequests.findFirst({
+        where: eq(residentJoinRequests.inviteCode, input.inviteCode),
+      });
+
+      if (!request) {
+        throw new TRPCError({ code: "NOT_FOUND", message: "Invite link not found." });
+      }
+
+      const normalized = await markInviteExpiredIfNeeded(request);
+      if (normalized.status !== "invited") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This invite is no longer active.",
+        });
+      }
+
+      try {
+        const key = createS3ObjectKey("resident", normalized.propertyId, input.contentType);
+        const uploadUrl = await generateUploadUrl(key, input.contentType, input.fileSizeBytes);
+        const fileUrl = getS3FileUrl(key);
+        return {
+          uploadUrl,
+          key,
+          fileUrl,
+          expiresInSeconds: 300,
+        };
+      } catch {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create upload URL.",
+        });
+      }
+    }),
+
   getInviteByCode: publicProcedure
     .input(getInviteByCodeSchema)
     .query(async ({ input }) => {

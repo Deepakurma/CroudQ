@@ -5,17 +5,22 @@ import {
   deleteS3Object,
   generateUploadUrl,
   getS3FileUrl,
+  isS3KeyOwnedByProperty,
 } from "../../services/s3-sender";
-import { protectedProcedure, router } from "../../server/trpc";
+import { propertyProcedure, router } from "../../server/trpc";
 import { deleteS3ObjectSchema, generateUploadUrlSchema } from "./dto";
 
 export const mediaRouter = router({
-  generateUploadUrl: protectedProcedure
+  generateUploadUrl: propertyProcedure
     .input(generateUploadUrlSchema)
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       try {
-        const key = createS3ObjectKey(input.folder, input.fileName);
-        const uploadUrl = await generateUploadUrl(key, input.contentType);
+        const key = createS3ObjectKey(input.folder, ctx.propertyId, input.contentType);
+        const uploadUrl = await generateUploadUrl(
+          key,
+          input.contentType,
+          input.fileSizeBytes,
+        );
         const fileUrl = getS3FileUrl(key);
 
         return {
@@ -32,9 +37,16 @@ export const mediaRouter = router({
       }
     }),
 
-  deleteObject: protectedProcedure
+  deleteObject: propertyProcedure
     .input(deleteS3ObjectSchema)
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
+      if (!isS3KeyOwnedByProperty(input.key, ctx.propertyId)) {
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "You are not allowed to delete this object.",
+        });
+      }
+
       try {
         await deleteS3Object(input.key);
         return { success: true };

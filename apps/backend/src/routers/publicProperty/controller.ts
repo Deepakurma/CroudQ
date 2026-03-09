@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
 import { TRPCError } from "@trpc/server";
 
 import { db } from "../../db";
@@ -34,7 +34,6 @@ const normalizePropertyType = (value: string | null | undefined) => {
   if (key.includes("boys")) return "boys-hostel";
   if (key.includes("girls")) return "girls-hostel";
   if (key.includes("coliv")) return "coliving";
-  if (key.includes("apartment")) return "apartments";
   if (key.includes("pg")) return "pg";
 
   return "pg";
@@ -261,6 +260,7 @@ export const publicPropertyRouter = router({
       const location = input?.location?.trim();
 
       const filters = [];
+      filters.push(isNull(properties.deletionScheduledFor));
       if (search) {
         filters.push(
           sql`${propertySearchDocument} @@ websearch_to_tsquery('english', ${search})`,
@@ -289,9 +289,7 @@ export const publicPropertyRouter = router({
               ? "girls"
               : input.propertyType === "coliving"
                 ? "coliv"
-                : input.propertyType === "apartments"
-                ? "apartment"
-                  : "pg";
+                : "pg";
         filters.push(
           sql`to_tsvector('english', coalesce(${properties.type}, ''))
               @@ websearch_to_tsquery('english', ${typeKeyword})`,
@@ -412,7 +410,10 @@ export const publicPropertyRouter = router({
     .input(publicPropertyBySlugSchema)
     .query(async ({ input }) => {
       const property = await db.query.properties.findFirst({
-        where: eq(properties.id, input.slug),
+        where: and(
+          eq(properties.id, input.slug),
+          isNull(properties.deletionScheduledFor),
+        ),
       });
 
       if (!property) {
@@ -467,11 +468,17 @@ export const publicPropertyRouter = router({
       .from(properties)
       .where(
         input?.q
-          ? sql`${properties.city} IS NOT NULL
+          ? and(
+              isNull(properties.deletionScheduledFor),
+              sql`${properties.city} IS NOT NULL
               AND btrim(${properties.city}) <> ''
               AND to_tsvector('english', coalesce(${properties.city}, ''))
-                  @@ websearch_to_tsquery('english', ${input.q})`
-          : sql`${properties.city} IS NOT NULL AND btrim(${properties.city}) <> ''`,
+                  @@ websearch_to_tsquery('english', ${input.q})`,
+            )
+          : and(
+              isNull(properties.deletionScheduledFor),
+              sql`${properties.city} IS NOT NULL AND btrim(${properties.city}) <> ''`,
+            ),
       )
       .groupBy(normalizedCity, displayCity)
       .orderBy(asc(displayCity))

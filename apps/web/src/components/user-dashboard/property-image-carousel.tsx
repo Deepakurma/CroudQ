@@ -5,18 +5,16 @@ import Image from 'next/image';
 
 import { Carousel, CarouselContent, CarouselItem } from '~/shared/shadcn/carousel';
 
+import {
+  isSafeLandlordImageSrc,
+  LandlordImageFallback
+} from '~/components/shared/landlord-image-fallback';
+
 import type { CarouselApi } from '~/shared/shadcn/carousel';
 
 type PropertyImageCarouselProps = {
   images: string[];
   propertyName: string;
-};
-
-const getSafeImageSrc = (src: string) => {
-  if (!src || src.startsWith('file:') || src.startsWith('blob:')) {
-    return '/assets/Full-Logo.jpeg';
-  }
-  return src;
 };
 
 export function PropertyImageCarousel({ images, propertyName }: PropertyImageCarouselProps) {
@@ -49,14 +47,18 @@ export function PropertyImageCarousel({ images, propertyName }: PropertyImageCar
           {images.map((image, index) => (
             <CarouselItem key={`${image}-${index}`} className="pl-0">
               <div className="relative h-[300px] w-full overflow-hidden">
-                <Image
-                  src={getSafeImageSrc(image)}
-                  alt={`${propertyName} image ${index + 1}`}
-                  fill
-                  className="object-cover"
-                  sizes="100vw"
-                  priority={index === 0}
-                />
+                {isSafeLandlordImageSrc(image) ? (
+                  <Image
+                    src={image}
+                    alt={`${propertyName} image ${index + 1}`}
+                    fill
+                    className="object-cover"
+                    sizes="100vw"
+                    priority={index === 0}
+                  />
+                ) : (
+                  <LandlordImageFallback className="h-full w-full" />
+                )}
               </div>
             </CarouselItem>
           ))}

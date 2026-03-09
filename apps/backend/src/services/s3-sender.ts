@@ -24,31 +24,47 @@ const s3Client = new S3Client({
 
 export type UploadFolder = "properties" | "resident";
 
-const sanitizeExtension = (fileName: string): string => {
-  const trimmed = fileName.trim();
-  if (!trimmed.includes(".")) {
-    return ".jpg";
-  }
+export const ALLOWED_IMAGE_CONTENT_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/heic",
+  "image/heif",
+] as const;
 
-  const rawExtension = trimmed.split(".").pop()?.toLowerCase() ?? "jpg";
-  const safeExtension = rawExtension.replace(/[^a-z0-9]/g, "");
-
-  return safeExtension ? `.${safeExtension}` : ".jpg";
+const extensionByContentType: Record<(typeof ALLOWED_IMAGE_CONTENT_TYPES)[number], string> = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+  "image/heic": ".heic",
+  "image/heif": ".heif",
 };
 
-export const createS3ObjectKey = (folder: UploadFolder, fileName: string): string => {
-  const ext = sanitizeExtension(fileName);
-  return `${folder}/${crypto.randomUUID()}${ext}`;
+export const MAX_IMAGE_UPLOAD_SIZE_BYTES = 10 * 1024 * 1024;
+
+export const createS3ObjectKey = (
+  folder: UploadFolder,
+  propertyId: string,
+  contentType: (typeof ALLOWED_IMAGE_CONTENT_TYPES)[number],
+): string => {
+  const extension = extensionByContentType[contentType];
+  return `${folder}/${propertyId}/${crypto.randomUUID()}${extension}`;
 };
 
 export const generateUploadUrl = async (
   key: string,
   contentType: string,
+  fileSizeBytes: number,
 ): Promise<string> => {
+  if (fileSizeBytes > MAX_IMAGE_UPLOAD_SIZE_BYTES) {
+    throw new Error("File size exceeds allowed limit.");
+  }
+
   const command = new PutObjectCommand({
     Bucket: bucket,
     Key: key,
     ContentType: contentType,
+    ContentLength: fileSizeBytes,
   });
 
   return getSignedUrl(s3Client, command, {
@@ -73,6 +89,10 @@ const isManagedPrefix = (key: string) => {
   return key.startsWith("properties/") || key.startsWith("resident/");
 };
 
+export const isS3KeyOwnedByProperty = (key: string, propertyId: string): boolean => {
+  return key.startsWith(`properties/${propertyId}/`) || key.startsWith(`resident/${propertyId}/`);
+};
+
 export const resolveManagedS3Key = (value: string | null | undefined): string | null => {
   if (!value) return null;
   const trimmed = value.trim();
@@ -94,4 +114,13 @@ export const resolveManagedS3Key = (value: string | null | undefined): string | 
   } catch {
     return null;
   }
+};
+
+export const resolveManagedS3KeyForProperty = (
+  value: string | null | undefined,
+  propertyId: string,
+): string | null => {
+  const key = resolveManagedS3Key(value);
+  if (!key) return null;
+  return isS3KeyOwnedByProperty(key, propertyId) ? key : null;
 };

@@ -11,13 +11,7 @@ export type SharingFilter =
   | '4-sharing'
   | '5-sharing'
   | '6-sharing';
-export type PropertyTypeFilter =
-  | 'all'
-  | 'boys-hostel'
-  | 'girls-hostel'
-  | 'pg'
-  | 'coliving'
-  | 'apartments';
+export type PropertyTypeFilter = 'all' | 'boys-hostel' | 'girls-hostel' | 'pg' | 'coliving';
 
 export function useFilters() {
   const [pricingFilter, setPricingFilter] = useState<PricingFilter>('all');

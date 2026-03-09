@@ -26,6 +26,10 @@ import {
 import { Button } from '~/shared/shadcn/button';
 import { Card, CardContent, CardHeader, CardTitle } from '~/shared/shadcn/card';
 
+import {
+  isSafeLandlordImageSrc,
+  LandlordImageFallback
+} from '~/components/shared/landlord-image-fallback';
 import { PropertyImageCarousel } from '~/components/user-dashboard/property-image-carousel';
 import { trpcHttp } from '~/utils/trpc';
 
@@ -90,13 +94,6 @@ const getFacilityLabel = (key: string) => {
   return labels[key] || key;
 };
 
-const getSafeImageSrc = (src: string) => {
-  if (!src || src.startsWith('file:') || src.startsWith('blob:')) {
-    return '/assets/Full-Logo.jpeg';
-  }
-  return src;
-};
-
 export default function PropertyDetailPage() {
   const params = useParams<{ slug: string }>();
 
@@ -132,7 +129,8 @@ export default function PropertyDetailPage() {
     );
   }
 
-  const images = property.images.length > 0 ? property.images : ['/assets/Full-Logo.jpeg'];
+  const images = property.images.length > 0 ? property.images : [''];
+  const hasAc = property.amenities.some((amenity) => normalizeFacilityKey(amenity) === 'ac');
 
   return (
     <main className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-3 sm:gap-5">
@@ -155,28 +153,36 @@ export default function PropertyDetailPage() {
 
         <div className="hidden h-[460px] gap-3 overflow-hidden md:grid md:grid-cols-4 md:grid-rows-2">
           <div className="group relative col-span-2 row-span-2 h-full w-full overflow-hidden">
-            <Image
-              src={getSafeImageSrc(images[0])}
-              alt={property.name}
-              fill
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
-              sizes="(max-width: 768px) 100vw, 50vw"
-              priority
-            />
+            {isSafeLandlordImageSrc(images[0]) ? (
+              <Image
+                src={images[0]}
+                alt={property.name}
+                fill
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                sizes="(max-width: 768px) 100vw, 50vw"
+                priority
+              />
+            ) : (
+              <LandlordImageFallback className="h-full w-full" />
+            )}
           </div>
           {images.slice(1, 5).map((image, index) => (
             <div
-              key={image}
+              key={`${image}-${index}`}
               className={`group relative h-full w-full overflow-hidden ${
                 index === 0 && images.length === 2 ? 'col-span-2 row-span-2' : ''
               }`}>
-              <Image
-                src={getSafeImageSrc(image)}
-                alt={`${property.name} image ${index + 2}`}
-                fill
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
-                sizes="25vw"
-              />
+              {isSafeLandlordImageSrc(image) ? (
+                <Image
+                  src={image}
+                  alt={`${property.name} image ${index + 2}`}
+                  fill
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  sizes="25vw"
+                />
+              ) : (
+                <LandlordImageFallback className="h-full w-full" />
+              )}
             </div>
           ))}
         </div>
@@ -285,20 +291,29 @@ export default function PropertyDetailPage() {
               {property.sharingTypes.length === 0 ? (
                 <p className="text-muted-foreground">No sharing types available.</p>
               ) : (
-                <ul className="space-y-3">
-                  {property.sharingTypes.map((sharingType) => (
-                    <li key={sharingType.type} className="flex items-center justify-between gap-3">
-                      <span className="leading-relaxed">{sharingType.type}</span>
-                      <span>—</span>
-                      <span className="font-semibold lg:text-lg">
-                        ₹{sharingType.price}{' '}
-                        <span className="text-muted-foreground text-xs font-normal lg:text-sm">
-                          / Bed
+                <div className="space-y-3">
+                  <ul className="space-y-3">
+                    {property.sharingTypes.map((sharingType) => (
+                      <li
+                        key={sharingType.type}
+                        className="flex items-center justify-between gap-3">
+                        <span className="leading-relaxed">{sharingType.type}</span>
+                        <span>—</span>
+                        <span className="font-semibold lg:text-lg">
+                          ₹{sharingType.price}{' '}
+                          <span className="text-muted-foreground text-xs font-normal lg:text-sm">
+                            / Bed
+                          </span>
                         </span>
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                      </li>
+                    ))}
+                  </ul>
+                  {hasAc && (
+                    <p className="text-muted-foreground text-xs leading-relaxed lg:text-sm">
+                      AC room prices may vary. Contact to confirm pricing.
+                    </p>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>

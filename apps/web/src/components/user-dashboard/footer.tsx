@@ -29,7 +29,7 @@ export function UserDashboardFooter() {
               </div>
             </Link>
             <p className="text-muted-foreground text-sm">
-              Find your ideal rental property or property with a smooth, hassle-free search.
+              Find your ideal rental property or hostel with a smooth, hassle-free search.
             </p>
 
             <p className="text-sm leading-relaxed">
@@ -81,7 +81,7 @@ export function UserDashboardFooter() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Mail className="text-primary size-4 shrink-0" />
-                  <span>support@bunkezy.com</span>
+                  <span>coming soon!</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="text-primary size-4 shrink-0" />

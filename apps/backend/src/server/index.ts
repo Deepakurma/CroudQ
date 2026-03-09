@@ -9,6 +9,7 @@ import { CorsConfig, isAllowedOrigin } from "../config/cors-config";
 import { db } from "../db";
 import { revokedTokens } from "../db/schema";
 import { appRouter } from "../routers";
+import { finalizeDuePropertyDeletions } from "../services/property-deletion";
 import { createContext } from "./context";
 
 export type ServerOptions = {
@@ -19,6 +20,16 @@ export type ServerOptions = {
 const getCleanupIntervalMs = () => {
   const rawMinutes = Number(
     process.env.REVOKED_TOKEN_CLEANUP_INTERVAL_MINUTES ?? "60",
+  );
+  if (!Number.isFinite(rawMinutes) || rawMinutes < 1) {
+    return 60 * 60 * 1000;
+  }
+  return Math.floor(rawMinutes * 60 * 1000);
+};
+
+const getPropertyDeletionCleanupIntervalMs = () => {
+  const rawMinutes = Number(
+    process.env.PROPERTY_DELETION_CLEANUP_INTERVAL_MINUTES ?? "60",
   );
   if (!Number.isFinite(rawMinutes) || rawMinutes < 1) {
     return 60 * 60 * 1000;
@@ -103,6 +114,7 @@ export async function createServer(
   });
 
   let revokedTokenCleanupTimer: ReturnType<typeof setInterval> | null = null;
+  let propertyDeletionCleanupTimer: ReturnType<typeof setInterval> | null = null;
 
   const runRevokedTokenCleanup = async () => {
     const deleted = await db
@@ -134,16 +146,44 @@ export async function createServer(
     server.log.info({ intervalMs }, "Started revoked token cleanup scheduler");
   };
 
+  const runPropertyDeletionCleanup = async () => {
+    await finalizeDuePropertyDeletions(server.log);
+  };
+
+  const startPropertyDeletionCleanup = () => {
+    const intervalMs = getPropertyDeletionCleanupIntervalMs();
+
+    runPropertyDeletionCleanup().catch((error) => {
+      server.log.error({ error }, "Failed initial property deletion cleanup");
+    });
+
+    propertyDeletionCleanupTimer = setInterval(() => {
+      runPropertyDeletionCleanup().catch((error) => {
+        server.log.error({ error }, "Failed scheduled property deletion cleanup");
+      });
+    }, intervalMs);
+
+    server.log.info(
+      { intervalMs },
+      "Started property deletion cleanup scheduler",
+    );
+  };
+
   server.addHook("onClose", async () => {
     if (revokedTokenCleanupTimer) {
       clearInterval(revokedTokenCleanupTimer);
       revokedTokenCleanupTimer = null;
+    }
+    if (propertyDeletionCleanupTimer) {
+      clearInterval(propertyDeletionCleanupTimer);
+      propertyDeletionCleanupTimer = null;
     }
   });
 
   const start = async () => {
     try {
       startRevokedTokenCleanup();
+      startPropertyDeletionCleanup();
       const port = opts.port ?? Number(process.env.PORT || "4000");
       const host = opts.host ?? "0.0.0.0";
       await server.listen({ port, host });

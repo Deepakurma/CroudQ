@@ -1,5 +1,6 @@
 import { EmptyState } from "@/components/EmptyState";
 import { ScreenWrapper } from "@/components/ScreenWrapper";
+import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 import { PropertyDetailsSkeleton } from "@/components/skeletons/PropertyDetailsSkeleton";
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
@@ -17,14 +18,16 @@ import {
   DoorClosed,
   Layers,
   MapPin,
+  ImageOff,
   Pencil,
   Phone,
   ShieldCheck,
+  Trash2,
   Utensils,
   Wifi,
   Zap,
 } from "lucide-react-native";
-import React, { useRef } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   Animated,
   Image,
@@ -35,6 +38,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useProperty } from "@/context/PropertyContext";
 
@@ -95,6 +99,14 @@ const getFloorLabel = (index: number, includeGround: boolean) => {
   }
 };
 
+const isSafeImageUri = (value: string | null | undefined) => {
+  if (!value) return false;
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith("file:") || trimmed.startsWith("blob:")) return false;
+  return true;
+};
+
 // ----------------------------------------------------------------------
 
 export default function ProfileScreen() {
@@ -102,14 +114,20 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets();
   const headerHeight = insets.top + 65;
   const router = useRouter();
+  const utils = trpc.useUtils();
   const { selectedPropertyId } = useProperty();
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   const {
     data: propertyData,
     isLoading,
+    refetch,
   } = trpc.property.getPropertyDetails.useQuery(undefined, {
     enabled: !!selectedPropertyId,
   });
+  const deletePropertyMutation = trpc.property.deleteProperty.useMutation();
+  const cancelDeletionMutation =
+    trpc.property.cancelPropertyDeletion.useMutation();
 
   const data = propertyData
     ? {
@@ -158,6 +176,74 @@ export default function ProfileScreen() {
   // Use backend-calculated capacity
   const capacity = propertyData?.totalCapacity || 0;
 
+  const scheduledDeletionDate = useMemo(() => {
+    const value = propertyData?.deletionScheduledFor;
+    if (!value) return null;
+    const parsed =
+      typeof value === "string" ? new Date(value) : new Date(String(value));
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }, [propertyData?.deletionScheduledFor]);
+
+  const handleSchedulePropertyDeletion = async () => {
+    try {
+      const result = await deletePropertyMutation.mutateAsync();
+      const scheduledFor = result?.scheduledFor
+        ? new Date(result.scheduledFor)
+        : null;
+      const formatted =
+        scheduledFor && !Number.isNaN(scheduledFor.getTime())
+          ? new Intl.DateTimeFormat("en-IN", {
+              dateStyle: "medium",
+              timeStyle: "short",
+            }).format(scheduledFor)
+          : "3 days";
+
+      Toast.show({
+        type: "success",
+        text1: result?.alreadyScheduled
+          ? "Deletion already scheduled"
+          : "Deletion scheduled",
+        text2: `Property will be deleted on ${formatted}.`,
+      });
+      setShowDeleteDialog(false);
+      await refetch();
+      await Promise.all([
+        utils.property.getAllProperties.invalidate(),
+        utils.property.getPropertyDetails.invalidate(),
+        utils.property.getDashboardStats.invalidate(),
+      ]);
+    } catch {
+      Toast.show({
+        type: "error",
+        text1: "Failed",
+        text2: "Could not schedule property deletion right now.",
+      });
+    }
+  };
+
+  const handleCancelPropertyDeletion = async () => {
+    try {
+      await cancelDeletionMutation.mutateAsync();
+      Toast.show({
+        type: "success",
+        text1: "Deletion cancelled",
+        text2: "Your property will remain active.",
+      });
+      await refetch();
+      await Promise.all([
+        utils.property.getAllProperties.invalidate(),
+        utils.property.getPropertyDetails.invalidate(),
+        utils.property.getDashboardStats.invalidate(),
+      ]);
+    } catch {
+      Toast.show({
+        type: "error",
+        text1: "Failed",
+        text2: "Could not cancel deletion right now.",
+      });
+    }
+  };
+
   return (
     <ScreenWrapper title="Property Details" scrollY={scrollY}>
       {isLoading ? (
@@ -198,11 +284,17 @@ export default function ProfileScreen() {
           >
             {/* Header Card */}
             <View style={styles.headerCard}>
-              {data.photos.length > 0 && (
+              {isSafeImageUri(data.photos[0]) ? (
                 <Image
                   source={{ uri: data.photos[0] }}
                   style={styles.headerImage}
                 />
+              ) : (
+                <View style={styles.imageFallbackSurface}>
+                  <View style={styles.imageFallbackBadge}>
+                    <ImageOff size={28} color={Colors.textSecondary} />
+                  </View>
+                </View>
               )}
               <View style={styles.headerOverlay} />
               <View style={styles.headerInfo}>
@@ -220,13 +312,18 @@ export default function ProfileScreen() {
                 </View>
               </View>
               <TouchableOpacity
-                style={styles.editButton}
+                style={[
+                  styles.editButton,
+                  scheduledDeletionDate ? styles.editButtonDisabled : null,
+                ]}
                 onPress={() => {
+                  if (scheduledDeletionDate) return;
                   router.push({
                     pathname: "/onboarding" as any,
                     params: { mode: "edit" },
                   });
                 }}
+                disabled={Boolean(scheduledDeletionDate)}
               >
                 <Pencil size={17} color={Colors.white} />
                 <Text style={styles.editButtonText}>Edit Property</Text>
@@ -415,19 +512,74 @@ export default function ProfileScreen() {
                   showsHorizontalScrollIndicator={false}
                   contentContainerStyle={styles.galleryScroll}
                 >
-                  {data.photos.map((photo, index) => (
-                    <Image
-                      key={index}
-                      source={{ uri: photo }}
-                      style={styles.galleryImage}
-                    />
-                  ))}
+                  {data.photos.map((photo, index) =>
+                    isSafeImageUri(photo) ? (
+                      <Image
+                        key={index}
+                        source={{ uri: photo }}
+                        style={styles.galleryImage}
+                      />
+                    ) : (
+                      <View
+                        key={index}
+                        style={[
+                          styles.galleryImage,
+                          styles.imageFallbackSurface,
+                        ]}
+                      >
+                        <View style={styles.imageFallbackBadge}>
+                          <ImageOff size={24} color={Colors.textSecondary} />
+                        </View>
+                      </View>
+                    ),
+                  )}
                 </ScrollView>
               ) : (
-                <EmptyState description="No photos added"></EmptyState>
+                <EmptyState description="Add property images to see"></EmptyState>
               )}
             </View>
+
+            <TouchableOpacity
+              style={styles.deletePropertyButton}
+              onPress={() => {
+                if (scheduledDeletionDate) {
+                  void handleCancelPropertyDeletion();
+                  return;
+                }
+                setShowDeleteDialog(true);
+              }}
+              disabled={
+                deletePropertyMutation.isPending ||
+                cancelDeletionMutation.isPending
+              }
+            >
+              <Trash2 size={14} color={Colors.error} />
+              <Text style={styles.deletePropertyButtonText}>
+                {scheduledDeletionDate
+                  ? cancelDeletionMutation.isPending
+                    ? "Cancelling..."
+                    : "Cancel Deletion"
+                  : deletePropertyMutation.isPending
+                    ? "Scheduling..."
+                    : "Delete Property"}
+              </Text>
+            </TouchableOpacity>
           </Animated.ScrollView>
+
+          <ConfirmationDialog
+            visible={showDeleteDialog}
+            title="Schedule Property Deletion?"
+            description="Your property will be deleted after 3 days. You can cancel before the deadline."
+            confirmLabel={
+              deletePropertyMutation.isPending ? "Scheduling..." : "Schedule"
+            }
+            cancelLabel="Keep Property"
+            variant="danger"
+            onCancel={() => setShowDeleteDialog(false)}
+            onConfirm={() => {
+              void handleSchedulePropertyDeletion();
+            }}
+          />
         </View>
       )}
     </ScreenWrapper>
@@ -486,6 +638,9 @@ const styles = StyleSheet.create({
     gap: Spacing.xs,
     borderWidth: 1,
     borderColor: "rgba(255,255,255,0.3)",
+  },
+  editButtonDisabled: {
+    opacity: 0.45,
   },
   editButtonText: {
     color: Colors.white,
@@ -755,5 +910,42 @@ const styles = StyleSheet.create({
     height: 120,
     borderRadius: Spacing.m,
     backgroundColor: Colors.accent,
+  },
+  imageFallbackSurface: {
+    width: "100%",
+    height: "100%",
+    borderRadius: Spacing.m,
+    backgroundColor: "#f3f5f8",
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  imageFallbackBadge: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    borderWidth: 1,
+    borderColor: Colors.cardBorder,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  deletePropertyButton: {
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(239,68,68,0.25)",
+    backgroundColor: "rgba(239,68,68,0.08)",
+    paddingVertical: Spacing.s,
+    paddingHorizontal: Spacing.l,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: Spacing.s,
+  },
+  deletePropertyButtonText: {
+    fontSize: Typography.size.s,
+    fontFamily: Typography.font.semibold,
+    color: Colors.error,
   },
 });

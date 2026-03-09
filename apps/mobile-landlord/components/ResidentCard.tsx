@@ -8,6 +8,7 @@ import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { Typography } from "@/constants/Typography";
 import { useAuth } from "@/context/AuthContext";
+import { useProperty } from "@/context/PropertyContext";
 import { uploadImageToS3 } from "@/utils/s3-upload";
 import { trpc } from "@/utils/api";
 import { BottomSheetModal } from "@gorhom/bottom-sheet";
@@ -73,6 +74,7 @@ export function ResidentCard({
   readonly = false,
 }: ResidentCardProps) {
   const { token } = useAuth();
+  const { selectedPropertyId } = useProperty();
   const [activeDialog, setActiveDialog] = useState<
     "none" | "checkout" | "markPaid"
   >("none");
@@ -273,8 +275,13 @@ export function ResidentCard({
           editProfileImage.startsWith("content://"));
 
       if (isLocalAsset) {
+        if (!selectedPropertyId) {
+          throw new Error("Property context is missing.");
+        }
+
         const uploaded = await uploadImageToS3({
           token,
+          propertyId: selectedPropertyId,
           fileUri: editProfileImage,
           fileName: `resident-${Date.now()}.jpg`,
           contentType: "image/jpeg",

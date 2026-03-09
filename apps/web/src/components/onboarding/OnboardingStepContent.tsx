@@ -19,6 +19,11 @@ import { Label } from '~/shared/shadcn/label';
 import { Switch } from '~/shared/shadcn/switch';
 import { Textarea } from '~/shared/shadcn/textarea';
 
+import {
+  isSafeLandlordImageSrc,
+  LandlordImageFallback
+} from '~/components/shared/landlord-image-fallback';
+
 import { ROOM_TYPES } from './config';
 
 import type { OnboardingFormData } from './config';
@@ -545,12 +550,21 @@ export function OnboardingStepContent({
             <div className="flex flex-wrap gap-3">
               {formData.photos.map((photo, index) => (
                 <div key={`${photo}-${index}`} className="relative">
-                  <Image
-                    src={photo}
-                    alt={`Property photo ${index + 1}`}
-                    className="h-20 w-20 rounded-lg border object-cover"
-                    unoptimized={photo.startsWith('blob:')}
-                  />
+                  {photo.startsWith('blob:') || isSafeLandlordImageSrc(photo) ? (
+                    <Image
+                      src={photo}
+                      alt={`Property photo ${index + 1}`}
+                      width={80}
+                      height={80}
+                      className="h-20 w-20 rounded-lg border object-cover"
+                      unoptimized={photo.startsWith('blob:')}
+                    />
+                  ) : (
+                    <LandlordImageFallback
+                      className="h-20 w-20 rounded-lg"
+                      logoClassName="size-8"
+                    />
+                  )}
                   <Button
                     type="button"
                     variant="destructive"
@@ -562,9 +576,7 @@ export function OnboardingStepContent({
                 </div>
               ))}
               {formData.photos.length === 0 && (
-                <div className="border-border bg-muted flex size-20 items-center justify-center rounded-lg border">
-                  <Plus className="text-muted-foreground size-6" />
-                </div>
+                <LandlordImageFallback className="h-20 w-20 rounded-lg" logoClassName="size-8" />
               )}
             </div>
           </div>

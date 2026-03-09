@@ -20,6 +20,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Toast from "react-native-toast-message";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useProperty } from "@/context/PropertyContext";
@@ -54,8 +55,23 @@ export default function DashboardScreen() {
   const activeProperty =
     properties?.find((property) => property.id === selectedPropertyId) ||
     properties?.[0];
+  const cancelDeletionMutation = trpc.property.cancelPropertyDeletion.useMutation();
   const isFrozen = Boolean(activeProperty?.isFrozen);
   const canRunPropertyQueries = isSelectedPropertyValid && !isFrozen;
+  const scheduledDeletionDate = React.useMemo(() => {
+    const value = activeProperty?.deletionScheduledFor;
+    if (!value) return null;
+    const parsed =
+      typeof value === "string" ? new Date(value) : new Date(String(value));
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }, [activeProperty?.deletionScheduledFor]);
+  const scheduledDeletionLabel = React.useMemo(() => {
+    if (!scheduledDeletionDate) return null;
+    return new Intl.DateTimeFormat("en-IN", {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(scheduledDeletionDate);
+  }, [scheduledDeletionDate]);
 
   // Enable hide-on-scroll for dashboard (only when properties exist)
   // useScrollToHideTabs(scrollY); // Removed for persistent tab bar
@@ -171,6 +187,28 @@ export default function DashboardScreen() {
     router.push("/rooms" as any);
   }, [router, setRoomsStatus]);
 
+  const handleCancelPropertyDeletion = React.useCallback(async () => {
+    try {
+      await cancelDeletionMutation.mutateAsync();
+      Toast.show({
+        type: "success",
+        text1: "Deletion cancelled",
+        text2: "Your property will remain active.",
+      });
+      await Promise.all([
+        utils.property.getAllProperties.invalidate(),
+        utils.property.getPropertyDetails.invalidate(),
+        utils.property.getDashboardStats.invalidate(),
+      ]);
+    } catch {
+      Toast.show({
+        type: "error",
+        text1: "Failed",
+        text2: "Could not cancel deletion right now.",
+      });
+    }
+  }, [cancelDeletionMutation, utils]);
+
   const hasUnresolvedComplaints = (unresolvedComplaints?.length ?? 0) > 0;
 
   return (
@@ -216,6 +254,25 @@ export default function DashboardScreen() {
           ]}
           showsVerticalScrollIndicator={false}
         >
+          {scheduledDeletionLabel ? (
+            <View style={styles.deletionBanner}>
+              <Text style={styles.deletionBannerText}>
+                Property deletion is scheduled for {scheduledDeletionLabel}.
+              </Text>
+              <TouchableOpacity
+                style={styles.cancelDeletionButton}
+                onPress={() => {
+                  void handleCancelPropertyDeletion();
+                }}
+                disabled={cancelDeletionMutation.isPending || !canRunPropertyQueries}
+              >
+                <Text style={styles.cancelDeletionButtonText}>
+                  {cancelDeletionMutation.isPending ? "Cancelling..." : "Cancel Deletion"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null}
+
           <DashboardStats
             totalResidents={stats?.totalResidents ?? 0}
             occupancyRate={stats?.occupancyRate ?? 0}
@@ -313,5 +370,33 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: Typography.size.m,
     fontFamily: Typography.font.bold,
+  },
+  deletionBanner: {
+    backgroundColor: "#fff5f5",
+    borderWidth: 1,
+    borderColor: "rgba(239,68,68,0.25)",
+    borderRadius: 20,
+    padding: Spacing.m,
+    gap: Spacing.s,
+  },
+  deletionBannerText: {
+    fontSize: Typography.size.s,
+    fontFamily: Typography.font.medium,
+    color: Colors.error,
+    lineHeight: 20,
+  },
+  cancelDeletionButton: {
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: "rgba(239,68,68,0.3)",
+    borderRadius: 14,
+    paddingHorizontal: Spacing.m,
+    paddingVertical: Spacing.xs,
+    backgroundColor: Colors.white,
+  },
+  cancelDeletionButtonText: {
+    fontSize: Typography.size.s,
+    fontFamily: Typography.font.semibold,
+    color: Colors.error,
   },
 });

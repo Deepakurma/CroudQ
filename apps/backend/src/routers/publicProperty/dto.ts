@@ -20,7 +20,6 @@ export const listPublicPropertiesSchema = z
         "girls-hostel",
         "pg",
         "coliving",
-        "apartments",
       ])
       .optional(),
     minPrice: z.number().int().min(0).optional(),
