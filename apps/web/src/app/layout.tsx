@@ -69,24 +69,44 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Bunkezy - --',
+  title: 'Bunkezy - Living Made Easy',
   icons: {
     icon: '/favicon.ico'
   },
-  description: '--',
-  keywords: ['properties', 'properties near me'],
+  description:
+    'Find a hostel or rental that fits, apply fast, and settle in without the usual hassle.',
+  keywords: [
+    'hostels',
+    'apartments',
+    'co-living',
+    'boys hostel',
+    'girls hostel',
+    'pg',
+    'pgs near me',
+    'hostels near me',
+    'rentals near me',
+    'rooms for rent',
+    'apartments for rent',
+    'student housing',
+    'shared accommodation',
+    'rental application',
+    'tenant portal',
+    'move in checklist'
+  ],
   authors: [{ name: 'Bunkezy' }],
   creator: 'Bunkezy',
   publisher: 'Bunkezy',
   openGraph: {
     title: 'Bunkezy',
-    description: '--',
+    description:
+      'Find a hostel or rental that fits, apply fast, and settle in without the usual hassle.',
     type: 'website'
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Bunkezy - --',
-    description: '--'
+    title: 'Bunkezy - Living Made Easy',
+    description:
+      'Find a hostel or rental that fits, apply fast, and settle in without the usual hassle.'
   },
   robots: {
     index: true,
