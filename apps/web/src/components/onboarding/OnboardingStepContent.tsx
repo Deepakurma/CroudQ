@@ -449,11 +449,11 @@ export function OnboardingStepContent({
       ];
 
       return (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-4">
           <h2 className="text-xl font-bold">Facilities</h2>
-          <div className="divide-y rounded-lg border">
+          <div className="divide-y rounded-lg">
             {facilities.map((item) => (
-              <div key={item.key} className="flex items-center justify-between p-4 px-5">
+              <div key={item.key} className="flex items-center justify-between p-4 px-0">
                 <div className="flex items-center gap-3">
                   {item.icon}
                   <span className="font-medium">{item.label}</span>
@@ -596,13 +596,13 @@ export function OnboardingStepContent({
               {formData.photos.length === 0 && (
                 <LandlordImageFallback className="h-20 w-20 rounded-lg" logoClassName="size-8" />
               )}
+              {isConvertingPhotos && (
+                <div className="text-muted-foreground flex items-center gap-2 text-sm">
+                  <Loader2 className="size-4 animate-spin" />
+                  Loading image...
+                </div>
+              )}
             </div>
-            {isConvertingPhotos && (
-              <div className="text-muted-foreground flex items-center gap-2 text-xs">
-                <Loader2 className="size-3.5 animate-spin" />
-                Loading image...
-              </div>
-            )}
           </div>
         </div>
       );
