@@ -559,11 +559,7 @@ export function OnboardingStepContent({
                 </div>
               </div>
               <span className="rounded-full border px-3 py-1 text-xs font-semibold">
-                {isConvertingPhotos
-                  ? 'Converting...'
-                  : isUploadingPhotos
-                    ? 'Uploading...'
-                    : 'Select'}
+                {isUploadingPhotos ? 'Uploading...' : 'Select'}
               </span>
             </label>
             <p className="text-muted-foreground text-xs">
@@ -586,6 +582,11 @@ export function OnboardingStepContent({
                       className="h-20 w-20 rounded-lg"
                       logoClassName="size-8"
                     />
+                  )}
+                  {isConvertingPhotos && (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/30">
+                      <Loader2 className="size-4 animate-spin text-white" />
+                    </div>
                   )}
                   <Button
                     type="button"
