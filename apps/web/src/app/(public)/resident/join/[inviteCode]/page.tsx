@@ -96,6 +96,7 @@ export default function JoinInvitePage() {
   const [durationMonths, setDurationMonths] = useState('');
   const [profileImage, setProfileImage] = useState<string>('');
   const [profileImagePreviewUrl, setProfileImagePreviewUrl] = useState<string>('');
+  const [isConvertingPhoto, setIsConvertingPhoto] = useState(false);
   const [selectedProfileImageFile, setSelectedProfileImageFile] = useState<File | null>(null);
 
   const [isSendingOtp, setIsSendingOtp] = useState(false);
@@ -311,10 +312,13 @@ export default function JoinInvitePage() {
     }
     let processedFile = file;
     try {
+      setIsConvertingPhoto(true);
       processedFile = await convertIfHeic(file);
     } catch {
       setErrorMessage('Unable to convert HEIC image. Please try a JPEG or PNG.');
       return;
+    } finally {
+      setIsConvertingPhoto(false);
     }
 
     setSelectedProfileImageFile(processedFile);
@@ -473,23 +477,32 @@ export default function JoinInvitePage() {
                       <span className="text-xs font-semibold">Select</span>
                     </label>
 
-                    {(profileImagePreviewUrl || profileImage) && (
+                    {(profileImagePreviewUrl || profileImage || isConvertingPhoto) && (
                       <div className="relative inline-flex">
-                        <Image
-                          src={profileImagePreviewUrl || profileImage}
-                          alt="Profile preview"
-                          width={96}
-                          height={96}
-                          className="h-24 w-24 rounded-lg border object-cover"
-                          unoptimized
-                        />
-                        <button
-                          type="button"
-                          onClick={clearProfileImageSelection}
-                          className="absolute -top-2 -right-2 rounded-full bg-red-600 p-1 text-white hover:bg-red-700"
-                          aria-label="Remove photo">
-                          <Trash2 className="size-3" />
-                        </button>
+                        {(profileImagePreviewUrl || profileImage) && (
+                          <Image
+                            src={profileImagePreviewUrl || profileImage}
+                            alt="Profile preview"
+                            width={96}
+                            height={96}
+                            className="h-24 w-24 rounded-lg border object-cover"
+                            unoptimized
+                          />
+                        )}
+                        {isConvertingPhoto && (
+                          <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/30">
+                            <Loader2 className="size-4 animate-spin text-white" />
+                          </div>
+                        )}
+                        {(profileImagePreviewUrl || profileImage) && (
+                          <button
+                            type="button"
+                            onClick={clearProfileImageSelection}
+                            className="absolute -top-2 -right-2 rounded-full bg-red-600 p-1 text-white hover:bg-red-700"
+                            aria-label="Remove photo">
+                            <Trash2 className="size-3" />
+                          </button>
+                        )}
                       </div>
                     )}
 

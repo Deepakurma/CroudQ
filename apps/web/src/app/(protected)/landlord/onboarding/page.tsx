@@ -115,6 +115,7 @@ function OnboardingScreenContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isBootstrapping, setIsBootstrapping] = useState(false);
   const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
+  const [isConvertingPhotos, setIsConvertingPhotos] = useState(false);
   const [pendingPhotoUploads, setPendingPhotoUploads] = useState<
     Array<{ file: File; previewUrl: string }>
   >([]);
@@ -447,10 +448,13 @@ function OnboardingScreenContent() {
     const maxSizeBytes = 10 * 1024 * 1024;
 
     try {
+      setIsConvertingPhotos(true);
       selectedFiles = await Promise.all(selectedFiles.map(convertIfHeic));
     } catch {
       toast.error('Unable to convert HEIC image. Please try a JPEG or PNG.');
       return;
+    } finally {
+      setIsConvertingPhotos(false);
     }
 
     for (const file of selectedFiles) {
@@ -701,6 +705,7 @@ function OnboardingScreenContent() {
           handlePhotoSelection={handlePhotoSelection}
           removePhoto={removePhoto}
           isUploadingPhotos={isUploadingPhotos}
+          isConvertingPhotos={isConvertingPhotos}
         />
       </div>
 

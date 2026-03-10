@@ -5,6 +5,7 @@ import {
   Brush as BrushCleaning,
   Camera,
   Check,
+  Loader2,
   Plus,
   Trash2,
   Utensils,
@@ -50,6 +51,7 @@ type OnboardingStepContentProps = {
   handlePhotoSelection: (files: FileList | null) => void;
   removePhoto: (index: number) => void;
   isUploadingPhotos: boolean;
+  isConvertingPhotos?: boolean;
 };
 
 export function OnboardingStepContent({
@@ -69,7 +71,8 @@ export function OnboardingStepContent({
   updateRent,
   handlePhotoSelection,
   removePhoto,
-  isUploadingPhotos
+  isUploadingPhotos,
+  isConvertingPhotos
 }: OnboardingStepContentProps) {
   switch (currentStep) {
     case 1:
@@ -556,7 +559,11 @@ export function OnboardingStepContent({
                 </div>
               </div>
               <span className="rounded-full border px-3 py-1 text-xs font-semibold">
-                {isUploadingPhotos ? 'Uploading...' : 'Select'}
+                {isConvertingPhotos
+                  ? 'Converting...'
+                  : isUploadingPhotos
+                    ? 'Uploading...'
+                    : 'Select'}
               </span>
             </label>
             <p className="text-muted-foreground text-xs">
@@ -591,7 +598,14 @@ export function OnboardingStepContent({
                 </div>
               ))}
               {formData.photos.length === 0 && (
-                <LandlordImageFallback className="h-20 w-20 rounded-lg" logoClassName="size-8" />
+                <div className="relative">
+                  <LandlordImageFallback className="h-20 w-20 rounded-lg" logoClassName="size-8" />
+                  {isConvertingPhotos && (
+                    <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/30">
+                      <Loader2 className="size-4 animate-spin text-white" />
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
