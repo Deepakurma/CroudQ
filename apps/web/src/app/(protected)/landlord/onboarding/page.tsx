@@ -3,6 +3,7 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+import heic2any from 'heic2any';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -405,10 +406,30 @@ function OnboardingScreenContent() {
     }));
   };
 
-  const handlePhotoSelection = (files: FileList | null) => {
+  const convertIfHeic = async (file: File): Promise<File> => {
+    const isHeic =
+      file.type === 'image/heic' ||
+      file.type === 'image/heif' ||
+      file.name.toLowerCase().endsWith('.heic') ||
+      file.name.toLowerCase().endsWith('.heif');
+
+    if (!isHeic) return file;
+
+    const blob = await heic2any({
+      blob: file,
+      toType: 'image/jpeg',
+      quality: 0.9
+    });
+
+    return new File([blob as Blob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), {
+      type: 'image/jpeg'
+    });
+  };
+
+  const handlePhotoSelection = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
-    const selectedFiles = Array.from(files);
+    let selectedFiles = Array.from(files);
     const remainingSlots = 5 - formData.photos.length;
     if (remainingSlots <= 0) {
       toast.error('You can upload up to 5 photos only.');
@@ -424,6 +445,13 @@ function OnboardingScreenContent() {
       return;
     }
     const maxSizeBytes = 10 * 1024 * 1024;
+
+    try {
+      selectedFiles = await Promise.all(selectedFiles.map(convertIfHeic));
+    } catch {
+      toast.error('Unable to convert HEIC image. Please try a JPEG or PNG.');
+      return;
+    }
 
     for (const file of selectedFiles) {
       if (!(ALLOWED_IMAGE_CONTENT_TYPES as readonly string[]).includes(file.type)) {

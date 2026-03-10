@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 
+import heic2any from 'heic2any';
 import { AlertTriangle, ImagePlus, Loader2, ShieldCheck, Trash2 } from 'lucide-react';
 
 import { getPublicOtpErrorMessage } from '~/lib/otp-error';
@@ -32,6 +33,26 @@ const toAllowedImageContentType = (value: string): AllowedImageContentType => {
     return value as AllowedImageContentType;
   }
   throw new Error('Unsupported image format. Use JPEG, PNG, WEBP, HEIC, or HEIF.');
+};
+
+const convertIfHeic = async (file: File): Promise<File> => {
+  const isHeic =
+    file.type === 'image/heic' ||
+    file.type === 'image/heif' ||
+    file.name.toLowerCase().endsWith('.heic') ||
+    file.name.toLowerCase().endsWith('.heif');
+
+  if (!isHeic) return file;
+
+  const blob = await heic2any({
+    blob: file,
+    toType: 'image/jpeg',
+    quality: 0.9
+  });
+
+  return new File([blob as Blob], file.name.replace(/\.(heic|heif)$/i, '.jpg'), {
+    type: 'image/jpeg'
+  });
 };
 
 interface InvitePayload {
@@ -266,7 +287,7 @@ export default function JoinInvitePage() {
     }
   };
 
-  const handlePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -288,8 +309,16 @@ export default function JoinInvitePage() {
     if (profileImagePreviewUrl) {
       URL.revokeObjectURL(profileImagePreviewUrl);
     }
-    setSelectedProfileImageFile(file);
-    setProfileImagePreviewUrl(URL.createObjectURL(file));
+    let processedFile = file;
+    try {
+      processedFile = await convertIfHeic(file);
+    } catch {
+      setErrorMessage('Unable to convert HEIC image. Please try a JPEG or PNG.');
+      return;
+    }
+
+    setSelectedProfileImageFile(processedFile);
+    setProfileImagePreviewUrl(URL.createObjectURL(processedFile));
     setErrorMessage('');
   };
 
