@@ -467,20 +467,21 @@ function OnboardingScreenContent() {
 
     setIsUploadingPhotos(true);
     try {
-      if (!propertyClient) {
-        throw new Error('Property context missing for image upload.');
-      }
-
       const uploadedPhotoUrlByPreview = new Map<string, string>();
 
       for (const pendingPhoto of pendingPhotoUploadsRef.current) {
         const contentType = toAllowedImageContentType(pendingPhoto.file.type);
-        const { uploadUrl, fileUrl } = await propertyClient.media.generateUploadUrl.mutate({
-          folder: 'properties',
-          fileName: pendingPhoto.file.name,
-          contentType,
-          fileSizeBytes: pendingPhoto.file.size
-        });
+        const { uploadUrl, fileUrl } = propertyClient
+          ? await propertyClient.media.generateUploadUrl.mutate({
+              folder: 'properties',
+              fileName: pendingPhoto.file.name,
+              contentType,
+              fileSizeBytes: pendingPhoto.file.size
+            })
+          : await trpcClient.media.generateUploadUrlForUser.mutate({
+              contentType,
+              fileSizeBytes: pendingPhoto.file.size
+            });
 
         const uploadResult = await fetch(uploadUrl, {
           method: 'PUT',

@@ -18,6 +18,15 @@ export const generateUploadUrlSchema = z.object({
     .max(MAX_IMAGE_UPLOAD_SIZE_BYTES),
 });
 
+export const generateUserUploadUrlSchema = z.object({
+  contentType: contentTypeSchema,
+  fileSizeBytes: z
+    .number()
+    .int()
+    .positive()
+    .max(MAX_IMAGE_UPLOAD_SIZE_BYTES),
+});
+
 export const deleteS3ObjectSchema = z.object({
   key: z.string().trim().min(1).max(1024).regex(/^(properties|resident)\/[^/]+\//, {
     message: "Invalid key prefix",
@@ -25,4 +34,5 @@ export const deleteS3ObjectSchema = z.object({
 });
 
 export type GenerateUploadUrlType = z.infer<typeof generateUploadUrlSchema>;
+export type GenerateUserUploadUrlType = z.infer<typeof generateUserUploadUrlSchema>;
 export type DeleteS3ObjectType = z.infer<typeof deleteS3ObjectSchema>;

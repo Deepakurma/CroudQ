@@ -1,5 +1,5 @@
 {
-  "id": "65b9fc54-cc37-4fe8-83d7-e36367d7407e",
+  "id": "21914e3a-5c87-466c-b9ca-d8e30861fe7a",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -371,6 +371,18 @@
           "primaryKey": false,
           "notNull": false
         },
+        "deletionRequestedAt": {
+          "name": "deletionRequestedAt",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "deletionScheduledFor": {
+          "name": "deletionScheduledFor",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
         "userId": {
           "name": "userId",
           "type": "text",
@@ -398,6 +410,21 @@
           "columns": [
             {
               "expression": "userId",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "properties_deletion_scheduled_for_idx": {
+          "name": "properties_deletion_scheduled_for_idx",
+          "columns": [
+            {
+              "expression": "deletionScheduledFor",
               "isExpression": false,
               "asc": true,
               "nulls": "last"

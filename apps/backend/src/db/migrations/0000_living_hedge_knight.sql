@@ -55,6 +55,8 @@ CREATE TABLE "property" (
 	"description" text,
 	"isFrozen" boolean DEFAULT false NOT NULL,
 	"freezeReason" text,
+	"deletionRequestedAt" timestamp,
+	"deletionScheduledFor" timestamp,
 	"userId" text NOT NULL,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
 	"updatedAt" timestamp DEFAULT now() NOT NULL
@@ -260,6 +262,7 @@ ALTER TABLE "support_query" ADD CONSTRAINT "support_query_propertyId_property_id
 CREATE INDEX "revoked_tokens_user_id_idx" ON "revoked_token" USING btree ("userId");--> statement-breakpoint
 CREATE INDEX "revoked_tokens_expires_at_idx" ON "revoked_token" USING btree ("expiresAt");--> statement-breakpoint
 CREATE INDEX "properties_user_id_idx" ON "property" USING btree ("userId");--> statement-breakpoint
+CREATE INDEX "properties_deletion_scheduled_for_idx" ON "property" USING btree ("deletionScheduledFor");--> statement-breakpoint
 CREATE INDEX "property_facilities_property_id_idx" ON "property_facility" USING btree ("propertyId");--> statement-breakpoint
 CREATE UNIQUE INDEX "property_facilities_property_id_unique" ON "property_facility" USING btree ("propertyId");--> statement-breakpoint
 CREATE INDEX "property_room_types_property_id_idx" ON "property_room_type" USING btree ("propertyId");--> statement-breakpoint

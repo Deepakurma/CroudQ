@@ -374,16 +374,12 @@ export default function OnboardingScreen() {
 
       setIsUploadingPhotos(true);
       try {
-        if (!selectedPropertyId) {
-          throw new Error("Property context is missing.");
-        }
-
         const uploadedPhotos: string[] = [];
         for (const asset of result.assets) {
           if (!asset.uri) continue;
           const uploaded = await uploadImageToS3({
             token,
-            propertyId: selectedPropertyId,
+            propertyId: selectedPropertyId ?? undefined,
             fileUri: asset.uri,
             fileName: asset.fileName ?? `property-${Date.now()}.jpg`,
             contentType: asset.mimeType ?? "image/jpeg",

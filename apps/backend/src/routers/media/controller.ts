@@ -2,13 +2,18 @@ import { TRPCError } from "@trpc/server";
 
 import {
   createS3ObjectKey,
+  createStagingS3ObjectKey,
   deleteS3Object,
   generateUploadUrl,
   getS3FileUrl,
   isS3KeyOwnedByProperty,
 } from "../../services/s3-sender";
-import { propertyProcedure, router } from "../../server/trpc";
-import { deleteS3ObjectSchema, generateUploadUrlSchema } from "./dto";
+import { propertyProcedure, protectedProcedure, router } from "../../server/trpc";
+import {
+  deleteS3ObjectSchema,
+  generateUploadUrlSchema,
+  generateUserUploadUrlSchema,
+} from "./dto";
 
 export const mediaRouter = router({
   generateUploadUrl: propertyProcedure
@@ -21,6 +26,28 @@ export const mediaRouter = router({
           input.contentType,
           input.fileSizeBytes,
         );
+        const fileUrl = getS3FileUrl(key);
+
+        return {
+          uploadUrl,
+          key,
+          fileUrl,
+          expiresInSeconds: 300,
+        };
+      } catch {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to create upload URL.",
+        });
+      }
+    }),
+
+  generateUploadUrlForUser: protectedProcedure
+    .input(generateUserUploadUrlSchema)
+    .mutation(async ({ input, ctx }) => {
+      try {
+        const key = createStagingS3ObjectKey(ctx.user.id, input.contentType);
+        const uploadUrl = await generateUploadUrl(key, input.contentType, input.fileSizeBytes);
         const fileUrl = getS3FileUrl(key);
 
         return {

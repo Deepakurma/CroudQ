@@ -19,7 +19,7 @@ const toAllowedImageContentType = (value: string): AllowedImageContentType => {
 
 interface UploadImageToS3Input {
   token: string;
-  propertyId: string;
+  propertyId?: string;
   fileUri: string;
   fileName: string;
   contentType: string;
@@ -44,12 +44,17 @@ export const uploadImageToS3 = async (
   const fileBlob = await fileResponse.blob();
   const contentType = toAllowedImageContentType(input.contentType);
 
-  const { uploadUrl, key, fileUrl } = await client.media.generateUploadUrl.mutate({
-    folder: input.folder,
-    fileName: input.fileName,
-    contentType,
-    fileSizeBytes: fileBlob.size,
-  });
+  const { uploadUrl, key, fileUrl } = input.propertyId
+    ? await client.media.generateUploadUrl.mutate({
+        folder: input.folder,
+        fileName: input.fileName,
+        contentType,
+        fileSizeBytes: fileBlob.size,
+      })
+    : await client.media.generateUploadUrlForUser.mutate({
+        contentType,
+        fileSizeBytes: fileBlob.size,
+      });
 
   const uploadResponse = await fetch(uploadUrl, {
     method: "PUT",

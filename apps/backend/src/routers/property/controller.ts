@@ -14,7 +14,14 @@ import {
     schedulePropertyDeletion,
 } from "../../services/property-deletion";
 import { roleGuardService } from "../../services/roleGuardService";
-import { deleteS3Object, resolveManagedS3KeyForProperty } from "../../services/s3-sender";
+import {
+    deleteS3Object,
+    getS3FileUrl,
+    isStagingKeyForUser,
+    moveStagingObjectToProperty,
+    resolveManagedS3KeyForProperty,
+    resolveStagingS3Key,
+} from "../../services/s3-sender";
 import { propertyProcedure, protectedProcedure, router } from "../../server/trpc";
 import {
     addRoomSchema,
@@ -38,13 +45,33 @@ export const propertyRouter = router({
     create: protectedProcedure
         .input(createPropertySchema)
         .mutation(async ({ input, ctx }) => {
+            const propertyId = crypto.randomUUID();
+            const finalPhotos = await Promise.all(
+                input.photos.map(async (photo) => {
+                    const stagingKey = resolveStagingS3Key(photo);
+                    if (!stagingKey) return photo;
+                    if (!isStagingKeyForUser(stagingKey, ctx.user.id)) {
+                        throw new TRPCError({
+                            code: "FORBIDDEN",
+                            message: "Invalid staging key.",
+                        });
+                    }
+
+                    const destinationKey = await moveStagingObjectToProperty(
+                        stagingKey,
+                        propertyId,
+                    );
+                    return getS3FileUrl(destinationKey);
+                }),
+            );
+
             const createdProperty = await db.transaction(async (tx) => {
                 await roleGuardService.assertCanBeLandlord(tx, ctx.user.id);
 
                 const [newProperty] = await tx
                     .insert(properties)
                     .values({
-                        id: crypto.randomUUID(),
+                        id: propertyId,
                         userId: ctx.user.id,
                         name: input.propertyName,
                         inchargeName: input.inchargeName,
@@ -60,7 +87,7 @@ export const propertyRouter = router({
                         floors: parseInt(input.floors, 10) || 0,
                         includeGroundFloor: input.includeGroundFloor,
                         rules: input.rules,
-                        photos: input.photos,
+                        photos: finalPhotos,
                         description: "",
                     })
                     .returning();
