@@ -583,11 +583,6 @@ export function OnboardingStepContent({
                       logoClassName="size-8"
                     />
                   )}
-                  {isConvertingPhotos && (
-                    <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/30">
-                      <Loader2 className="size-4 animate-spin text-white" />
-                    </div>
-                  )}
                   <Button
                     type="button"
                     variant="destructive"
@@ -599,16 +594,15 @@ export function OnboardingStepContent({
                 </div>
               ))}
               {formData.photos.length === 0 && (
-                <div className="relative">
-                  <LandlordImageFallback className="h-20 w-20 rounded-lg" logoClassName="size-8" />
-                  {isConvertingPhotos && (
-                    <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/30">
-                      <Loader2 className="size-4 animate-spin text-white" />
-                    </div>
-                  )}
-                </div>
+                <LandlordImageFallback className="h-20 w-20 rounded-lg" logoClassName="size-8" />
               )}
             </div>
+            {isConvertingPhotos && (
+              <div className="text-muted-foreground flex items-center gap-2 text-xs">
+                <Loader2 className="size-3.5 animate-spin" />
+                Loading image...
+              </div>
+            )}
           </div>
         </div>
       );
