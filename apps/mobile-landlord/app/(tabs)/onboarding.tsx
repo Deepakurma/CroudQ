@@ -107,12 +107,19 @@ export default function OnboardingScreen() {
 
   const [formData, setFormData] = useState(createInitialOnboardingFormData());
   const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
+  const [pendingPhotoUploads, setPendingPhotoUploads] = useState<
+    { uri: string; fileName: string; contentType: string }[]
+  >([]);
+  const pendingPhotoUploadsRef = useRef<
+    { uri: string; fileName: string; contentType: string }[]
+  >([]);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Reset form to initial state
   const resetForm = useCallback(() => {
     setFormData(createInitialOnboardingFormData());
+    setPendingPhotoUploads([]);
     setErrors({});
     setCurrLandmark("");
     setCurrRule("");
@@ -183,6 +190,10 @@ export default function OnboardingScreen() {
       resetForm();
     }
   }, [propertyData, isEditMode, resetForm]);
+
+  useEffect(() => {
+    pendingPhotoUploadsRef.current = pendingPhotoUploads;
+  }, [pendingPhotoUploads]);
 
   useFocusEffect(
     useCallback(() => {
@@ -363,71 +374,61 @@ export default function OnboardingScreen() {
     });
 
     if (!result.canceled) {
-      if (!token) {
+      const remainingSlots = 5 - formData.photos.length;
+      if (remainingSlots <= 0) {
         Toast.show({
           type: "error",
-          text1: "Session expired",
-          text2: "Please login again.",
+          text1: "Limit reached",
+          text2: "You can upload up to 5 photos only.",
         });
         return;
       }
 
-      setIsUploadingPhotos(true);
-      try {
-        const remainingSlots = 5 - formData.photos.length;
-        if (remainingSlots <= 0) {
-          Toast.show({
-            type: "error",
-            text1: "Limit reached",
-            text2: "You can upload up to 5 photos only.",
-          });
-          return;
-        }
-
-        if (result.assets.length > remainingSlots) {
-          Toast.show({
-            type: "error",
-            text1: "Too many photos",
-            text2: `You can upload only ${remainingSlots} more photo(s).`,
-          });
-          return;
-        }
-
-        const uploadedPhotos: string[] = [];
-        for (const asset of result.assets) {
-          if (!asset.uri) continue;
-          const uploaded = await uploadImageToS3({
-            token,
-            propertyId: selectedPropertyId ?? undefined,
-            fileUri: asset.uri,
-            fileName: asset.fileName ?? `property-${Date.now()}.jpg`,
-            contentType: asset.mimeType ?? "image/jpeg",
-            folder: "properties",
-          });
-          uploadedPhotos.push(uploaded.fileUrl);
-        }
-
-        setFormData((prev) => ({
-          ...prev,
-          photos: [...prev.photos, ...uploadedPhotos],
-        }));
-      } catch {
+      if (result.assets.length > remainingSlots) {
         Toast.show({
           type: "error",
-          text1: "Upload failed",
-          text2: "Could not upload selected images.",
+          text1: "Too many photos",
+          text2:
+            remainingSlots === 5
+              ? "You can upload up to 5 photos only."
+              : `You can upload only ${remainingSlots} more photo(s).`,
         });
-      } finally {
-        setIsUploadingPhotos(false);
+        return;
       }
+
+      const newPendingPhotos = result.assets
+        .filter((asset) => asset.uri)
+        .map((asset, index) => ({
+          uri: asset.uri!,
+          fileName: asset.fileName ?? `property-${Date.now()}-${index}.jpg`,
+          contentType: asset.mimeType ?? "image/jpeg",
+        }));
+
+      if (newPendingPhotos.length === 0) {
+        return;
+      }
+
+      setPendingPhotoUploads((prev) => [...prev, ...newPendingPhotos]);
+      setFormData((prev) => ({
+        ...prev,
+        photos: [...prev.photos, ...newPendingPhotos.map((photo) => photo.uri)],
+      }));
     }
   };
 
   const removePhoto = (index: number) => {
-    setFormData((prev) => ({
-      ...prev,
-      photos: prev.photos.filter((_, i) => i !== index),
-    }));
+    setFormData((prev) => {
+      const removedPhotoUrl = prev.photos[index];
+      if (removedPhotoUrl) {
+        setPendingPhotoUploads((pending) =>
+          pending.filter((photo) => photo.uri !== removedPhotoUrl),
+        );
+      }
+      return {
+        ...prev,
+        photos: prev.photos.filter((_, i) => i !== index),
+      };
+    });
   };
 
   const router = useRouter();
@@ -436,9 +437,52 @@ export default function OnboardingScreen() {
   const validateRoomStructureMutation =
     trpc.property.validateRoomStructure.useMutation();
   const updateRoomStructureMutation = trpc.property.updateRoomStructure.useMutation();
-  const submitEditPropertyUpdate = () => {
+  const uploadPendingPhotosIfAny = async (): Promise<string[]> => {
+    if (!pendingPhotoUploadsRef.current.length) {
+      return formData.photos;
+    }
+
+    if (!token) {
+      Toast.show({
+        type: "error",
+        text1: "Session expired",
+        text2: "Please login again.",
+      });
+      throw new Error("Missing auth token for upload");
+    }
+
+    setIsUploadingPhotos(true);
+    try {
+      const uploadedPhotoUrlByPreview = new Map<string, string>();
+
+      for (const pendingPhoto of pendingPhotoUploadsRef.current) {
+        const uploaded = await uploadImageToS3({
+          token,
+          propertyId: selectedPropertyId ?? undefined,
+          fileUri: pendingPhoto.uri,
+          fileName: pendingPhoto.fileName,
+          contentType: pendingPhoto.contentType,
+          folder: "properties",
+        });
+        uploadedPhotoUrlByPreview.set(pendingPhoto.uri, uploaded.fileUrl);
+      }
+
+      const nextPhotos = formData.photos.map(
+        (photo) => uploadedPhotoUrlByPreview.get(photo) ?? photo,
+      );
+
+      pendingPhotoUploadsRef.current = [];
+      setPendingPhotoUploads([]);
+      setFormData((prev) => ({ ...prev, photos: nextPhotos }));
+      return nextPhotos;
+    } finally {
+      setIsUploadingPhotos(false);
+    }
+  };
+
+  const submitEditPropertyUpdate = (photos: string[]) => {
     updatePropertyMutation.mutate(
-      getUpdatePropertyPayload(formData),
+      getUpdatePropertyPayload({ ...formData, photos }),
       {
         onSuccess: async () => {
           await Promise.all([
@@ -472,7 +516,7 @@ export default function OnboardingScreen() {
     );
   };
 
-  const nextStep = () => {
+  const nextStep = async () => {
     if (!validateStep(currentStep)) return;
 
     if (currentStep < STEPS.length) {
@@ -510,12 +554,20 @@ export default function OnboardingScreen() {
       }
       setCurrentStep((prev) => prev + 1);
     } else {
+      let photos: string[];
+      try {
+        photos = await uploadPendingPhotosIfAny();
+      } catch (error) {
+        console.error("Failed to upload photos:", error);
+        return;
+      }
+
       if (isEditMode && propertyData) {
         const hasValidStructure =
           formData.floors.trim().length > 0 && parseInt(formData.floors, 10) > 0;
 
         if (!hasValidStructure) {
-          submitEditPropertyUpdate();
+          submitEditPropertyUpdate(photos);
           return;
         }
 
@@ -526,7 +578,7 @@ export default function OnboardingScreen() {
             roomsPerFloor: formData.roomsPerFloor,
           },
           {
-            onSuccess: submitEditPropertyUpdate,
+            onSuccess: () => submitEditPropertyUpdate(photos),
             onError: (error) => {
               const errorMessage = getTrpcErrorLogMessage(error).toLowerCase();
               const isStructureOccupiedError =
@@ -552,7 +604,7 @@ export default function OnboardingScreen() {
         );
       } else {
         createPropertyMutation.mutate(
-          getCreatePropertyPayload(formData),
+          getCreatePropertyPayload({ ...formData, photos }),
           {
             onSuccess: async (data) => {
               // Invalidate properties query to refetch the list

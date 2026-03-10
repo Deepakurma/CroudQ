@@ -416,7 +416,11 @@ function OnboardingScreenContent() {
     }
 
     if (selectedFiles.length > remainingSlots) {
-      toast.error(`You can upload only ${remainingSlots} more photo(s).`);
+      toast.error(
+        remainingSlots === 5
+          ? 'You can upload up to 5 photos only.'
+          : `You can upload only ${remainingSlots} more photo(s).`
+      );
       return;
     }
     const maxSizeBytes = 10 * 1024 * 1024;

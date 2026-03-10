@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 
-import { AlertTriangle, ImagePlus, Loader2, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, ImagePlus, Loader2, ShieldCheck, Trash2 } from 'lucide-react';
 
 import { getPublicOtpErrorMessage } from '~/lib/otp-error';
 import { getPublicErrorMessage } from '~/lib/trpc-error';
@@ -73,7 +74,7 @@ export default function JoinInvitePage() {
   const [otp, setOtp] = useState('');
   const [durationMonths, setDurationMonths] = useState('');
   const [profileImage, setProfileImage] = useState<string>('');
-  const [profileImageName, setProfileImageName] = useState<string>('');
+  const [profileImagePreviewUrl, setProfileImagePreviewUrl] = useState<string>('');
   const [selectedProfileImageFile, setSelectedProfileImageFile] = useState<File | null>(null);
 
   const [isSendingOtp, setIsSendingOtp] = useState(false);
@@ -234,6 +235,10 @@ export default function JoinInvitePage() {
           profileImageUrl = fileUrl;
           setProfileImage(fileUrl);
           setSelectedProfileImageFile(null);
+          if (profileImagePreviewUrl) {
+            URL.revokeObjectURL(profileImagePreviewUrl);
+            setProfileImagePreviewUrl('');
+          }
         } catch {
           setErrorMessage('Could not upload selected image.');
           return;
@@ -280,10 +285,30 @@ export default function JoinInvitePage() {
       return;
     }
 
+    if (profileImagePreviewUrl) {
+      URL.revokeObjectURL(profileImagePreviewUrl);
+    }
     setSelectedProfileImageFile(file);
-    setProfileImageName(file.name);
+    setProfileImagePreviewUrl(URL.createObjectURL(file));
     setErrorMessage('');
   };
+
+  const clearProfileImageSelection = () => {
+    if (profileImagePreviewUrl) {
+      URL.revokeObjectURL(profileImagePreviewUrl);
+    }
+    setProfileImagePreviewUrl('');
+    setSelectedProfileImageFile(null);
+    setProfileImage('');
+  };
+
+  useEffect(() => {
+    return () => {
+      if (profileImagePreviewUrl) {
+        URL.revokeObjectURL(profileImagePreviewUrl);
+      }
+    };
+  }, [profileImagePreviewUrl]);
 
   if (isLoadingInvite) {
     return (
@@ -400,25 +425,46 @@ export default function JoinInvitePage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2 sm:col-span-2">
                   <Label htmlFor="profileImage">Photo</Label>
-                  <div className="space-y-2 rounded-xl border p-3">
-                    <label
-                      htmlFor="profileImage"
-                      className="text-muted-foreground flex cursor-pointer items-center gap-2 text-sm">
-                      <ImagePlus className="size-4" />
-                      Upload profile photo (optional)
-                    </label>
-                    <Input
+                  <div className="space-y-3 rounded-xl border p-3">
+                    <input
                       id="profileImage"
                       type="file"
                       accept="image/*"
                       onChange={handlePhotoChange}
                       disabled={isUploadingPhoto}
+                      className="sr-only"
                     />
-                    {profileImageName ? (
-                      <p className="text-xs text-green-700">Selected: {profileImageName}</p>
-                    ) : (
-                      <p className="text-muted-foreground text-xs">Max size: 10MB</p>
+                    <label
+                      htmlFor="profileImage"
+                      className="bg-muted/40 hover:bg-muted flex cursor-pointer items-center justify-between rounded-lg border px-3 py-2 text-sm">
+                      <span className="flex items-center gap-2">
+                        <ImagePlus className="size-4" />
+                        Upload photo
+                      </span>
+                      <span className="text-xs font-semibold">Select</span>
+                    </label>
+
+                    {(profileImagePreviewUrl || profileImage) && (
+                      <div className="relative inline-flex">
+                        <Image
+                          src={profileImagePreviewUrl || profileImage}
+                          alt="Profile preview"
+                          width={96}
+                          height={96}
+                          className="h-24 w-24 rounded-lg border object-cover"
+                          unoptimized
+                        />
+                        <button
+                          type="button"
+                          onClick={clearProfileImageSelection}
+                          className="absolute -top-2 -right-2 rounded-full bg-red-600 p-1 text-white hover:bg-red-700"
+                          aria-label="Remove photo">
+                          <Trash2 className="size-3" />
+                        </button>
+                      </div>
                     )}
+
+                    <p className="text-muted-foreground text-xs">Max size: 10MB</p>
                     {isUploadingPhoto ? (
                       <p className="text-muted-foreground text-xs">Uploading photo...</p>
                     ) : selectedProfileImageFile ? (

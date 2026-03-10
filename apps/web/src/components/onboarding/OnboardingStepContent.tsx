@@ -534,18 +534,33 @@ export function OnboardingStepContent({
 
           <div className="space-y-3">
             <Label htmlFor="property-photos">Property Photos</Label>
-            <Input
+            <input
               id="property-photos"
               type="file"
               accept="image/*"
               multiple
               onChange={(event) => handlePhotoSelection(event.target.files)}
               disabled={isUploadingPhotos}
+              className="sr-only"
             />
+            <label
+              htmlFor="property-photos"
+              className="group bg-muted/30 hover:border-foreground/30 flex cursor-pointer items-center justify-between rounded-xl border border-dashed px-4 py-4 transition">
+              <div className="flex items-center gap-3">
+                <span className="bg-foreground text-background flex h-11 w-11 shrink-0 items-center justify-center rounded-full">
+                  <Camera className="h-5 w-5" />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold">Upload property photos</p>
+                  <p className="text-muted-foreground text-xs">Max 5 photos • 10MB each</p>
+                </div>
+              </div>
+              <span className="rounded-full border px-3 py-1 text-xs font-semibold">
+                {isUploadingPhotos ? 'Uploading...' : 'Select'}
+              </span>
+            </label>
             <p className="text-muted-foreground text-xs">
-              {isUploadingPhotos
-                ? 'Uploading photos...'
-                : 'Upload JPG/PNG/WebP images. They will be uploaded after you click submit.'}
+              {formData.photos.length}/5 photos selected
             </p>
             <div className="flex flex-wrap gap-3">
               {formData.photos.map((photo, index) => (
