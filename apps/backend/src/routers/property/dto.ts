@@ -49,7 +49,7 @@ export const createPropertySchema = z.object({
   rents: z.record(z.string(), z.string().regex(/^[0-9]+$/)),
   facilities: facilitiesSchema,
   rules: z.array(z.string().trim().min(1).max(300)).max(50),
-  photos: z.array(z.string().trim().max(2_000_000)).max(80),
+  photos: z.array(z.string().trim().max(2_000_000)).max(5),
 });
 
 export const updateRoomSchema = z.object({
@@ -120,7 +120,7 @@ export const updatePropertySchema = z.object({
   rents: z.record(z.string(), z.string().regex(/^[0-9]+$/)),
   facilities: facilitiesSchema,
   rules: z.array(z.string().trim().min(1).max(300)).max(50),
-  photos: z.array(z.string().trim().max(2_000_000)).max(80),
+  photos: z.array(z.string().trim().max(2_000_000)).max(5),
 });
 
 export const updateRoomStructureSchema = z.object({

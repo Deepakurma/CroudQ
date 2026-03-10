@@ -409,6 +409,16 @@ function OnboardingScreenContent() {
     if (!files || files.length === 0) return;
 
     const selectedFiles = Array.from(files);
+    const remainingSlots = 5 - formData.photos.length;
+    if (remainingSlots <= 0) {
+      toast.error('You can upload up to 5 photos only.');
+      return;
+    }
+
+    if (selectedFiles.length > remainingSlots) {
+      toast.error(`You can upload only ${remainingSlots} more photo(s).`);
+      return;
+    }
     const maxSizeBytes = 10 * 1024 * 1024;
 
     for (const file of selectedFiles) {

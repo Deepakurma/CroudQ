@@ -374,6 +374,25 @@ export default function OnboardingScreen() {
 
       setIsUploadingPhotos(true);
       try {
+        const remainingSlots = 5 - formData.photos.length;
+        if (remainingSlots <= 0) {
+          Toast.show({
+            type: "error",
+            text1: "Limit reached",
+            text2: "You can upload up to 5 photos only.",
+          });
+          return;
+        }
+
+        if (result.assets.length > remainingSlots) {
+          Toast.show({
+            type: "error",
+            text1: "Too many photos",
+            text2: `You can upload only ${remainingSlots} more photo(s).`,
+          });
+          return;
+        }
+
         const uploadedPhotos: string[] = [];
         for (const asset of result.assets) {
           if (!asset.uri) continue;
