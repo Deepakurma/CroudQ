@@ -612,6 +612,7 @@ const pulseData: PulseCardProps[] = [
 export default function page() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [isFetching, setIsFetching] = React.useState(false);
+  const hasLoadedRef = React.useRef(false);
   const [landlords, setLandlords] = useState<Landlord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [landlordStats, setLandlordStats] = useState<LandlordStats>({
@@ -627,9 +628,9 @@ export default function page() {
 
   useEffect(() => {
     const fetchLandlords = async () => {
-      const shouldShowSkeleton = landlords.length === 0;
-      if (shouldShowSkeleton) setIsLoading(true);
-      if (!shouldShowSkeleton) setIsFetching(true);
+      const hasLoaded = hasLoadedRef.current;
+      if (!hasLoaded) setIsLoading(true);
+      if (hasLoaded) setIsFetching(true);
       try {
         const payload = (await trpcClient.admin.listLandlords.query({
           q: searchQuery.trim() || undefined
@@ -672,6 +673,7 @@ export default function page() {
       } finally {
         setIsLoading(false);
         setIsFetching(false);
+        hasLoadedRef.current = true;
       }
     };
 
