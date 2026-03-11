@@ -127,6 +127,7 @@ function FeedbackRowActions({ id, onDelete }: { id: string; onDelete: (id: strin
 
 export default function page() {
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isFetching, setIsFetching] = React.useState(false);
   const [feedbacks, setFeedbacks] = useState<Query[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [range, setRange] = useState<DateRange | undefined>({
@@ -140,6 +141,7 @@ export default function page() {
     const fetchFeedbacks = async () => {
       const shouldShowSkeleton = feedbacks.length === 0;
       if (shouldShowSkeleton) setIsLoading(true);
+      if (!shouldShowSkeleton) setIsFetching(true);
       try {
         const payload = await trpcClient.admin.listFeedbacks.query({
           q: searchQuery.trim() || undefined
@@ -155,6 +157,7 @@ export default function page() {
         setFeedbacks([]);
       } finally {
         setIsLoading(false);
+        setIsFetching(false);
       }
     };
 
@@ -197,6 +200,7 @@ export default function page() {
           onSearchChange={setSearchQuery}
           serverSideSearch={true}
           isLoading={isLoading}
+          isFetching={isFetching}
           dateRange={range}
           setDateRange={setRange}
           filters={{

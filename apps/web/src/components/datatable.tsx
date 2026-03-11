@@ -56,6 +56,7 @@ interface DataTableProps<TData, TValue> {
   data: TData[];
   searchPlaceholder?: string;
   isLoading?: boolean;
+  isFetching?: boolean;
   searchValue?: string;
   onSearchChange?: (value: string) => void;
   serverSideSearch?: boolean;
@@ -79,6 +80,7 @@ export function DataTable<TData, TValue>({
   data,
   searchPlaceholder = 'Search...',
   isLoading = false,
+  isFetching = false,
   searchValue,
   onSearchChange,
   serverSideSearch = false,
@@ -127,6 +129,9 @@ export function DataTable<TData, TValue>({
       <p className="text-sm font-medium sm:text-[15px]">
         <span className="text-muted-foreground text-sm tracking-wider">Results</span>({resultsCount}
         )
+        {isFetching && !isLoading && (
+          <span className="text-muted-foreground ml-2 animate-pulse text-xs">Updating…</span>
+        )}
       </p>
 
       {setDateRange !== undefined && (

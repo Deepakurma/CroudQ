@@ -167,6 +167,7 @@ function QueryRowActions({ id, onDelete }: { id: string; onDelete: (id: string) 
 
 export default function page() {
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isFetching, setIsFetching] = React.useState(false);
   const [queries, setQueries] = useState<Query[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [range, setRange] = useState<DateRange | undefined>({
@@ -178,6 +179,7 @@ export default function page() {
     const fetchQueries = async () => {
       const shouldShowSkeleton = queries.length === 0;
       if (shouldShowSkeleton) setIsLoading(true);
+      if (!shouldShowSkeleton) setIsFetching(true);
       try {
         const payload = await trpcClient.admin.listQueries.query({
           q: searchQuery.trim() || undefined
@@ -203,6 +205,7 @@ export default function page() {
         setQueries([]);
       } finally {
         setIsLoading(false);
+        setIsFetching(false);
       }
     };
 
@@ -242,6 +245,7 @@ export default function page() {
           onSearchChange={setSearchQuery}
           serverSideSearch={true}
           isLoading={isLoading}
+          isFetching={isFetching}
           dateRange={range}
           setDateRange={setRange}
         />

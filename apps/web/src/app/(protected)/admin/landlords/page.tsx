@@ -611,6 +611,7 @@ const pulseData: PulseCardProps[] = [
 
 export default function page() {
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isFetching, setIsFetching] = React.useState(false);
   const [landlords, setLandlords] = useState<Landlord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [landlordStats, setLandlordStats] = useState<LandlordStats>({
@@ -628,6 +629,7 @@ export default function page() {
     const fetchLandlords = async () => {
       const shouldShowSkeleton = landlords.length === 0;
       if (shouldShowSkeleton) setIsLoading(true);
+      if (!shouldShowSkeleton) setIsFetching(true);
       try {
         const payload = (await trpcClient.admin.listLandlords.query({
           q: searchQuery.trim() || undefined
@@ -669,6 +671,7 @@ export default function page() {
         toast.error('Could not fetch landlords right now. Please try again.');
       } finally {
         setIsLoading(false);
+        setIsFetching(false);
       }
     };
 
@@ -777,6 +780,7 @@ export default function page() {
           onSearchChange={setSearchQuery}
           serverSideSearch={true}
           isLoading={isLoading}
+          isFetching={isFetching}
           dateRange={range}
           setDateRange={setRange}
           filters={{
