@@ -59,6 +59,7 @@ interface DataTableProps<TData, TValue> {
   searchValue?: string;
   onSearchChange?: (value: string) => void;
   serverSideSearch?: boolean;
+  searchDebounceMs?: number;
 
   isActiveToggle?: boolean;
   setIsActiveToggle?: (val: boolean) => void;
@@ -81,12 +82,28 @@ export function DataTable<TData, TValue>({
   searchValue,
   onSearchChange,
   serverSideSearch = false,
+  searchDebounceMs = 350,
   dateRange,
   setDateRange,
   filters
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = React.useState('');
+  const [localSearch, setLocalSearch] = React.useState(searchValue ?? '');
+
+  React.useEffect(() => {
+    if (onSearchChange) {
+      setLocalSearch(searchValue ?? '');
+    }
+  }, [onSearchChange, searchValue]);
+
+  React.useEffect(() => {
+    if (!onSearchChange) return;
+    const timer = setTimeout(() => {
+      onSearchChange(localSearch);
+    }, searchDebounceMs);
+    return () => clearTimeout(timer);
+  }, [localSearch, onSearchChange, searchDebounceMs]);
 
   const table = useReactTable({
     data,
@@ -152,10 +169,10 @@ export function DataTable<TData, TValue>({
           <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
             placeholder={searchPlaceholder}
-            value={onSearchChange ? (searchValue ?? '') : globalFilter}
+            value={onSearchChange ? localSearch : globalFilter}
             onChange={(event) => {
               if (onSearchChange) {
-                onSearchChange(event.target.value);
+                setLocalSearch(event.target.value);
                 return;
               }
               setGlobalFilter(event.target.value);

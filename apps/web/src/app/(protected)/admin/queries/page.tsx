@@ -169,25 +169,18 @@ export default function page() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [queries, setQueries] = useState<Query[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [range, setRange] = useState<DateRange | undefined>({
     from: new Date(),
     to: undefined
   });
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery.trim());
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  useEffect(() => {
     const fetchQueries = async () => {
-      setIsLoading(true);
+      const shouldShowSkeleton = queries.length === 0;
+      if (shouldShowSkeleton) setIsLoading(true);
       try {
         const payload = await trpcClient.admin.listQueries.query({
-          q: debouncedSearch || undefined
+          q: searchQuery.trim() || undefined
         });
 
         const mapped = (payload as QueryApiItem[]).map((item) => ({
@@ -214,7 +207,7 @@ export default function page() {
     };
 
     void fetchQueries();
-  }, [debouncedSearch]);
+  }, [searchQuery]);
 
   const handleDelete = async (id: string) => {
     try {

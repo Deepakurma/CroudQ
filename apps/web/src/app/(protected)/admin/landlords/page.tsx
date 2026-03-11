@@ -613,7 +613,6 @@ export default function page() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [landlords, setLandlords] = useState<Landlord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [landlordStats, setLandlordStats] = useState<LandlordStats>({
     totalLandlordAccounts: 0,
     convertedLandlordAccounts: 0
@@ -626,18 +625,12 @@ export default function page() {
   const [filter, setFilter] = useState<string | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery.trim());
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  useEffect(() => {
     const fetchLandlords = async () => {
-      setIsLoading(true);
+      const shouldShowSkeleton = landlords.length === 0;
+      if (shouldShowSkeleton) setIsLoading(true);
       try {
         const payload = (await trpcClient.admin.listLandlords.query({
-          q: debouncedSearch || undefined
+          q: searchQuery.trim() || undefined
         })) as RawLandlord[] | LandlordsApiResponse;
 
         const payloadLandlords = Array.isArray(payload)
@@ -680,7 +673,7 @@ export default function page() {
     };
 
     void fetchLandlords();
-  }, [debouncedSearch]);
+  }, [searchQuery]);
 
   const handleToggleFreeze = async (landlord: Landlord) => {
     try {

@@ -129,7 +129,6 @@ export default function page() {
   const [isLoading, setIsLoading] = React.useState(true);
   const [feedbacks, setFeedbacks] = useState<Query[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [range, setRange] = useState<DateRange | undefined>({
     from: new Date(),
     to: undefined
@@ -138,18 +137,12 @@ export default function page() {
   const [filter, setFilter] = useState<number | null>(null);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearch(searchQuery.trim());
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
-
-  useEffect(() => {
     const fetchFeedbacks = async () => {
-      setIsLoading(true);
+      const shouldShowSkeleton = feedbacks.length === 0;
+      if (shouldShowSkeleton) setIsLoading(true);
       try {
         const payload = await trpcClient.admin.listFeedbacks.query({
-          q: debouncedSearch || undefined
+          q: searchQuery.trim() || undefined
         });
         const mapped = (payload as FeedbackApiItem[]).map((item) => ({
           id: item.id,
@@ -166,7 +159,7 @@ export default function page() {
     };
 
     void fetchFeedbacks();
-  }, [debouncedSearch]);
+  }, [searchQuery]);
 
   const handleDelete = async (id: string) => {
     try {
