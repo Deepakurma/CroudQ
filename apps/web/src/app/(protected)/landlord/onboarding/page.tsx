@@ -116,6 +116,7 @@ function OnboardingScreenContent() {
   const [isBootstrapping, setIsBootstrapping] = useState(false);
   const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
   const [isConvertingPhotos, setIsConvertingPhotos] = useState(false);
+  const isMediaBusy = isUploadingPhotos || isConvertingPhotos;
   const [pendingPhotoUploads, setPendingPhotoUploads] = useState<
     Array<{ file: File; previewUrl: string }>
   >([]);
@@ -587,6 +588,10 @@ function OnboardingScreenContent() {
   };
 
   const nextStep = async () => {
+    if (isMediaBusy) {
+      toast.error('Please wait, images are being uploaded.');
+      return;
+    }
     if (!validateStep(currentStep)) return;
 
     if (currentStep < STEPS.length) {
@@ -720,9 +725,16 @@ function OnboardingScreenContent() {
         )}
 
         <Button
-          onClick={() => void nextStep()}
-          disabled={isSubmitting || isUploadingPhotos}
-          className="flex-[2]">
+          onClick={() => {
+            if (isMediaBusy) {
+              toast.error('Please wait, images are being uploaded.');
+              return;
+            }
+            void nextStep();
+          }}
+          disabled={isSubmitting}
+          aria-disabled={isMediaBusy || isSubmitting}
+          className={`flex-[2] ${isMediaBusy ? 'cursor-not-allowed opacity-50' : ''}`}>
           {currentStep === STEPS.length
             ? isSubmitting
               ? isEditMode

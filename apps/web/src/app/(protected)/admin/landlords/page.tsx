@@ -57,6 +57,10 @@ import {
 import { CustomDialog } from '~/components/custom-dialog';
 import { DataTable } from '~/components/datatable';
 import PulseCard from '~/components/pulsecard';
+import {
+  isSafeLandlordImageSrc,
+  LandlordImageFallback
+} from '~/components/shared/landlord-image-fallback';
 import { trpcClient } from '~/utils/trpc';
 
 import type { ColumnDef } from '@tanstack/react-table';
@@ -97,6 +101,7 @@ export interface Landlord {
   isFrozen: boolean;
   freezeReason?: string | null;
   thumbnail?: string;
+  images?: string[];
   createdAt: Date;
   status: 'Active' | 'Pending Renewal' | 'Frozen';
   startDate: Date;
@@ -472,29 +477,42 @@ const columns: ColumnDef<Landlord>[] = [
   {
     accessorKey: 'images',
     header: 'Images',
-    cell: ({ row }) => (
-      <Carousel className="w-full max-w-[100px]">
-        <CarouselContent>
-          {Array.from({ length: 5 }).map((_, index) => (
-            <CarouselItem key={index}>
-              <div className="p-1">
-                <Image
-                  src={row.original.thumbnail || '/assets/placeholder.png'}
-                  alt={`Slide ${index + 1}`}
-                  width={96}
-                  height={72}
-                  className="rounded-lg object-cover"
-                />
-              </div>
-            </CarouselItem>
-          ))}
-        </CarouselContent>
-        <div className="flex items-center justify-center gap-4 py-4">
-          <CarouselPrevious className="static translate-y-0" />
-          <CarouselNext className="static translate-y-0" />
-        </div>
-      </Carousel>
-    )
+    cell: ({ row }) => {
+      const images =
+        row.original.images && row.original.images.length > 0
+          ? row.original.images
+          : row.original.thumbnail
+            ? [row.original.thumbnail]
+            : [''];
+
+      return (
+        <Carousel className="w-full max-w-[100px]">
+          <CarouselContent>
+            {images.map((image, index) => (
+              <CarouselItem key={`${image}-${index}`}>
+                <div className="p-1">
+                  {isSafeLandlordImageSrc(image) ? (
+                    <Image
+                      src={image}
+                      alt={`${row.original.landlordName} image ${index + 1}`}
+                      width={96}
+                      height={72}
+                      className="rounded-lg object-cover"
+                    />
+                  ) : (
+                    <LandlordImageFallback className="h-[72px] w-[96px] rounded-lg" />
+                  )}
+                </div>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <div className="flex items-center justify-center gap-4 py-4">
+            <CarouselPrevious className="static translate-y-0" />
+            <CarouselNext className="static translate-y-0" />
+          </div>
+        </Carousel>
+      );
+    }
   },
   {
     id: 'actions',

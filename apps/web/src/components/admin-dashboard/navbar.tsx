@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { LogOut, Moon, Sun, UserRound } from 'lucide-react';
@@ -48,9 +49,19 @@ export default function AdminNavbar() {
             <p className="text-muted-foreground text-[13px]">{new Date().toDateString()}</p>
           </div>
 
-          <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl transition-all hover:opacity-90 md:hidden">
-            <Image src="/assets/Logo.png" alt="Bunkezy Logo" fill className="object-cover" />
-          </div>
+          <Link
+            href="/"
+            className="flex items-center gap-1 transition-opacity hover:opacity-90 md:hidden">
+            <div className="relative ml-[-5px] flex size-10 items-center justify-center overflow-hidden rounded-xl transition-all hover:opacity-90 sm:size-12">
+              <Image src="/assets/Logo.png" alt="Bunkezy Logo" fill className="object-cover" />
+            </div>
+            <div>
+              <p className="text-foreground text-md font-bold tracking-tight sm:text-lg">Bunkezy</p>
+              <p className="text-muted-foreground text-[8px] font-medium tracking-wider whitespace-nowrap uppercase sm:text-[11px]">
+                Admin Control
+              </p>
+            </div>
+          </Link>
         </div>
 
         <DropdownMenu>
