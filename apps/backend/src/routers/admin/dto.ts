@@ -13,20 +13,30 @@ export const listLandlordsSchema = z
         limit: z.number().int().min(1).max(200).optional(),
         offset: z.number().int().min(0).optional(),
         q: z.string().trim().min(1).max(200).optional(),
+        from: z.coerce.date().optional(),
+        to: z.coerce.date().optional(),
+        status: z.enum(["Active", "Pending Renewal", "Frozen"]).optional(),
     })
     .optional();
 
 export const listQueriesSchema = z
     .object({
-        limit: z.number().int().min(1).max(500).optional(),
+        limit: z.number().int().min(1).max(200).optional(),
+        offset: z.number().int().min(0).optional(),
         q: z.string().trim().min(1).max(200).optional(),
+        from: z.coerce.date().optional(),
+        to: z.coerce.date().optional(),
     })
     .optional();
 
 export const listFeedbacksSchema = z
     .object({
-        limit: z.number().int().min(1).max(500).optional(),
+        limit: z.number().int().min(1).max(200).optional(),
+        offset: z.number().int().min(0).optional(),
         q: z.string().trim().min(1).max(200).optional(),
+        from: z.coerce.date().optional(),
+        to: z.coerce.date().optional(),
+        rating: z.number().int().min(1).max(5).optional(),
     })
     .optional();
 

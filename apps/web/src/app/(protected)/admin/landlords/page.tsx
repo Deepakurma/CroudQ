@@ -100,8 +100,7 @@ export interface Landlord {
   cctv: boolean;
   isFrozen: boolean;
   freezeReason?: string | null;
-  thumbnail?: string;
-  images?: string[];
+  images: string[];
   createdAt: Date;
   status: 'Active' | 'Pending Renewal' | 'Frozen';
   startDate: Date;
@@ -122,6 +121,7 @@ type RawLandlord = Omit<Landlord, 'createdAt' | 'startDate' | 'endDate'> & {
 interface LandlordsApiResponse {
   landlords?: RawLandlord[];
   stats?: LandlordStats;
+  total?: number;
 }
 
 const columns: ColumnDef<Landlord>[] = [
@@ -478,12 +478,7 @@ const columns: ColumnDef<Landlord>[] = [
     accessorKey: 'images',
     header: 'Images',
     cell: ({ row }) => {
-      const images =
-        row.original.images && row.original.images.length > 0
-          ? row.original.images
-          : row.original.thumbnail
-            ? [row.original.thumbnail]
-            : [''];
+      const images = row.original.images.length > 0 ? row.original.images : [''];
 
       return (
         <Carousel className="w-full max-w-[100px]">
@@ -615,16 +610,20 @@ export default function page() {
   const hasLoadedRef = React.useRef(false);
   const [landlords, setLandlords] = useState<Landlord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalCount, setTotalCount] = useState(0);
   const [landlordStats, setLandlordStats] = useState<LandlordStats>({
     totalLandlordAccounts: 0,
     convertedLandlordAccounts: 0
   });
-  const [range, setRange] = useState<DateRange | undefined>({
-    from: new Date(),
-    to: undefined
-  });
+  const [range, setRange] = useState<DateRange | undefined>(undefined);
 
   const [filter, setFilter] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPageIndex(0);
+  }, [searchQuery, range?.from, range?.to, filter]);
 
   useEffect(() => {
     const fetchLandlords = async () => {
@@ -633,7 +632,15 @@ export default function page() {
       if (hasLoaded) setIsFetching(true);
       try {
         const payload = (await trpcClient.admin.listLandlords.query({
-          q: searchQuery.trim() || undefined
+          q: searchQuery.trim() || undefined,
+          from: range?.from,
+          to: range?.to,
+          status:
+            filter && filter !== ''
+              ? (filter as 'Active' | 'Pending Renewal' | 'Frozen')
+              : undefined,
+          limit: pageSize,
+          offset: pageIndex * pageSize
         })) as RawLandlord[] | LandlordsApiResponse;
 
         const payloadLandlords = Array.isArray(payload)
@@ -642,29 +649,27 @@ export default function page() {
             ? payload.landlords
             : [];
         const payloadStats = Array.isArray(payload) ? null : payload.stats;
+        const payloadTotal = Array.isArray(payload)
+          ? payloadLandlords.length
+          : (payload.total ?? 0);
 
         const mapped = payloadLandlords.map((item) => ({
           ...item,
+          images: item.images ?? [],
           createdAt: new Date(item.createdAt),
           startDate: new Date(item.startDate),
           endDate: new Date(item.endDate)
         }));
 
-        const seenLandlordAccounts = new Set<string>();
-        const deduped = mapped.filter((item) => {
-          const landlordAccountKey = item.userId || item.id;
-          if (seenLandlordAccounts.has(landlordAccountKey)) return false;
-          seenLandlordAccounts.add(landlordAccountKey);
-          return true;
-        });
-
-        setLandlords(deduped);
+        setLandlords(mapped);
         setLandlordStats({
-          totalLandlordAccounts: payloadStats?.totalLandlordAccounts ?? deduped.length,
-          convertedLandlordAccounts: payloadStats?.convertedLandlordAccounts ?? deduped.length
+          totalLandlordAccounts: payloadStats?.totalLandlordAccounts ?? payloadTotal,
+          convertedLandlordAccounts: payloadStats?.convertedLandlordAccounts ?? payloadTotal
         });
+        setTotalCount(payloadTotal);
       } catch {
         setLandlords([]);
+        setTotalCount(0);
         setLandlordStats({
           totalLandlordAccounts: 0,
           convertedLandlordAccounts: 0
@@ -678,7 +683,7 @@ export default function page() {
     };
 
     void fetchLandlords();
-  }, [searchQuery]);
+  }, [searchQuery, range?.from, range?.to, filter, pageIndex, pageSize]);
 
   const handleToggleFreeze = async (landlord: Landlord) => {
     try {
@@ -726,9 +731,6 @@ export default function page() {
     });
   }, [handleToggleFreeze]);
 
-  const filteredData =
-    filter && filter !== '' ? landlords.filter((item) => item.status === filter) : landlords;
-
   const cards = useMemo<PulseCardProps[]>(() => {
     const pendingRenewals = landlords.filter(
       (landlord) => landlord.status === 'Pending Renewal'
@@ -773,14 +775,23 @@ export default function page() {
         </div>
       </div>
       <div className="box-border flex w-full flex-col gap-2 overflow-hidden p-4 sm:gap-3">
-        <h1 className="text-sm font-semibold tracking-widest uppercase">All landlords</h1>
+        <h1 className="text-sm font-semibold tracking-widest uppercase">All Properties</h1>
         <DataTable
           columns={columnsWithActions}
-          data={filteredData}
+          data={landlords}
           searchPlaceholder="Search by name, phone, city or any..."
           searchValue={searchQuery}
           onSearchChange={setSearchQuery}
           serverSideSearch={true}
+          serverSidePagination={true}
+          pageIndex={pageIndex}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          onPageChange={setPageIndex}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPageIndex(0);
+          }}
           isLoading={isLoading}
           isFetching={isFetching}
           dateRange={range}
@@ -793,7 +804,7 @@ export default function page() {
               { label: 'Frozen', value: 'Frozen', icon: Ban },
               { label: 'Show All', value: '', icon: Eye }
             ],
-            onChange: (val) => setFilter(val as string)
+            onChange: (val) => setFilter(val === '' ? null : (val as string))
           }}
         />
       </div>{' '}

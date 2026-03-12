@@ -29,24 +29,6 @@ interface StatProp {
   note: string;
 }
 
-function getGrowthMetrics(previous: number, current: number) {
-  // These cards represent growth snapshots; show "Decreased" only on true landlord base drop.
-  // When there is no increase versus previous period, keep it as 0% increase.
-  if (current <= previous) {
-    return { isDecrease: false, percentage: '0.0%' };
-  }
-
-  if (previous <= 0) {
-    return { isDecrease: false, percentage: '100.0%' };
-  }
-
-  const rawGrowth = ((current - previous) / previous) * 100;
-  return {
-    isDecrease: false,
-    percentage: `${Math.abs(rawGrowth).toFixed(1)}%`
-  };
-}
-
 interface AnalyticsCardProps {
   stat: StatProp;
   data: { previous: number; current: number };
@@ -58,7 +40,6 @@ interface AnalyticsCardProps {
 
 export function AnalyticsCard({ stat, data, colors }: AnalyticsCardProps) {
   const totalVisitors = data.current;
-  const growth = getGrowthMetrics(data.previous, data.current);
 
   const chartConfig: ChartConfig = {
     previous: {
@@ -134,7 +115,7 @@ export function AnalyticsCard({ stat, data, colors }: AnalyticsCardProps) {
         </ChartContainer>
       </CardContent>
 
-      {/* <CardFooter className="mt-[-60px] flex-col gap-2 text-xs lg:text-sm">
+      <CardFooter className="mt-[-60px] flex-col gap-2 text-xs lg:text-sm">
         <p className="text-center leading-none font-medium">
           Increased by{' '}
           <em
@@ -151,19 +132,6 @@ export function AnalyticsCard({ stat, data, colors }: AnalyticsCardProps) {
         <div className="text-muted-foreground text-center text-[10px] leading-none sm:text-xs">
           Based on activity from the {stat.description.toLowerCase()}.
         </div>
-      </CardFooter> */}
-      <CardFooter className="mt-[-45px] flex-col gap-2 text-xs lg:text-sm">
-        <p className="text-muted-foreground/70 text-center leading-none sm:font-medium">
-          {growth.isDecrease ? 'Decreased' : 'Increased'} by{' '}
-          <em
-            className={clsx(
-              'rounded px-1 py-0.5 font-bold not-italic',
-              growth.isDecrease ? 'bg-red-100 text-red-600' : 'bg-green-100 text-green-600'
-            )}>
-            {growth.percentage}
-          </em>{' '}
-          {stat.note}
-        </p>
       </CardFooter>
     </Card>
   );

@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 
 import { db } from "../../db";
 import { complaints, feedbacks, properties, residents, superAdmins, supportQueries, users } from "../../db/schema";
@@ -34,35 +34,69 @@ const getLastTwelveMonths = (baseDate: Date): Array<{ key: string; label: string
     return result;
 };
 
-const getLandlordsForAdmin = async (limit: number = 100, offset: number = 0, q?: string) => {
-    let filteredPropertyIds: string[] | null = null;
+const normalizeStartDate = (value?: Date) => {
+    if (!value) return undefined;
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+};
+
+const normalizeEndDate = (value?: Date) => {
+    if (!value) return undefined;
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate(), 23, 59, 59, 999);
+};
+
+const getLandlordsForAdmin = async ({
+    limit = 20,
+    offset = 0,
+    q,
+    from,
+    to,
+    status,
+}: {
+    limit?: number;
+    offset?: number;
+    q?: string;
+    from?: Date;
+    to?: Date;
+    status?: "Active" | "Pending Renewal" | "Frozen";
+}) => {
+    const startDate = normalizeStartDate(from);
+    const endDate = normalizeEndDate(to);
+    const now = new Date();
+    const pendingCutoff = new Date(now.getTime() - 335 * DAY_MS);
+
+    const conditions = [];
     if (q) {
-        const matchedPropertyRows = await db
-            .select({ id: properties.id })
-            .from(properties)
-            .where(
-                sql`(
-                    setweight(to_tsvector('english', coalesce(${properties.name}, '')), 'A') ||
-                    setweight(to_tsvector('english', coalesce(${properties.area}, '')), 'B') ||
-                    setweight(to_tsvector('english', coalesce(${properties.city}, '')), 'C') ||
-                    setweight(to_tsvector('english', coalesce(${properties.addressLine1}, '')), 'D') ||
-                    setweight(to_tsvector('english', coalesce(${properties.type}, '')), 'D')
-                ) @@ websearch_to_tsquery('english', ${q})`,
-            )
-            .orderBy(desc(properties.createdAt))
-            .limit(limit)
-            .offset(offset);
-        filteredPropertyIds = matchedPropertyRows.map((row) => row.id);
-        if (filteredPropertyIds.length === 0) {
-            return [];
-        }
+        conditions.push(
+            sql`(
+                setweight(to_tsvector('english', coalesce(${properties.name}, '')), 'A') ||
+                setweight(to_tsvector('english', coalesce(${properties.area}, '')), 'B') ||
+                setweight(to_tsvector('english', coalesce(${properties.city}, '')), 'C') ||
+                setweight(to_tsvector('english', coalesce(${properties.addressLine1}, '')), 'D') ||
+                setweight(to_tsvector('english', coalesce(${properties.type}, '')), 'D')
+            ) @@ websearch_to_tsquery('english', ${q})`,
+        );
     }
+    if (startDate) conditions.push(gte(properties.createdAt, startDate));
+    if (endDate) conditions.push(lte(properties.createdAt, endDate));
+    if (status === "Frozen") {
+        conditions.push(sql`${properties.isFrozen} is true`);
+    }
+    if (status === "Pending Renewal") {
+        conditions.push(sql`${properties.isFrozen} is not true`);
+        conditions.push(lte(properties.createdAt, pendingCutoff));
+    }
+    if (status === "Active") {
+        conditions.push(sql`${properties.isFrozen} is not true`);
+        conditions.push(gte(properties.createdAt, pendingCutoff));
+    }
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
 
     const propertiesData = await db.query.properties.findMany({
         orderBy: desc(properties.createdAt),
-        limit: filteredPropertyIds ? undefined : limit,
-        offset: filteredPropertyIds ? undefined : offset,
-        where: filteredPropertyIds ? inArray(properties.id, filteredPropertyIds) : undefined,
+        limit,
+        offset,
+        where,
         with: {
             facilities: true,
             roomTypes: true,
@@ -81,10 +115,9 @@ const getLandlordsForAdmin = async (limit: number = 100, offset: number = 0, q?:
         },
     });
 
-    const now = new Date();
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * DAY_MS);
 
-    return propertiesData.map((property) => {
+    const items = propertiesData.map((property) => {
         const facility = property.facilities[0];
         const roomCountsByType = new Map<string, number>();
         for (const room of property.rooms) {
@@ -141,7 +174,7 @@ const getLandlordsForAdmin = async (limit: number = 100, offset: number = 0, q?:
             laundry: Boolean(facility?.laundry),
             housekeeping: Boolean(facility?.housekeeping),
             cctv: Boolean(facility?.cctv),
-            thumbnail: property.photos?.[0] || "",
+            images: property.photos ?? [],
             createdAt: property.createdAt,
             status: isFrozen ? "Frozen" : isPendingRenewal ? "Pending Renewal" : "Active",
             startDate,
@@ -150,6 +183,15 @@ const getLandlordsForAdmin = async (limit: number = 100, offset: number = 0, q?:
             activeResidents,
         };
     });
+
+    const countQuery = db
+        .select({
+            count: sql<number>`count(*)::int`,
+        })
+        .from(properties);
+    const countRow = where ? await countQuery.where(where) : await countQuery;
+
+    return { items, total: countRow[0]?.count ?? 0 };
 };
 
 const getLandlordAccountStats = async () => {
@@ -186,19 +228,47 @@ const getLandlordAccountStats = async () => {
 
 export const adminRouter = router({
     listQueries: superAdminProcedure.input(listQueriesSchema).query(async ({ input }) => {
-        return db.query.supportQueries.findMany({
-            where: input?.q
-                ? sql`(
+        const startDate = normalizeStartDate(input?.from);
+        const endDate = normalizeEndDate(input?.to);
+        const conditions = [];
+
+        if (input?.q) {
+            conditions.push(
+                sql`(
                     setweight(to_tsvector('english', coalesce(${supportQueries.query}, '')), 'A') ||
                     setweight(to_tsvector('english', coalesce(${supportQueries.landlordName}, '')), 'B') ||
                     setweight(to_tsvector('english', coalesce(${supportQueries.inchargeName}, '')), 'C') ||
                     setweight(to_tsvector('english', coalesce(${supportQueries.city}, '')), 'D') ||
                     setweight(to_tsvector('english', coalesce(${supportQueries.address}, '')), 'D')
-                ) @@ websearch_to_tsquery('english', ${input.q})`
-                : undefined,
-            orderBy: desc(supportQueries.createdAt),
-            limit: input?.limit ?? 200,
-        });
+                ) @@ websearch_to_tsquery('english', ${input.q})`,
+            );
+        }
+        if (startDate) conditions.push(gte(supportQueries.createdAt, startDate));
+        if (endDate) conditions.push(lte(supportQueries.createdAt, endDate));
+
+        const where = conditions.length > 0 ? and(...conditions) : undefined;
+        const limit = input?.limit ?? 20;
+        const offset = input?.offset ?? 0;
+
+        const [items, totalRow] = await Promise.all([
+            db.query.supportQueries.findMany({
+                where,
+                orderBy: desc(supportQueries.createdAt),
+                limit,
+                offset,
+            }),
+            (async () => {
+                const countQuery = db
+                    .select({
+                        count: sql<number>`count(*)::int`,
+                    })
+                    .from(supportQueries);
+                const rows = where ? await countQuery.where(where) : await countQuery;
+                return rows[0]?.count ?? 0;
+            })(),
+        ]);
+
+        return { items, total: totalRow };
     }),
 
     deleteQuery: superAdminProcedure
@@ -217,15 +287,44 @@ export const adminRouter = router({
         }),
 
     listFeedbacks: superAdminProcedure.input(listFeedbacksSchema).query(async ({ input }) => {
-        return db.query.feedbacks.findMany({
-            where: input?.q
-                ? sql`(
+        const startDate = normalizeStartDate(input?.from);
+        const endDate = normalizeEndDate(input?.to);
+        const conditions = [];
+
+        if (input?.q) {
+            conditions.push(
+                sql`(
                     setweight(to_tsvector('english', coalesce(${feedbacks.description}, '')), 'A')
-                ) @@ websearch_to_tsquery('english', ${input.q})`
-                : undefined,
-            orderBy: desc(feedbacks.createdAt),
-            limit: input?.limit ?? 200,
-        });
+                ) @@ websearch_to_tsquery('english', ${input.q})`,
+            );
+        }
+        if (input?.rating) conditions.push(eq(feedbacks.rating, input.rating));
+        if (startDate) conditions.push(gte(feedbacks.createdAt, startDate));
+        if (endDate) conditions.push(lte(feedbacks.createdAt, endDate));
+
+        const where = conditions.length > 0 ? and(...conditions) : undefined;
+        const limit = input?.limit ?? 20;
+        const offset = input?.offset ?? 0;
+
+        const [items, totalRow] = await Promise.all([
+            db.query.feedbacks.findMany({
+                where,
+                orderBy: desc(feedbacks.createdAt),
+                limit,
+                offset,
+            }),
+            (async () => {
+                const countQuery = db
+                    .select({
+                        count: sql<number>`count(*)::int`,
+                    })
+                    .from(feedbacks);
+                const rows = where ? await countQuery.where(where) : await countQuery;
+                return rows[0]?.count ?? 0;
+            })(),
+        ]);
+
+        return { items, total: totalRow };
     }),
 
     deleteFeedback: superAdminProcedure
@@ -268,20 +367,29 @@ export const adminRouter = router({
     listLandlords: superAdminProcedure
         .input(listLandlordsSchema)
         .query(async ({ input }) => {
-        const limit = input?.limit ?? 100;
+        const limit = input?.limit ?? 20;
         const offset = input?.offset ?? 0;
-        const [landlords, stats] = await Promise.all([
-            getLandlordsForAdmin(limit, offset, input?.q?.trim()),
+        const [landlordsResult, stats] = await Promise.all([
+            getLandlordsForAdmin({
+                limit,
+                offset,
+                q: input?.q?.trim(),
+                from: input?.from,
+                to: input?.to,
+                status: input?.status,
+            }),
             getLandlordAccountStats(),
         ]);
         return {
-            landlords,
+            landlords: landlordsResult.items,
             stats,
+            total: landlordsResult.total,
         };
     }),
 
     getDashboardSummary: superAdminProcedure.query(async () => {
-        const landlords = await getLandlordsForAdmin(200, 0);
+        const landlordsResult = await getLandlordsForAdmin({ limit: 200, offset: 0 });
+        const landlords = landlordsResult.items;
 
         const now = new Date();
         const landlordCreatedDates = landlords.map((landlord) => landlord.createdAt);

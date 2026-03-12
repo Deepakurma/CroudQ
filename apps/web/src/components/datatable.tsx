@@ -61,6 +61,12 @@ interface DataTableProps<TData, TValue> {
   onSearchChange?: (value: string) => void;
   serverSideSearch?: boolean;
   searchDebounceMs?: number;
+  serverSidePagination?: boolean;
+  pageIndex?: number;
+  pageSize?: number;
+  totalCount?: number;
+  onPageChange?: (pageIndex: number) => void;
+  onPageSizeChange?: (pageSize: number) => void;
 
   isActiveToggle?: boolean;
   setIsActiveToggle?: (val: boolean) => void;
@@ -85,6 +91,12 @@ export function DataTable<TData, TValue>({
   onSearchChange,
   serverSideSearch = false,
   searchDebounceMs = 350,
+  serverSidePagination = false,
+  pageIndex,
+  pageSize,
+  totalCount,
+  onPageChange,
+  onPageSizeChange,
   dateRange,
   setDateRange,
   filters
@@ -92,6 +104,10 @@ export function DataTable<TData, TValue>({
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = React.useState('');
   const [localSearch, setLocalSearch] = React.useState(searchValue ?? '');
+  const [pagination, setPagination] = React.useState({
+    pageIndex: 0,
+    pageSize: 10
+  });
 
   React.useEffect(() => {
     if (onSearchChange) {
@@ -107,6 +123,18 @@ export function DataTable<TData, TValue>({
     return () => clearTimeout(timer);
   }, [localSearch, onSearchChange, searchDebounceMs]);
 
+  const activePagination = serverSidePagination
+    ? {
+        pageIndex: pageIndex ?? 0,
+        pageSize: pageSize ?? 10
+      }
+    : pagination;
+
+  const pageCount =
+    serverSidePagination && totalCount !== undefined
+      ? Math.max(1, Math.ceil(totalCount / activePagination.pageSize))
+      : undefined;
+
   const table = useReactTable({
     data,
     columns,
@@ -116,13 +144,41 @@ export function DataTable<TData, TValue>({
     getFilteredRowModel: getFilteredRowModel(),
     state: {
       sorting,
-      globalFilter
+      globalFilter,
+      pagination: activePagination
     },
     onSortingChange: setSorting,
-    onGlobalFilterChange: setGlobalFilter
+    onGlobalFilterChange: setGlobalFilter,
+    onPaginationChange: (updater) => {
+      if (!serverSidePagination) {
+        setPagination(updater);
+        return;
+      }
+      const nextPagination = typeof updater === 'function' ? updater(activePagination) : updater;
+      if (nextPagination.pageIndex !== activePagination.pageIndex) {
+        onPageChange?.(nextPagination.pageIndex);
+      }
+      if (nextPagination.pageSize !== activePagination.pageSize) {
+        onPageSizeChange?.(nextPagination.pageSize);
+      }
+    },
+    manualPagination: serverSidePagination,
+    pageCount: serverSidePagination ? pageCount : undefined
   });
 
-  const resultsCount = serverSideSearch ? data.length : table.getFilteredRowModel().rows.length;
+  const resultsCount =
+    serverSideSearch || serverSidePagination
+      ? (totalCount ?? data.length)
+      : table.getFilteredRowModel().rows.length;
+
+  const totalPages = serverSidePagination ? (pageCount ?? 1) : table.getPageCount() || 1;
+
+  const canPreviousPage = serverSidePagination
+    ? activePagination.pageIndex > 0
+    : table.getCanPreviousPage();
+  const canNextPage = serverSidePagination
+    ? activePagination.pageIndex + 1 < totalPages
+    : table.getCanNextPage();
 
   return (
     <div className="space-y-3">
@@ -338,12 +394,12 @@ export function DataTable<TData, TValue>({
       {/* Pagination Controls */}
       <div className="flex flex-col items-center justify-between gap-2">
         <div className="text-muted-foreground text-sm font-medium">
-          Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
+          Page {activePagination.pageIndex + 1} of {totalPages}
         </div>
 
         <div className="flex items-center gap-3">
           <Select
-            value={`${table.getState().pagination.pageSize}`}
+            value={`${activePagination.pageSize}`}
             onValueChange={(value) => {
               table.setPageSize(Number(value));
             }}>
@@ -365,7 +421,7 @@ export function DataTable<TData, TValue>({
               variant="outline"
               size="sm"
               onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage() || isLoading}>
+              disabled={!canPreviousPage || isLoading}>
               <ChevronLeft className="h-4 w-4" />
               Previous
             </Button>
@@ -374,7 +430,7 @@ export function DataTable<TData, TValue>({
               variant="outline"
               size="sm"
               onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage() || isLoading}>
+              disabled={!canNextPage || isLoading}>
               Next
               <ChevronRight className="h-4 w-4" />
             </Button>

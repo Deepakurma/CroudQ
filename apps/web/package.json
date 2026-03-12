@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@bunkezy/backend": "workspace:*",
+    "@google-analytics/data": "^5.2.1",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-checkbox": "^1.3.3",

@@ -36,6 +36,13 @@ const EMPTY_ANALYTICS = {
   month: { previous: 0, current: 0 }
 };
 
+function calculateGrowth(previous: number, current: number) {
+  if (previous === 0) return '0%';
+  const growth = ((current - previous) / previous) * 100;
+  if (growth <= 0) return '0%';
+  return `${growth.toFixed(1)}%`;
+}
+
 interface LandlordAnalyticsProps {
   isLoading?: boolean;
   analytics?: {
@@ -59,17 +66,23 @@ export function LandlordAnalytics({ analytics, isLoading }: LandlordAnalyticsPro
                 <Skeleton className="h-4 w-40" />
               </div>
             ))
-          : visitorStats.map((stat) => (
-              <AnalyticsCard
-                key={stat.key}
-                stat={stat}
-                data={(analytics || EMPTY_ANALYTICS)[stat.key as keyof typeof EMPTY_ANALYTICS]}
-                colors={{
-                  current: 'var(--chart-3)',
-                  previous: 'var(--chart-4)'
-                }}
-              />
-            ))}
+          : visitorStats.map((stat) => {
+              const data = (analytics || EMPTY_ANALYTICS)[stat.key as keyof typeof EMPTY_ANALYTICS];
+              return (
+                <AnalyticsCard
+                  key={stat.key}
+                  stat={{
+                    ...stat,
+                    growth: calculateGrowth(data.previous, data.current)
+                  }}
+                  data={data}
+                  colors={{
+                    current: 'var(--chart-3)',
+                    previous: 'var(--chart-4)'
+                  }}
+                />
+              );
+            })}
       </div>
     </div>
   );

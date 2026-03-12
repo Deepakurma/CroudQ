@@ -171,10 +171,14 @@ export default function page() {
   const hasLoadedRef = React.useRef(false);
   const [queries, setQueries] = useState<Query[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [range, setRange] = useState<DateRange | undefined>({
-    from: new Date(),
-    to: undefined
-  });
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(20);
+  const [totalCount, setTotalCount] = useState(0);
+  const [range, setRange] = useState<DateRange | undefined>(undefined);
+
+  useEffect(() => {
+    setPageIndex(0);
+  }, [searchQuery, range?.from, range?.to]);
 
   useEffect(() => {
     const fetchQueries = async () => {
@@ -183,10 +187,15 @@ export default function page() {
       if (hasLoaded) setIsFetching(true);
       try {
         const payload = await trpcClient.admin.listQueries.query({
-          q: searchQuery.trim() || undefined
+          q: searchQuery.trim() || undefined,
+          from: range?.from,
+          to: range?.to,
+          limit: pageSize,
+          offset: pageIndex * pageSize
         });
 
-        const mapped = (payload as QueryApiItem[]).map((item) => ({
+        const items = Array.isArray(payload) ? payload : payload.items;
+        const mapped = (items as QueryApiItem[]).map((item) => ({
           id: item.id,
           landlordName: item.landlordName || 'N/A',
           inchargeName: item.inchargeName || 'N/A',
@@ -202,8 +211,10 @@ export default function page() {
           createdAt: new Date(item.createdAt)
         }));
         setQueries(mapped);
+        setTotalCount(Array.isArray(payload) ? mapped.length : (payload.total ?? mapped.length));
       } catch {
         setQueries([]);
+        setTotalCount(0);
       } finally {
         setIsLoading(false);
         setIsFetching(false);
@@ -212,7 +223,7 @@ export default function page() {
     };
 
     void fetchQueries();
-  }, [searchQuery]);
+  }, [searchQuery, range?.from, range?.to, pageIndex, pageSize]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -246,6 +257,15 @@ export default function page() {
           searchValue={searchQuery}
           onSearchChange={setSearchQuery}
           serverSideSearch={true}
+          serverSidePagination={true}
+          pageIndex={pageIndex}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          onPageChange={setPageIndex}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPageIndex(0);
+          }}
           isLoading={isLoading}
           isFetching={isFetching}
           dateRange={range}
