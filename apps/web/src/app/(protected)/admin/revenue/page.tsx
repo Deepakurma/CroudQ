@@ -126,6 +126,7 @@ export default function page() {
             //     data={analytics[stat.key as keyof typeof analytics]}
             //   />
             <AnalyticsCard
+              label="Revenue"
               key={stat.key}
               stat={stat}
               data={DUMMY_ANALYTICS[stat.key as keyof typeof DUMMY_ANALYTICS]}

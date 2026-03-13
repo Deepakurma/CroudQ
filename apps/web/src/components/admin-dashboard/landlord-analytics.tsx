@@ -70,6 +70,7 @@ export function LandlordAnalytics({ analytics, isLoading }: LandlordAnalyticsPro
               const data = (analytics || EMPTY_ANALYTICS)[stat.key as keyof typeof EMPTY_ANALYTICS];
               return (
                 <AnalyticsCard
+                  label="Landlords"
                   key={stat.key}
                   stat={{
                     ...stat,

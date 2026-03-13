@@ -30,6 +30,7 @@ interface StatProp {
 }
 
 interface AnalyticsCardProps {
+  label: string;
   stat: StatProp;
   data: { previous: number; current: number };
   colors?: {
@@ -38,7 +39,7 @@ interface AnalyticsCardProps {
   };
 }
 
-export function AnalyticsCard({ stat, data, colors }: AnalyticsCardProps) {
+export function AnalyticsCard({ label, stat, data, colors }: AnalyticsCardProps) {
   const totalVisitors = data.current;
 
   const chartConfig: ChartConfig = {
@@ -89,7 +90,7 @@ export function AnalyticsCard({ stat, data, colors }: AnalyticsCardProps) {
                           x={viewBox.cx}
                           y={(viewBox.cy || 0) + 4}
                           className="fill-muted-foreground text-sm">
-                          Landlords
+                          {label}
                         </tspan>
                       </text>
                     );

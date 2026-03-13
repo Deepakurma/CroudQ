@@ -93,6 +93,7 @@ export function Analytics() {
               const data = (analytics || EMPTY_ANALYTICS)[stat.key as keyof typeof EMPTY_ANALYTICS];
               return (
                 <AnalyticsCard
+                  label="Users"
                   key={stat.key}
                   stat={{
                     ...stat,
