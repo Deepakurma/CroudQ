@@ -6,6 +6,7 @@ import { LogOut, Users2 } from "lucide-react-native";
 import React, { ReactElement } from "react";
 import { Animated, StyleSheet } from "react-native";
 import { EmptyState } from "../EmptyState";
+import { CardShadow } from "@/constants/Shadows";
 
 interface ResidentsListProps {
   data: any[];
@@ -30,11 +31,11 @@ export function ResidentsList({
 }: ResidentsListProps) {
   if (isLoading) {
     return (
-      <Animated.ScrollView
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingTop: headerHeight, paddingHorizontal: Spacing.l },
-        ]}
+    <Animated.ScrollView
+      contentContainerStyle={[
+        styles.listContent,
+        { paddingTop: headerHeight, paddingHorizontal: Spacing.l },
+      ]}
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -103,6 +104,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
   skeletonHeader: {

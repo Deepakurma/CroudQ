@@ -1,6 +1,7 @@
 import { Colors } from "@/constants/Colors";
 import React from "react";
 import { StyleSheet, View, ViewStyle } from "react-native";
+import { CardShadow } from "@/constants/Shadows";
 
 interface CardProps {
   children: React.ReactNode;
@@ -25,6 +26,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.04,
     shadowRadius: 20,
+    ...CardShadow,
     elevation: 2,
   },
 });

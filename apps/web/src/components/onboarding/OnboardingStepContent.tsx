@@ -616,20 +616,20 @@ export function OnboardingStepContent({
             </p>
           </div>
 
-          <div className="rounded-lg border p-5 shadow-sm">
+          <div className="rounded-lg border bg-slate-50 p-4">
             <h3 className="text-muted-foreground mb-4 text-xs font-bold tracking-wide uppercase">
               Basic Details
             </h3>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between border-b pb-2">
+              <div className="flex justify-between border-b border-slate-100 pb-2">
                 <span className="text-muted-foreground">Property Name</span>
                 <span className="font-medium">{formData.propertyName || 'N/A'}</span>
               </div>
-              <div className="flex justify-between border-b pb-2">
+              <div className="flex justify-between border-b border-slate-100 pb-2">
                 <span className="text-muted-foreground">Type</span>
                 <span className="font-medium">{formData.type || 'N/A'}</span>
               </div>
-              <div className="flex justify-between border-b pb-2">
+              <div className="flex justify-between border-b border-slate-100 pb-2">
                 <span className="text-muted-foreground">Incharge</span>
                 <span className="font-medium">{formData.inchargeName || 'N/A'}</span>
               </div>
@@ -640,7 +640,7 @@ export function OnboardingStepContent({
             </div>
           </div>
 
-          <div className="rounded-lg border p-5 shadow-sm">
+          <div className="rounded-lg border bg-slate-50 p-4">
             <h3 className="text-muted-foreground mb-4 text-xs font-bold tracking-wide uppercase">
               Location
             </h3>
@@ -649,21 +649,193 @@ export function OnboardingStepContent({
                 .filter(Boolean)
                 .join(', ') || 'N/A'}
             </p>
+            {formData.landmarks.length > 0 ? (
+              <div className="mt-4 space-y-2">
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                  Landmarks
+                </p>
+                <ul className="space-y-1 text-sm">
+                  {formData.landmarks.map((item, index) => (
+                    <li key={`${item}-${index}`} className="flex items-start gap-2">
+                      <span className="mt-1 h-1.5 w-1.5 rounded-full bg-slate-400" />
+                      <span className="font-medium">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
           </div>
 
-          <div className="rounded-lg border p-5 shadow-sm">
+          <div className="rounded-lg border bg-slate-50 p-4">
             <h3 className="text-muted-foreground mb-4 text-xs font-bold tracking-wide uppercase">
               Property Stats
             </h3>
-            <div className="flex items-center justify-evenly py-2">
-              <div className="text-center">
-                <p className="text-primary text-2xl font-bold">{formData.floors || '0'}</p>
+            {(() => {
+              const floorsCount = parseInt(formData.floors || '0', 10) || 0;
+              const roomsTotal = Object.values(formData.roomsPerFloor || {}).reduce(
+                (sum, value) => sum + (parseInt(value || '0', 10) || 0),
+                0
+              );
+              const bedCounts = (formData.roomTypes || [])
+                .map((type) => {
+                  if (type === 'Single') return 1;
+                  const parsed = parseInt(type, 10);
+                  return Number.isFinite(parsed) ? parsed : null;
+                })
+                .filter((value): value is number => value !== null);
+              const bedsTotal = bedCounts.reduce((sum, value) => sum + value, 0);
+
+              return (
+                <div className="flex items-center justify-evenly py-2">
+                  <div className="text-center">
+                    <p className="text-primary text-2xl font-bold">{bedsTotal || 0}</p>
+                    <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                      Beds
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-primary text-2xl font-bold">{roomsTotal}</p>
+                    <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                      Rooms
+                    </p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-primary text-2xl font-bold">{floorsCount || 0}</p>
+                    <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                      Floors
+                    </p>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {formData.floors && parseInt(formData.floors, 10) > 0 ? (
+              <div className="mt-4 space-y-2 text-sm">
                 <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                  Floors
+                  Rooms Layout
                 </p>
+                {Array.from({ length: parseInt(formData.floors, 10) }).map((_, index) => {
+                  let floorLabel = '';
+                  if (formData.includeGroundFloor) {
+                    floorLabel =
+                      index === 0
+                        ? 'Ground Floor'
+                        : index === 1
+                          ? '1st Floor'
+                          : index === 2
+                            ? '2nd Floor'
+                            : index === 3
+                              ? '3rd Floor'
+                              : `${index}th Floor`;
+                  } else {
+                    const floorNum = index + 1;
+                    floorLabel =
+                      floorNum === 1
+                        ? '1st Floor'
+                        : floorNum === 2
+                          ? '2nd Floor'
+                          : floorNum === 3
+                            ? '3rd Floor'
+                            : `${floorNum}th Floor`;
+                  }
+                  const roomCount = formData.roomsPerFloor[index] || '0';
+
+                  return (
+                    <div key={floorLabel} className="flex justify-between">
+                      <span className="font-medium">{floorLabel}</span>
+                      <span className="text-muted-foreground">{roomCount} Rooms</span>
+                    </div>
+                  );
+                })}
               </div>
+            ) : null}
+
+            {formData.roomTypes.length > 0 ? (
+              <div className="mt-4 space-y-2 text-sm">
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                  Rent Config
+                </p>
+                {formData.roomTypes.map((type) => (
+                  <div key={type} className="flex justify-between">
+                    <span className="font-medium">{type}</span>
+                    <span className="text-muted-foreground">₹{formData.rents[type] || '0'}</span>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="rounded-lg border bg-slate-50 p-4">
+            <h3 className="text-muted-foreground mb-4 text-xs font-bold tracking-wide uppercase">
+              Facilities
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { key: 'electricity', label: 'Electricity' },
+                { key: 'powerBackup', label: 'Power Backup' },
+                { key: 'hotWater', label: 'Hot Water' },
+                { key: 'wifi', label: 'WiFi' },
+                { key: 'ac', label: 'AC' },
+                { key: 'food', label: 'Food' },
+                { key: 'housekeeping', label: 'Housekeeping' },
+                { key: 'cctv', label: 'CCTV' },
+                { key: 'laundry', label: 'Laundry' },
+                { key: 'parking', label: 'Parking' },
+                { key: 'lift', label: 'Lift' }
+              ]
+                .filter((facility) => Boolean(formData[facility.key as keyof OnboardingFormData]))
+                .map((facility) => (
+                  <span
+                    key={facility.key}
+                    className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-700">
+                    {facility.label}
+                  </span>
+                ))}
             </div>
           </div>
+
+          {formData.rules.length > 0 ? (
+            <div className="rounded-lg border bg-slate-50 p-4">
+              <h3 className="text-muted-foreground mb-4 text-xs font-bold tracking-wide uppercase">
+                Rules
+              </h3>
+              <ul className="space-y-2 text-sm">
+                {formData.rules.map((item, index) => (
+                  <li key={`${item}-${index}`} className="flex items-start gap-2">
+                    <span className="mt-1 h-1.5 w-1.5 rounded-full bg-slate-400" />
+                    <span className="font-medium">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
+          {formData.photos.length > 0 ? (
+            <div className="rounded-lg border bg-slate-50 p-4">
+              <h3 className="text-muted-foreground mb-4 text-xs font-bold tracking-wide uppercase">
+                Photos ({formData.photos.length})
+              </h3>
+              <div className="flex flex-wrap gap-3">
+                {formData.photos.map((photo, index) => (
+                  <div
+                    key={`${photo}-${index}`}
+                    className="relative h-20 w-20 overflow-hidden rounded-lg border bg-slate-50">
+                    {isSafeLandlordImageSrc(photo) ? (
+                      <Image
+                        src={photo}
+                        alt={`Property ${index + 1}`}
+                        fill
+                        className="object-cover"
+                        sizes="80px"
+                      />
+                    ) : (
+                      <LandlordImageFallback className="h-full w-full" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
       );
     default:

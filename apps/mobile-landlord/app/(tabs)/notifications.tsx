@@ -18,6 +18,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { CardShadow } from "@/constants/Shadows";
 
 // Mock Data for Notifications
 const NOTIFICATIONS = [
@@ -176,6 +177,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
   iconContainer: {

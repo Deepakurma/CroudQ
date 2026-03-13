@@ -25,6 +25,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useProperty } from "@/context/PropertyContext";
 import { RecentNotice } from "@/components/dashboard/RecentNotice";
+import { CardShadow } from "@/constants/Shadows";
 // ... imports
 
 export default function DashboardScreen() {
@@ -356,6 +357,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
   addPropertyButton: {

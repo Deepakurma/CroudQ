@@ -22,6 +22,7 @@ import { getTrpcErrorLogMessage } from "@/utils/trpc-error";
 import { validateSchema } from "@/utils/validation";
 import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
+import * as ImageManipulator from "expo-image-manipulator";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, ChevronLeft } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -107,6 +108,7 @@ export default function OnboardingScreen() {
 
   const [formData, setFormData] = useState(createInitialOnboardingFormData());
   const [isUploadingPhotos, setIsUploadingPhotos] = useState(false);
+  const [isConvertingPhotos, setIsConvertingPhotos] = useState(false);
   const [pendingPhotoUploads, setPendingPhotoUploads] = useState<
     { uri: string; fileName: string; contentType: string }[]
   >([]);
@@ -337,6 +339,36 @@ export default function OnboardingScreen() {
     }
   };
 
+  const isMediaBusy = isUploadingPhotos || isConvertingPhotos;
+
+  const convertIfHeic = async (asset: ImagePicker.ImagePickerAsset) => {
+    const fileName = asset.fileName ?? "";
+    const mimeType = asset.mimeType ?? "";
+    const isHeic =
+      mimeType === "image/heic" ||
+      mimeType === "image/heif" ||
+      fileName.toLowerCase().endsWith(".heic") ||
+      fileName.toLowerCase().endsWith(".heif");
+
+    if (!isHeic) return asset;
+
+    const result = await ImageManipulator.manipulateAsync(asset.uri, [], {
+      compress: 0.9,
+      format: ImageManipulator.SaveFormat.JPEG,
+    });
+
+    const nextFileName = fileName
+      ? fileName.replace(/\.(heic|heif)$/i, ".jpg")
+      : `property-${Date.now()}.jpg`;
+
+    return {
+      ...asset,
+      uri: result.uri,
+      fileName: nextFileName,
+      mimeType: "image/jpeg",
+    };
+  };
+
   const addListItem = (
     field: "landmarks" | "rules",
     value: string,
@@ -358,6 +390,15 @@ export default function OnboardingScreen() {
   };
 
   const pickImage = async () => {
+    if (isMediaBusy) {
+      Toast.show({
+        type: "info",
+        text1: "Please wait",
+        text2: "Photos are being processed.",
+      });
+      return;
+    }
+
     // Request permission
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
@@ -366,7 +407,7 @@ export default function OnboardingScreen() {
     }
 
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsMultipleSelection: true,
       selectionLimit: 5,
       aspect: [4, 3],
@@ -396,13 +437,27 @@ export default function OnboardingScreen() {
         return;
       }
 
-      const newPendingPhotos = result.assets
-        .filter((asset) => asset.uri)
-        .map((asset, index) => ({
-          uri: asset.uri!,
-          fileName: asset.fileName ?? `property-${Date.now()}-${index}.jpg`,
-          contentType: asset.mimeType ?? "image/jpeg",
-        }));
+      let selectedAssets = result.assets.filter((asset) => asset.uri);
+      try {
+        setIsConvertingPhotos(true);
+        selectedAssets = await Promise.all(selectedAssets.map(convertIfHeic));
+      } catch (error) {
+        console.error("Failed to convert HEIC images:", error);
+        Toast.show({
+          type: "error",
+          text1: "Conversion failed",
+          text2: "Unable to convert HEIC image. Please try a JPEG or PNG.",
+        });
+        return;
+      } finally {
+        setIsConvertingPhotos(false);
+      }
+
+      const newPendingPhotos = selectedAssets.map((asset, index) => ({
+        uri: asset.uri!,
+        fileName: asset.fileName ?? `property-${Date.now()}-${index}.jpg`,
+        contentType: asset.mimeType ?? "image/jpeg",
+      }));
 
       if (newPendingPhotos.length === 0) {
         return;
@@ -436,7 +491,8 @@ export default function OnboardingScreen() {
   const updatePropertyMutation = trpc.property.update.useMutation();
   const validateRoomStructureMutation =
     trpc.property.validateRoomStructure.useMutation();
-  const updateRoomStructureMutation = trpc.property.updateRoomStructure.useMutation();
+  const updateRoomStructureMutation =
+    trpc.property.updateRoomStructure.useMutation();
   const uploadPendingPhotosIfAny = async (): Promise<string[]> => {
     if (!pendingPhotoUploadsRef.current.length) {
       return formData.photos;
@@ -517,6 +573,14 @@ export default function OnboardingScreen() {
   };
 
   const nextStep = async () => {
+    if (isMediaBusy) {
+      Toast.show({
+        type: "info",
+        text1: "Please wait",
+        text2: "Photos are being processed.",
+      });
+      return;
+    }
     if (!validateStep(currentStep)) return;
 
     if (currentStep < STEPS.length) {
@@ -535,7 +599,9 @@ export default function OnboardingScreen() {
               const errorMessage = getTrpcErrorLogMessage(error).toLowerCase();
               const isStructureOccupiedError =
                 errorMessage.includes("higher room slots are occupied") ||
-                errorMessage.includes("cannot remove floors with occupied rooms") ||
+                errorMessage.includes(
+                  "cannot remove floors with occupied rooms",
+                ) ||
                 errorMessage.includes("currently assigned to rooms");
 
               Toast.show({
@@ -564,7 +630,8 @@ export default function OnboardingScreen() {
 
       if (isEditMode && propertyData) {
         const hasValidStructure =
-          formData.floors.trim().length > 0 && parseInt(formData.floors, 10) > 0;
+          formData.floors.trim().length > 0 &&
+          parseInt(formData.floors, 10) > 0;
 
         if (!hasValidStructure) {
           submitEditPropertyUpdate(photos);
@@ -583,7 +650,9 @@ export default function OnboardingScreen() {
               const errorMessage = getTrpcErrorLogMessage(error).toLowerCase();
               const isStructureOccupiedError =
                 errorMessage.includes("higher room slots are occupied") ||
-                errorMessage.includes("cannot remove floors with occupied rooms") ||
+                errorMessage.includes(
+                  "cannot remove floors with occupied rooms",
+                ) ||
                 errorMessage.includes("currently assigned to rooms");
 
               console.error(
@@ -666,6 +735,8 @@ export default function OnboardingScreen() {
       updateRent={updateRent}
       pickImage={pickImage}
       removePhoto={removePhoto}
+      isUploadingPhotos={isUploadingPhotos}
+      isConvertingPhotos={isConvertingPhotos}
     />
   );
 
@@ -713,16 +784,18 @@ export default function OnboardingScreen() {
           <TouchableOpacity
             style={styles.nextButton}
             onPress={nextStep}
-            disabled={isUploadingPhotos}
+            disabled={isMediaBusy}
           >
             <Text style={styles.nextButtonText}>
-              {isUploadingPhotos
-                ? "Uploading photos..."
+              {isMediaBusy
+                ? isConvertingPhotos
+                  ? "Converting photos..."
+                  : "Uploading photos..."
                 : currentStep === STEPS.length
-                ? isEditMode
-                  ? "Update Property"
-                  : "Submit Registration"
-                : "Next"}
+                  ? isEditMode
+                    ? "Update Property"
+                    : "Submit Registration"
+                  : "Next"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -907,7 +980,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingVertical: Spacing.xs,
+    paddingVertical: Spacing.m,
     borderBottomWidth: 1,
     borderBottomColor: "#f9fafb",
   },
@@ -940,6 +1013,12 @@ const styles = StyleSheet.create({
   uploadSubText: {
     fontSize: Typography.size.s,
     color: Colors.textSecondary,
+  },
+  mediaStatusText: {
+    fontSize: Typography.size.xs,
+    color: Colors.textSecondary,
+    fontFamily: Typography.font.medium,
+    marginTop: Spacing.s,
   },
   photoGrid: {
     flexDirection: "row",

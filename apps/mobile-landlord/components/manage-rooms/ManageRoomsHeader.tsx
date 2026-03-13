@@ -1,6 +1,7 @@
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { Typography } from "@/constants/Typography";
+import { CardShadow } from "@/constants/Shadows";
 import { SlidersHorizontal, X } from "lucide-react-native";
 import React from "react";
 import {
@@ -125,6 +126,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
   filterChipSelected: {

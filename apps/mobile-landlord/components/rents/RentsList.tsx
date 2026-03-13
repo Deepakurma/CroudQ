@@ -27,11 +27,11 @@ export function RentsList({
 }: RentsListProps) {
   if (isLoading) {
     return (
-      <Animated.ScrollView
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingTop: headerHeight, paddingHorizontal: Spacing.l },
-        ]}
+    <Animated.ScrollView
+      contentContainerStyle={[
+        styles.listContent,
+        { paddingTop: headerHeight, paddingHorizontal: Spacing.l },
+      ]}
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],

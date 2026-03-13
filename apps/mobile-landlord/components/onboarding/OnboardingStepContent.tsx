@@ -52,6 +52,8 @@ type OnboardingStepContentProps = {
   updateRent: (type: string, value: string) => void;
   pickImage: () => void;
   removePhoto: (index: number) => void;
+  isUploadingPhotos?: boolean;
+  isConvertingPhotos?: boolean;
 };
 
 export function OnboardingStepContent({
@@ -72,7 +74,16 @@ export function OnboardingStepContent({
   updateRent,
   pickImage,
   removePhoto,
+  isUploadingPhotos = false,
+  isConvertingPhotos = false,
 }: OnboardingStepContentProps) {
+  const isMediaBusy = isUploadingPhotos || isConvertingPhotos;
+  const mediaStatusText = isConvertingPhotos
+    ? "Converting photos..."
+    : isUploadingPhotos
+      ? "Uploading photos..."
+      : null;
+
   switch (currentStep) {
     case 1:
       return (
@@ -571,7 +582,11 @@ export function OnboardingStepContent({
             Upload good quality photos to attract more residents.
           </Text>
 
-          <TouchableOpacity style={styles.uploadBox} onPress={pickImage}>
+          <TouchableOpacity
+            style={[styles.uploadBox, isMediaBusy && { opacity: 0.7 }]}
+            onPress={pickImage}
+            disabled={isMediaBusy}
+          >
             {formData.photos.length > 0 ? (
               <Image source={{ uri: formData.photos[0] }} style={styles.mainPhoto} />
             ) : (
@@ -583,9 +598,17 @@ export function OnboardingStepContent({
             )}
           </TouchableOpacity>
 
+          {mediaStatusText ? (
+            <Text style={styles.mediaStatusText}>{mediaStatusText}</Text>
+          ) : null}
+
           <Text style={[styles.label, { marginTop: Spacing.l }]}>Room Photos</Text>
           <View style={styles.photoGrid}>
-            <TouchableOpacity style={styles.miniUploadBox} onPress={pickImage}>
+            <TouchableOpacity
+              style={[styles.miniUploadBox, isMediaBusy && { opacity: 0.7 }]}
+              onPress={pickImage}
+              disabled={isMediaBusy}
+            >
               <Plus size={24} color={Colors.textSecondary} />
             </TouchableOpacity>
             {formData.photos.map((uri, index) => (
@@ -658,18 +681,39 @@ export function OnboardingStepContent({
 
           <View style={styles.reviewSection}>
             <Text style={styles.reviewSectionHeader}>Property Stats</Text>
-            <View style={styles.statsRow}>
-              <View style={styles.statItem}>
-                <Text style={styles.statLabel}>Beds</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statLabel}>Rooms</Text>
-              </View>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{formData.floors || "0"}</Text>
-                <Text style={styles.statLabel}>Floors</Text>
-              </View>
-            </View>
+            {(() => {
+              const floorsCount = parseInt(formData.floors || "0", 10) || 0;
+              const roomsTotal = Object.values(formData.roomsPerFloor || {}).reduce(
+                (sum, value) => sum + (parseInt(value || "0", 10) || 0),
+                0,
+              );
+              const bedCounts = (formData.roomTypes || [])
+                .map((type) => {
+                  if (type === "Single") return 1;
+                  const parsed = parseInt(type, 10);
+                  return Number.isFinite(parsed) ? parsed : null;
+                })
+                .filter((value): value is number => value !== null);
+              const bedsTotal = bedCounts.reduce((sum, value) => sum + value, 0);
+              const bedsLabel = bedsTotal > 0 ? `${bedsTotal}` : "0";
+
+              return (
+                <View style={styles.statsRow}>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statValue}>{bedsLabel}</Text>
+                    <Text style={styles.statLabel}>Beds</Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statValue}>{roomsTotal}</Text>
+                    <Text style={styles.statLabel}>Rooms</Text>
+                  </View>
+                  <View style={styles.statItem}>
+                    <Text style={styles.statValue}>{floorsCount || "0"}</Text>
+                    <Text style={styles.statLabel}>Floors</Text>
+                  </View>
+                </View>
+              );
+            })()}
 
             {formData.floors && parseInt(formData.floors, 10) > 0 && (
               <View style={{ marginTop: 12 }}>
@@ -729,7 +773,8 @@ export function OnboardingStepContent({
             <Text style={styles.reviewSectionHeader}>Facilities</Text>
             <View style={styles.tagsContainer}>
               {[
-                { key: "electricity", label: "Power Backup" },
+                { key: "electricity", label: "Electricity" },
+                { key: "powerBackup", label: "Power Backup" },
                 { key: "hotWater", label: "Hot Water" },
                 { key: "wifi", label: "WiFi" },
                 { key: "ac", label: "AC" },

@@ -7,6 +7,7 @@ import { formatIndianCurrency } from "@/utils/common";
 import { Check, Pencil, X } from "lucide-react-native";
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { CardShadow } from "@/constants/Shadows";
 
 interface ApprovalItem {
   id: string;
@@ -209,6 +210,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
   headerRow: {

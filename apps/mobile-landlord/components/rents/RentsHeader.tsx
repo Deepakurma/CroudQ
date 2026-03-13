@@ -1,6 +1,7 @@
 import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { Typography } from "@/constants/Typography";
+import { CardShadow } from "@/constants/Shadows";
 import * as Haptics from "expo-haptics";
 import { Bell, Check, Search } from "lucide-react-native";
 import React from "react";
@@ -138,6 +139,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
   searchInput: {
@@ -202,6 +204,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
   notifyBtnActive: {

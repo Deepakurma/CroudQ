@@ -1,15 +1,26 @@
 {
   "expo": {
-    "name": "Bunkezy Mobile Landlord",
+    "name": "Bunkezy",
     "slug": "bunkezy-mobile-landlord",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "orientation": "portrait",
-    "icon": "./assets/images/Logo.png",
+    "icon": "./assets/images/Logo.jpeg",
     "scheme": "bunkezy-mobile-landlord",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.bunkezy.landlord",
+      "buildNumber": "1",
+      "icon": "./assets/images/Logo.png",
+      "infoPlist": {
+        "NSCameraUsageDescription": "This app uses camera to upload property images.",
+        "NSPhotoLibraryUsageDescription": "This app needs access to photos to upload property images.",
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +30,8 @@
         "monochromeImage": "./assets/images/Logo.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.bunkezy.landlord"
     },
     "web": {
       "output": "static",
@@ -45,6 +57,12 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "5506e01e-8937-4f62-a02e-724f22ef1562"
+      }
     }
   }
 }

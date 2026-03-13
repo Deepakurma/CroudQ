@@ -10,6 +10,7 @@ import {
 import React, { useRef, useState } from "react";
 import { Dimensions, FlatList, StyleSheet, Text, View } from "react-native";
 import { StatCardSkeleton } from "../skeletons/StatCardSkeleton";
+import { CardShadow } from "@/constants/Shadows";
 
 const chunkArray = <T,>(arr: T[], size: number): T[][] => {
   const result: T[][] = [];
@@ -175,6 +176,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
   statIconCircle: {

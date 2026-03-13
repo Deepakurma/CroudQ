@@ -15,6 +15,7 @@ import {
 import React, { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { EdgeInsets } from "react-native-safe-area-context";
+import { CardShadow } from "@/constants/Shadows";
 
 // Removed PROPERTY_OPTIONS
 
@@ -323,6 +324,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
   propertyIconBox: {
@@ -355,6 +357,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 10,
+    ...CardShadow,
     elevation: 5,
   },
   dropdownOverlay: {

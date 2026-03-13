@@ -39,6 +39,7 @@ import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 import { z } from "zod";
+import { CardShadow } from "@/constants/Shadows";
 
 const residentSchema = z
   .object({
@@ -301,7 +302,7 @@ export default function AddResidentScreen() {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -820,6 +821,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.04,
     shadowRadius: 20,
+    ...CardShadow,
     elevation: 1,
   },
   manualModeCard: {
@@ -979,7 +981,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     backgroundColor: Colors.accent,
-    paddingHorizontal: Spacing.m,
+    padding: Spacing.m,
     borderRadius: Spacing.m,
   },
   switchLabel: {
@@ -1036,6 +1038,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.04,
     shadowRadius: 20,
+    ...CardShadow,
     elevation: 1,
   },
   qrTitleRow: {

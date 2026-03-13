@@ -9,6 +9,7 @@ import { ChevronRight, Megaphone } from "lucide-react-native";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { SkeletonLoader } from "../ui/SkeletonLoader";
+import { CardShadow } from "@/constants/Shadows";
 
 export interface RecentNoticeItem {
   id: string;
@@ -134,6 +135,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.12,
     shadowRadius: 10,
+    ...CardShadow,
     elevation: 2,
   },
   noticeHeader: {

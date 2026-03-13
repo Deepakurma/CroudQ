@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { EmptyState } from "../EmptyState";
+import { CardShadow } from "@/constants/Shadows";
 
 export interface Complaint {
   id: string;
@@ -45,11 +46,11 @@ export function ComplaintsList({
 }: ComplaintsListProps) {
   if (isLoading) {
     return (
-      <Animated.ScrollView
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingTop: headerHeight, paddingHorizontal: Spacing.l },
-        ]}
+    <Animated.ScrollView
+      contentContainerStyle={[
+        styles.listContent,
+        { paddingTop: headerHeight, paddingHorizontal: Spacing.l },
+      ]}
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -157,6 +158,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
   cardSection: {

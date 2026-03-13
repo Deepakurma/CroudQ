@@ -4,6 +4,7 @@ import { Typography } from "@/constants/Typography";
 import { Search } from "lucide-react-native";
 import React from "react";
 import { StyleSheet, TextInput, View } from "react-native";
+import { CardShadow } from "@/constants/Shadows";
 
 interface ResidentsHeaderProps {
   searchQuery?: string;
@@ -48,6 +49,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
   searchInput: {

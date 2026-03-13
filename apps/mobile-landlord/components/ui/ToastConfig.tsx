@@ -7,6 +7,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Colors } from "@/constants/Colors";
 import { Typography } from "@/constants/Typography";
 import { Spacing } from "@/constants/Spacing";
+import { CardShadow } from "@/constants/Shadows";
 
 export const toastConfig: ToastConfig = {
   success: ({ text1, text2 }: BaseToastProps) => (
@@ -67,6 +68,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 10,
+    ...CardShadow,
     elevation: 5,
   },
   gradientToast: {

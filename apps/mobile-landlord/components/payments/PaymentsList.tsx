@@ -4,6 +4,7 @@ import { Typography } from "@/constants/Typography";
 import { formatIndianCurrency } from "@/utils/common";
 import React, { ReactElement } from "react";
 import { Animated, StyleSheet, Text, View } from "react-native";
+import { CardShadow } from "@/constants/Shadows";
 
 export interface Payment {
   id: string;
@@ -89,6 +90,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
   cardHeaderRow: {

@@ -30,10 +30,11 @@ const amenityKeys = [
 
 const normalizePropertyType = (value: string | null | undefined) => {
   const key = (value ?? "").trim().toLowerCase();
+  const normalized = key.replace(/[^a-z]/g, "");
 
   if (key.includes("boys")) return "boys-hostel";
   if (key.includes("girls")) return "girls-hostel";
-  if (key.includes("coliv")) return "coliving";
+  if (normalized.includes("coliv")) return "coliving";
   if (key.includes("pg")) return "pg";
 
   return "pg";

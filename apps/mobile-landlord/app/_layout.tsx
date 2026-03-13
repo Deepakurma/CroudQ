@@ -185,7 +185,7 @@ function AuthBootstrapGate({ children }: { children: ReactNode }) {
       return <Redirect href="/onboarding" />;
     }
     if (hasLandlordRole) {
-      return <Redirect href="/home" />;
+      return <Redirect href="/(tabs)" />;
     }
     return <Redirect href="/login" />;
   }

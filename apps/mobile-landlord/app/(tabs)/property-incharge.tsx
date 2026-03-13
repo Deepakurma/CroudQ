@@ -28,6 +28,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
 import { z } from "zod";
+import { CardShadow } from "@/constants/Shadows";
 
 const inchargeSchema = z.object({
   name: z.string().trim().min(3, "Name must be at least 3 characters"),
@@ -301,6 +302,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
   cardHeader: {

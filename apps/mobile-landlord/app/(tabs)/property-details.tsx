@@ -41,6 +41,7 @@ import {
 import Toast from "react-native-toast-message";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useProperty } from "@/context/PropertyContext";
+import { CardShadow } from "@/constants/Shadows";
 
 // Helper to map facilities to icons
 const getFacilityIcon = (key: string) => {
@@ -129,12 +130,22 @@ export default function ProfileScreen() {
   const cancelDeletionMutation =
     trpc.property.cancelPropertyDeletion.useMutation();
 
+  const typeLabelMap: Record<string, string> = {
+    Boys: "Boys Hostel",
+    Girls: "Girls Hostel",
+    PG: "PG",
+    "Co-living": "Co-living",
+  };
+
   const data = propertyData
     ? {
         propertyName: propertyData.name,
         inchargeName: propertyData.inchargeName || "",
         inchargePhone: propertyData.inchargePhone || "",
-        type: propertyData.type || "Boys",
+        type:
+          typeLabelMap[propertyData.type || "Boys"] ||
+          propertyData.type ||
+          "Boys",
         address1: propertyData.addressLine1 || "",
         area: propertyData.area || "",
         city: propertyData.city || "",
@@ -301,7 +312,7 @@ export default function ProfileScreen() {
                 <Text style={styles.propertyName}>{data.propertyName}</Text>
                 <View style={styles.badgeRow}>
                   <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{data.type} Property</Text>
+                    <Text style={styles.badgeText}>{data.type}</Text>
                   </View>
                   <View style={styles.locationBadge}>
                     <MapPin size={12} color={Colors.white} />
@@ -609,6 +620,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
   headerImage: {
@@ -712,6 +724,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
   callButton: {
@@ -735,6 +748,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
   cardHeader: {
@@ -811,6 +825,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
   statNumber: {

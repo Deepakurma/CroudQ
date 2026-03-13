@@ -3,6 +3,7 @@ import { Spacing } from "@/constants/Spacing";
 import { Typography } from "@/constants/Typography";
 import * as Haptics from "expo-haptics";
 import { Search, SlidersHorizontal } from "lucide-react-native";
+import { CardShadow } from "@/constants/Shadows";
 import React from "react";
 import {
   StyleSheet,
@@ -134,6 +135,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
   searchInput: {
@@ -193,6 +195,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
 });

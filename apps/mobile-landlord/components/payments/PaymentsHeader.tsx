@@ -7,6 +7,7 @@ import React from "react";
 import { StyleSheet, Text, TextInput, View } from "react-native";
 
 import { DatePicker } from "@/components/ui/DatePicker";
+import { CardShadow } from "@/constants/Shadows";
 
 interface PaymentsHeaderProps {
   startDate: Date;
@@ -92,6 +93,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
   searchInput: {
@@ -149,6 +151,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
   statLabel: {

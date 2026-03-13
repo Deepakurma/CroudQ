@@ -25,6 +25,7 @@ import {
 } from "react-native";
 import Toast from "react-native-toast-message";
 import { z } from "zod";
+import { CardShadow } from "@/constants/Shadows";
 
 interface ResidentProps {
   id: string;
@@ -143,7 +144,7 @@ export function ResidentCard({
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -608,6 +609,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
   errorContainer: {
