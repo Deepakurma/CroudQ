@@ -55,7 +55,7 @@ interface LandlordAnalyticsProps {
 export function LandlordAnalytics({ analytics, isLoading }: LandlordAnalyticsProps) {
   return (
     <div className="flex flex-col gap-2 p-4 sm:gap-3">
-      <h1 className="text-sm font-semibold tracking-widest uppercase">Landlord Analytics</h1>
+      <h1 className="text-sm font-semibold tracking-widest uppercase">Properties Analytics</h1>
       <div className="no-scrollbar flex w-full gap-3 overflow-x-auto sm:grid sm:grid-cols-3 sm:gap-4 lg:gap-6">
         {isLoading
           ? visitorStats.map((stat) => (
@@ -70,7 +70,7 @@ export function LandlordAnalytics({ analytics, isLoading }: LandlordAnalyticsPro
               const data = (analytics || EMPTY_ANALYTICS)[stat.key as keyof typeof EMPTY_ANALYTICS];
               return (
                 <AnalyticsCard
-                  label="Landlords"
+                  label="Properties"
                   key={stat.key}
                   stat={{
                     ...stat,
