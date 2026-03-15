@@ -2,7 +2,7 @@ import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { Typography } from "@/constants/Typography";
 import * as Haptics from "expo-haptics";
-import { Search, SlidersHorizontal } from "lucide-react-native";
+import { Search, SlidersHorizontal, X } from "lucide-react-native";
 import { CardShadow } from "@/constants/Shadows";
 import React from "react";
 import {
@@ -34,12 +34,21 @@ export function RoomsHeader({
       <View style={styles.searchContainer}>
         <Search size={20} color={Colors.textSecondary} />
         <TextInput
-          placeholder="Search by room or name"
+          placeholder="Search by room no or type"
           style={styles.searchInput}
           placeholderTextColor={Colors.textSecondary}
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
+        {!!searchQuery && (
+          <TouchableOpacity
+            onPress={() => setSearchQuery("")}
+            style={styles.clearButton}
+            activeOpacity={0.7}
+          >
+            <X size={18} color={Colors.textSecondary} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Radio Filters */}
@@ -144,6 +153,10 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.l,
     color: Colors.text,
     fontFamily: Typography.font.regular,
+  },
+  clearButton: {
+    padding: 6,
+    marginLeft: Spacing.s,
   },
   filterContainer: {
     flexDirection: "row",

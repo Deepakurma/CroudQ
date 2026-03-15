@@ -106,7 +106,14 @@ export const OtpAuthCard = ({
               onClick={onVerify}
               disabled={isLoading || otpValue.length !== otpLength}
               className="h-11 w-full">
-              {isLoading ? <Loader2 className="size-4 animate-spin" /> : 'Verify'}
+              {isLoading ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="size-4 animate-spin" />
+                  Verifying...
+                </span>
+              ) : (
+                'Verify'
+              )}
             </Button>
 
             <Button

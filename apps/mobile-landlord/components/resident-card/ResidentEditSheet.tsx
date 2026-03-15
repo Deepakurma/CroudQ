@@ -2,7 +2,7 @@ import { AppTextInput } from "@/components/ui/AppTextInput";
 import { DatePicker } from "@/components/ui/DatePicker";
 import { Colors } from "@/constants/Colors";
 import { formatIndianCurrency } from "@/utils/common";
-import { Camera } from "lucide-react-native";
+import { Camera, X } from "lucide-react-native";
 import React from "react";
 import { Image, Text, TouchableOpacity, View } from "react-native";
 
@@ -10,6 +10,7 @@ type Props = {
   itemName: string;
   editProfileImage?: string;
   pickImage: () => void;
+  removeImage: () => void;
   editName: string;
   setEditName: (value: string) => void;
   editRoom: string;
@@ -37,6 +38,7 @@ export function ResidentEditSheet({
   itemName,
   editProfileImage,
   pickImage,
+  removeImage,
   editName,
   setEditName,
   editRoom,
@@ -59,6 +61,8 @@ export function ResidentEditSheet({
   isSaving,
   styles,
 }: Props) {
+  const hasProfileImage = !!editProfileImage;
+
   return (
     <View style={styles.sheetSection}>
       <Text style={styles.sheetTitle}>Edit Resident</Text>
@@ -72,8 +76,15 @@ export function ResidentEditSheet({
               <Text style={styles.editAvatarText}>{itemName.charAt(0).toUpperCase()}</Text>
             </View>
           )}
-          <TouchableOpacity style={styles.cameraBtn} onPress={pickImage}>
-            <Camera size={16} color={Colors.white} />
+          <TouchableOpacity
+            style={styles.cameraBtn}
+            onPress={hasProfileImage ? removeImage : pickImage}
+          >
+            {hasProfileImage ? (
+              <X size={16} color={Colors.white} />
+            ) : (
+              <Camera size={16} color={Colors.white} />
+            )}
           </TouchableOpacity>
         </View>
         <TouchableOpacity onPress={pickImage}>
@@ -189,4 +200,3 @@ export function ResidentEditSheet({
     </View>
   );
 }
-

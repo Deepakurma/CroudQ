@@ -21,6 +21,7 @@ import {
 } from "react-native";
 
 import { useRouter } from "expo-router";
+import Toast from "react-native-toast-message";
 
 const ACTION_BUTTONS = [
   {
@@ -70,14 +71,20 @@ function ActionButton({
   label,
   onPress,
   showAlertDot = false,
+  disabled = false,
 }: {
   icon: React.ReactNode;
   label: string;
   onPress?: () => void;
   showAlertDot?: boolean;
+  disabled?: boolean;
 }) {
   return (
-    <TouchableOpacity style={styles.actionBtn} onPress={onPress}>
+    <TouchableOpacity
+      style={[styles.actionBtn, disabled && styles.actionBtnDisabled]}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
       <View style={styles.actionIcon}>
         {icon}
         {showAlertDot ? <View style={styles.alertDot} /> : null}
@@ -89,8 +96,12 @@ function ActionButton({
 
 export function QuickActions({
   hasUnresolvedComplaints = false,
+  hasPendingCheckouts = false,
+  canAddProperty = true,
 }: {
   hasUnresolvedComplaints?: boolean;
+  hasPendingCheckouts?: boolean;
+  canAddProperty?: boolean;
 }) {
   const router = useRouter();
 
@@ -103,6 +114,14 @@ export function QuickActions({
         router.push("/rooms" as any);
         break;
       case "add-property":
+        if (!canAddProperty) {
+          Toast.show({
+            type: "error",
+            text1: "Property Limit Reached",
+            text2: "You can only add up to 3 properties.",
+          });
+          break;
+        }
         router.push("/onboarding" as any);
         break;
       case "complains":
@@ -140,7 +159,11 @@ export function QuickActions({
             <ActionButton
               icon={item.icon}
               label={item.label}
-              showAlertDot={item.key === "complains" && hasUnresolvedComplaints}
+              disabled={item.key === "add-property" && !canAddProperty}
+              showAlertDot={
+                (item.key === "complains" && hasUnresolvedComplaints) ||
+                (item.key === "residents" && hasPendingCheckouts)
+              }
               onPress={() => handlePress(item.key)}
             />
           </View>
@@ -166,6 +189,9 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     gap: 6,
+  },
+  actionBtnDisabled: {
+    opacity: 0.8,
   },
   actionIcon: {
     width: 44,

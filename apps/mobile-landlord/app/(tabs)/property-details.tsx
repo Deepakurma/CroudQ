@@ -84,20 +84,12 @@ const getFacilityLabel = (key: string) => {
   return labels[key] || key;
 };
 
-const getFloorLabel = (index: number, includeGround: boolean) => {
-  if (includeGround) {
-    if (index === 0) return "Ground Floor";
-    if (index === 1) return "1st Floor";
-    if (index === 2) return "2nd Floor";
-    if (index === 3) return "3rd Floor";
-    return `${index}th Floor`;
-  } else {
-    const floorNum = index + 1;
-    if (floorNum === 1) return "1st Floor";
-    if (floorNum === 2) return "2nd Floor";
-    if (floorNum === 3) return "3rd Floor";
-    return `${floorNum}th Floor`;
-  }
+const getFloorLabel = (floorNumber: number, includeGround: boolean) => {
+  if (includeGround && floorNumber === 0) return "Ground Floor";
+  if (floorNumber === 1) return "1st Floor";
+  if (floorNumber === 2) return "2nd Floor";
+  if (floorNumber === 3) return "3rd Floor";
+  return `${floorNumber}th Floor`;
 };
 
 const isSafeImageUri = (value: string | null | undefined) => {
@@ -134,7 +126,7 @@ export default function ProfileScreen() {
     Boys: "Boys Hostel",
     Girls: "Girls Hostel",
     PG: "PG",
-    "Co-living": "Co-living",
+    coliving: "Co-living",
   };
 
   const data = propertyData
@@ -702,6 +694,7 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.l,
     fontFamily: Typography.font.bold,
     color: Colors.text,
+    marginBottom: 1,
   },
   subValue: {
     fontSize: Typography.size.m,

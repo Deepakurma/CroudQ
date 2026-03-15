@@ -116,7 +116,7 @@ export default function RootLayout() {
                         value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
                       >
                         <Stack initialRouteName="login" screenOptions={{ headerShown: false }}>
-                          <Stack.Screen name="dashboard" />
+                          <Stack.Screen name="index" />
                           <Stack.Screen name="complaint" />
                           <Stack.Screen name="receipts" />
                         </Stack>
@@ -151,7 +151,7 @@ function AuthBootstrapGate({ children }: { children: ReactNode }) {
   }
 
   if (isAuthenticated && isPublicRoute && !postLoginInitializing) {
-    return <Redirect href="/dashboard" />;
+    return <Redirect href="/" />;
   }
 
   return <>{children}</>;

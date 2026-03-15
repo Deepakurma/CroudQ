@@ -44,7 +44,6 @@ export const authRouter = router({
         .mutation(async ({ input, ctx }) => {
             const result = await authService.verifyOTP(input.phoneNumber, input.otp, input.reqId);
             const isSuperAdmin = result.identity.roles.includes("SUPER_ADMIN");
-            const isLandlord = result.identity.roles.includes("LANDLORD");
             const canAccessLandlordWeb = hasLandlordWebAccess(result.identity);
 
             if (!canAccessLandlordWeb) {

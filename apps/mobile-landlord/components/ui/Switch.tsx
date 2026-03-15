@@ -60,13 +60,11 @@ export function Switch({
   };
 
   const trackColors = {
-    false: "#767577",
-    true: Colors.primary,
-    ...trackColor,
+    false: trackColor?.false ?? "#767577",
+    true: trackColor?.true ?? Colors.primary,
   };
 
-  const resolvedThumbColor =
-    thumbColor || (value ? Colors.white : "#f4f3f4");
+  const resolvedThumbColor = thumbColor || (value ? Colors.white : "#f4f3f4");
 
   return (
     <Pressable
@@ -77,7 +75,11 @@ export function Switch({
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
       accessible={accessible}
-      style={[styles.container, disabled && styles.disabled, style as ViewStyle]}
+      style={[
+        styles.container,
+        disabled && styles.disabled,
+        style as ViewStyle,
+      ]}
     >
       <Animated.View
         style={[

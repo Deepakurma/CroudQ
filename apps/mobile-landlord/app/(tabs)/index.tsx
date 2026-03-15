@@ -44,6 +44,7 @@ export default function DashboardScreen() {
   const { data: properties, isLoading: isPropertiesLoading } =
     trpc.property.getAllProperties.useQuery();
   const hasProperties = (properties?.length ?? 0) > 0;
+  const canAddProperty = (properties?.length ?? 0) < 3;
   const shouldShowGetStarted =
     !isPropertyLoading && !isPropertiesLoading && !hasProperties;
   const propertyIds = React.useMemo(
@@ -120,6 +121,16 @@ export default function DashboardScreen() {
   const { data: unresolvedComplaints } = trpc.complaint.list.useQuery(
     {
       status: "pending",
+      scopePropertyId: selectedPropertyId || undefined,
+    },
+    {
+      enabled: canRunPropertyQueries,
+    },
+  );
+  const { data: pendingCheckoutResidents } = trpc.resident.list.useQuery(
+    {
+      status: "pending_checkout",
+      limit: 1,
       scopePropertyId: selectedPropertyId || undefined,
     },
     {
@@ -211,6 +222,7 @@ export default function DashboardScreen() {
   }, [cancelDeletionMutation, utils]);
 
   const hasUnresolvedComplaints = (unresolvedComplaints?.length ?? 0) > 0;
+  const hasPendingCheckouts = (pendingCheckoutResidents?.length ?? 0) > 0;
 
   return (
     <View style={styles.container}>
@@ -290,7 +302,11 @@ export default function DashboardScreen() {
           />
 
           <View style={styles.contentCard}>
-            <QuickActions hasUnresolvedComplaints={hasUnresolvedComplaints} />
+            <QuickActions
+              hasUnresolvedComplaints={hasUnresolvedComplaints}
+              hasPendingCheckouts={hasPendingCheckouts}
+              canAddProperty={canAddProperty}
+            />
           </View>
 
           <View style={styles.contentCard}>

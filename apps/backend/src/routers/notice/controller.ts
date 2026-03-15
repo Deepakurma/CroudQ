@@ -22,7 +22,7 @@ export const noticeRouter = router({
             return await db.select().from(notices)
                 .where(eq(notices.propertyId, ctx.propertyId))
                 .orderBy(desc(notices.createdAt))
-                .limit(input?.limit ?? 100);
+                .limit(input?.limit ?? 150);
         }),
     create: propertyProcedure
         .input(createNoticeSchema)

@@ -1,3 +1,5 @@
+import { Platform } from "react-native";
+
 export const Colors = {
   // background: "#f8f8f8ff",
   background: "rgb(245, 245, 245)",
@@ -8,7 +10,8 @@ export const Colors = {
   white: "#fff",
   text: "#1f2937",
   textSecondary: "#6b7280",
-  cardBorder: "rgba(0, 0, 0, 0.05)",
+  cardBorder:
+    Platform.OS === "ios" ? "rgba(0, 0, 0, 0.08)" : "rgba(0, 0, 0, 0.05)",
   border: "rgba(0, 0, 0, 0.10)",
 
   success: "#10b981",

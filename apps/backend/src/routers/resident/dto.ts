@@ -5,7 +5,7 @@ export const createResidentSchema = z.object({
   roomNumber: z.string(),
   name: z.string(),
   phoneNumber: z.string(),
-  profileImage: z.string().optional(),
+  profileImage: z.string().nullable().optional(),
   checkInDate: z.string(),
   rentAmount: z.number().positive().max(200000),
   advanceMonths: z.number().optional(),
@@ -31,7 +31,7 @@ export const rejectRequestSchema = z.object({
 export const residentIdSchema = z.object({ residentId: z.string() });
 export const paymentHistorySchema = z.object({
   residentId: z.string(),
-  limit: z.number().int().min(1).max(100).optional(),
+  limit: z.number().int().min(1).max(200).optional(),
 });
 
 export const getResidentsByRoomSchema = z.object({
@@ -41,7 +41,7 @@ export const getResidentsByRoomSchema = z.object({
 
 export const listResidentsSchema = z
   .object({
-    status: z.enum(["all", "paid", "due"]).optional(),
+    status: z.enum(["all", "paid", "due", "pending_checkout"]).optional(),
     q: z.string().trim().min(1).max(100).optional(),
     limit: z.number().int().min(1).max(200).optional(),
     scopePropertyId: z.string().trim().min(1).optional(),
@@ -57,7 +57,7 @@ export const updateResidentSchema = z.object({
   rentAmount: z.number().positive().max(200000).optional(),
   checkInDate: z.string().optional(),
   checkOutDate: z.string().optional().nullable(),
-  profileImage: z.string().optional(),
+  profileImage: z.string().nullable().optional(),
   advanceMonths: z.number().optional(),
 });
 

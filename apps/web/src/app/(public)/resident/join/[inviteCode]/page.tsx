@@ -376,16 +376,16 @@ export default function JoinInvitePage() {
   if (!invite) return null;
 
   return (
-    <main className="m-auto w-full max-w-2xl">
-      <Card className="rounded-3xl border shadow-sm">
-        <CardHeader className="space-y-1">
+    <main className="m-auto w-full max-w-2xl pb-5">
+      <Card className="rounded-3xl border py-4 shadow-sm sm:py-6">
+        <CardHeader className="space-y-1 px-4 sm:px-6">
           <CardTitle className="text-xl">Join - {invite.property.name}</CardTitle>
           <p className="text-muted-foreground text-sm">
             Room {invite.room?.roomNumber || 'N/A'} • {invite.room?.roomType || 'Room'}
             {invite.room?.isAc ? ' • AC' : ''}
           </p>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 px-4 sm:px-6">
           {!invite.allowSubmission ? (
             <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
               {statusMessage}
@@ -441,7 +441,14 @@ export default function JoinInvitePage() {
                     onClick={handleVerifyOtp}
                     disabled={isVerifyingOtp || !otpSent}
                     className="min-w-28">
-                    {isVerifyingOtp ? <Loader2 className="size-4 animate-spin" /> : 'Verify'}
+                    {isVerifyingOtp ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Loader2 className="size-4 animate-spin" />
+                        Verifying...
+                      </span>
+                    ) : (
+                      'Verify'
+                    )}
                   </Button>
                 </div>
                 {verificationToken ? (
@@ -490,7 +497,7 @@ export default function JoinInvitePage() {
                           />
                         )}
                         {isConvertingPhoto && (
-                          <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/30">
+                          <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-black/50">
                             <Loader2 className="size-4 animate-spin text-white" />
                           </div>
                         )}

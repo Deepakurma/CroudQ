@@ -37,7 +37,7 @@ export const complaintRouter = router({
                 )
                 .where(and(...filters))
                 .orderBy(desc(complaints.createdAt))
-                .limit(input?.limit ?? 100);
+                .limit(input?.limit ?? 150);
 
             return result.map((row) => ({
                 ...row.complaint,

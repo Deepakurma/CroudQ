@@ -48,7 +48,6 @@ export const schedulePropertyDeletion = async (
     .set({
       deletionRequestedAt: now,
       deletionScheduledFor: scheduledFor,
-      updatedAt: now,
     })
     .where(and(eq(properties.id, propertyId), eq(properties.userId, userId)))
     .returning({
@@ -71,7 +70,6 @@ export const cancelPropertyDeletion = async (propertyId: string, userId: string)
     .set({
       deletionRequestedAt: null,
       deletionScheduledFor: null,
-      updatedAt: new Date(),
     })
     .where(and(eq(properties.id, propertyId), eq(properties.userId, userId)))
     .returning({

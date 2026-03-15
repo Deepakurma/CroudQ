@@ -122,22 +122,28 @@ export function OnboardingStepContent({
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Property Type</Text>
             <View style={styles.typeSelector}>
-              {["Boys", "Girls", "Co-living", "PG"].map((type) => (
+              {[
+                { value: "Boys", label: "Boys" },
+                { value: "Girls", label: "Girls" },
+                { value: "coliving", label: "Co-living" },
+                { value: "PG", label: "PG" },
+              ].map((type) => (
                 <TouchableOpacity
-                  key={type}
+                  key={type.value}
                   style={[
                     styles.typeOption,
-                    formData.type === type && styles.typeOptionSelected,
+                    formData.type === type.value && styles.typeOptionSelected,
                   ]}
-                  onPress={() => updateField("type", type)}
+                  onPress={() => updateField("type", type.value)}
                 >
                   <Text
                     style={[
                       styles.typeOptionText,
-                      formData.type === type && styles.typeOptionTextSelected,
+                      formData.type === type.value &&
+                        styles.typeOptionTextSelected,
                     ]}
                   >
-                    {type}
+                    {type.label}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -687,22 +693,9 @@ export function OnboardingStepContent({
                 (sum, value) => sum + (parseInt(value || "0", 10) || 0),
                 0,
               );
-              const bedCounts = (formData.roomTypes || [])
-                .map((type) => {
-                  if (type === "Single") return 1;
-                  const parsed = parseInt(type, 10);
-                  return Number.isFinite(parsed) ? parsed : null;
-                })
-                .filter((value): value is number => value !== null);
-              const bedsTotal = bedCounts.reduce((sum, value) => sum + value, 0);
-              const bedsLabel = bedsTotal > 0 ? `${bedsTotal}` : "0";
 
               return (
                 <View style={styles.statsRow}>
-                  <View style={styles.statItem}>
-                    <Text style={styles.statValue}>{bedsLabel}</Text>
-                    <Text style={styles.statLabel}>Beds</Text>
-                  </View>
                   <View style={styles.statItem}>
                     <Text style={styles.statValue}>{roomsTotal}</Text>
                     <Text style={styles.statLabel}>Rooms</Text>

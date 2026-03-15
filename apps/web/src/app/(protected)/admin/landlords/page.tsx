@@ -110,6 +110,9 @@ export interface Landlord {
 interface LandlordStats {
   totalLandlordAccounts: number;
   convertedLandlordAccounts: number;
+  totalPropertiesTotal: number;
+  pendingRenewalsTotal: number;
+  totalCapacityTotal: number;
 }
 
 type RawLandlord = Omit<Landlord, 'createdAt' | 'startDate' | 'endDate'> & {
@@ -570,9 +573,9 @@ function LandlordRowActions({
 
 const pulseData: PulseCardProps[] = [
   {
-    label: 'Total Landlords',
+    label: 'Total Properties',
     value: 100,
-    sub: 'No of Landlords onboarded',
+    sub: 'No of properties onboarded',
     button: 'Add+',
     buttonLink: '#',
     color: 'green',
@@ -615,7 +618,10 @@ export default function page() {
   const [totalCount, setTotalCount] = useState(0);
   const [landlordStats, setLandlordStats] = useState<LandlordStats>({
     totalLandlordAccounts: 0,
-    convertedLandlordAccounts: 0
+    convertedLandlordAccounts: 0,
+    totalPropertiesTotal: 0,
+    pendingRenewalsTotal: 0,
+    totalCapacityTotal: 0
   });
   const [range, setRange] = useState<DateRange | undefined>(undefined);
 
@@ -663,8 +669,11 @@ export default function page() {
 
         setLandlords(mapped);
         setLandlordStats({
-          totalLandlordAccounts: payloadStats?.totalLandlordAccounts ?? payloadTotal,
-          convertedLandlordAccounts: payloadStats?.convertedLandlordAccounts ?? payloadTotal
+          totalLandlordAccounts: payloadStats?.totalLandlordAccounts ?? 0,
+          convertedLandlordAccounts: payloadStats?.convertedLandlordAccounts ?? 0,
+          totalPropertiesTotal: payloadStats?.totalPropertiesTotal ?? 0,
+          pendingRenewalsTotal: payloadStats?.pendingRenewalsTotal ?? 0,
+          totalCapacityTotal: payloadStats?.totalCapacityTotal ?? 0
         });
         setTotalCount(payloadTotal);
       } catch {
@@ -672,7 +681,10 @@ export default function page() {
         setTotalCount(0);
         setLandlordStats({
           totalLandlordAccounts: 0,
-          convertedLandlordAccounts: 0
+          convertedLandlordAccounts: 0,
+          totalPropertiesTotal: 0,
+          pendingRenewalsTotal: 0,
+          totalCapacityTotal: 0
         });
         toast.error('Could not fetch landlords right now. Please try again.');
       } finally {
@@ -732,17 +744,9 @@ export default function page() {
   }, [handleToggleFreeze]);
 
   const cards = useMemo<PulseCardProps[]>(() => {
-    const pendingRenewals = landlords.filter(
-      (landlord) => landlord.status === 'Pending Renewal'
-    ).length;
-    const totalCapacity = landlords.reduce((sum, landlord) => {
-      return (
-        sum +
-        landlord.roomTypes.reduce((capacitySum, roomType) => {
-          return capacitySum + roomType.capacity * roomType.rooms;
-        }, 0)
-      );
-    }, 0);
+    const pendingRenewals = landlordStats.pendingRenewalsTotal;
+    const totalCapacity = landlordStats.totalCapacityTotal;
+    const totalProperties = landlordStats.totalPropertiesTotal;
     const convertedLandlordAccounts = landlordStats.convertedLandlordAccounts;
     const totalLandlordAccounts = landlordStats.totalLandlordAccounts;
     const conversionRate =
@@ -751,7 +755,7 @@ export default function page() {
         : 0;
 
     return pulseData.map((card) => {
-      if (card.label === 'Total Landlords') return { ...card, value: totalLandlordAccounts };
+      if (card.label === 'Total Properties') return { ...card, value: totalProperties };
       if (card.label === 'Pending Renewals') return { ...card, value: pendingRenewals };
       if (card.label === 'Conversion Rate')
         return {

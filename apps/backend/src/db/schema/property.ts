@@ -42,7 +42,6 @@ export const properties = pgTable(
       .notNull()
       .references(() => users.id),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
   },
   (table) => ({
     userIdIdx: index("properties_user_id_idx").on(table.userId),

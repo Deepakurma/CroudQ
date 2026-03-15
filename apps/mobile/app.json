@@ -1,17 +1,24 @@
 {
   "expo": {
-    "name": "Bunkezy Mobile",
-    "slug": "bunkezy-mobile",
+    "name": "Bunkezy",
+    "slug": "bunkezy-resident",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/Logo.png",
-    "scheme": "bunkezy-mobile",
+    "scheme": "bunkezy-resident",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.bunkezy.resident",
+      "buildNumber": "1",
+      "icon": "./assets/images/Logo.png",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "com.bunkezy.resident",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/Logo.png",
@@ -45,6 +52,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "393769f3-a071-456b-8ff2-aad01635cfad"
+      }
+    },
+    "owner": "deepakurma"
   }
 }

@@ -23,6 +23,7 @@ import {
   DoorOpen,
   QrCode,
   UserRoundPlus,
+  X,
 } from "lucide-react-native";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -47,6 +48,7 @@ const residentSchema = z
     primaryPhone: z
       .string()
       .regex(/^[0-9]{10}$/, "Phone number must be 10 digits"),
+    roomId: z.string().min(1, "Please select a room"),
     roomNo: z.string().min(1, "Please select a room"),
     checkInDate: z.string().min(1, "Please select check-in date"),
     rentAmount: z
@@ -91,6 +93,7 @@ export default function AddResidentScreen() {
   const [formData, setFormData] = useState({
     name: "",
     primaryPhone: "",
+    roomId: "",
     roomNo: "",
     checkInDate: "",
     rentAmount: "",
@@ -114,6 +117,7 @@ export default function AddResidentScreen() {
     setFormData({
       name: "",
       primaryPhone: "",
+      roomId: "",
       roomNo: "",
       checkInDate: "",
       rentAmount: "",
@@ -195,6 +199,14 @@ export default function AddResidentScreen() {
 
   const handleSubmit = () => {
     if (!validate()) return;
+    if (!formData.roomId) {
+      setErrors((prev) => ({
+        ...prev,
+        roomId: "Please select a room",
+        roomNo: "Please select a room",
+      }));
+      return;
+    }
     if (isUploadingPhoto) {
       Toast.show({
         type: "info",
@@ -204,17 +216,70 @@ export default function AddResidentScreen() {
       return;
     }
 
-    createResidentMutation.mutate({
-      roomId: selectedRoom?.id || "",
-      roomNumber: formData.roomNo,
-      name: formData.name,
-      phoneNumber: formData.primaryPhone,
-      profileImage: photos[0],
-      checkInDate: formData.checkInDate,
-      rentAmount: parseInt(formData.rentAmount) || 0,
-      advanceMonths: parseInt(formData.advanceMonths) || 0,
-      durationMonths: parseInt(formData.durationValue) || undefined,
-    });
+    const submitResident = async () => {
+      let profileImageUrl = photos[0];
+      const selectedPhoto = photos[0];
+      const isLocalAsset =
+        !!selectedPhoto &&
+        (selectedPhoto.startsWith("file://") ||
+          selectedPhoto.startsWith("content://"));
+
+      if (isLocalAsset) {
+        if (!token) {
+          Toast.show({
+            type: "error",
+            text1: "Session expired",
+            text2: "Please login again.",
+          });
+          return;
+        }
+
+        if (!selectedPropertyId) {
+          Toast.show({
+            type: "error",
+            text1: "Missing property",
+            text2: "Select a property and try again.",
+          });
+          return;
+        }
+
+        setIsUploadingPhoto(true);
+        try {
+          const uploaded = await uploadImageToS3({
+            token,
+            propertyId: selectedPropertyId,
+            fileUri: selectedPhoto,
+            fileName: `resident-${Date.now()}.jpg`,
+            contentType: "image/jpeg",
+            folder: "resident",
+          });
+          profileImageUrl = uploaded.fileUrl;
+        } catch {
+          Toast.show({
+            type: "error",
+            text1: "Upload failed",
+            text2: "Could not upload selected image.",
+          });
+          return;
+        } finally {
+          setIsUploadingPhoto(false);
+        }
+      }
+
+      createResidentMutation.mutate({
+        roomId: formData.roomId,
+        roomNumber: formData.roomNo,
+        name: formData.name,
+        phoneNumber: formData.primaryPhone,
+        profileImage: profileImageUrl,
+        checkInDate: formData.checkInDate,
+        rentAmount: parseInt(formData.rentAmount) || 0,
+        advanceMonths: parseInt(formData.advanceMonths) || 0,
+        durationMonths: parseInt(formData.durationValue) || undefined,
+      });
+    };
+
+    void submitResident();
   };
 
   const handleGenerateInvite = () => {
@@ -308,41 +373,14 @@ export default function AddResidentScreen() {
       quality: 0.8,
     });
     if (!result.canceled) {
-      if (!token) {
-        Toast.show({
-          type: "error",
-          text1: "Session expired",
-          text2: "Please login again.",
-        });
-        return;
-      }
-
       const asset = result.assets[0];
-      setIsUploadingPhoto(true);
-      try {
-        if (!selectedPropertyId) {
-          throw new Error("Property context is missing.");
-        }
-
-        const uploaded = await uploadImageToS3({
-          token,
-          propertyId: selectedPropertyId,
-          fileUri: asset.uri,
-          fileName: asset.fileName ?? `resident-${Date.now()}.jpg`,
-          contentType: asset.mimeType ?? "image/jpeg",
-          folder: "resident",
-        });
-        setPhotos([uploaded.fileUrl]);
-      } catch {
-        Toast.show({
-          type: "error",
-          text1: "Upload failed",
-          text2: "Could not upload selected image.",
-        });
-      } finally {
-        setIsUploadingPhoto(false);
-      }
+      setPhotos([asset.uri]);
     }
+  };
+
+  const handleRemovePhoto = () => {
+    if (isUploadingPhoto) return;
+    setPhotos([]);
   };
 
   return (
@@ -427,19 +465,33 @@ export default function AddResidentScreen() {
             </TouchableOpacity>
 
             <View style={styles.photoSection}>
-              <TouchableOpacity style={styles.photoUpload} onPress={pickImage}>
-                {photos.length > 0 ? (
-                  <Image source={{ uri: photos[0] }} style={styles.photo} />
-                ) : (
-                  <View style={styles.photoPlaceholder}>
-                    <Camera size={32} color={Colors.textSecondary} />
-                    <Text style={styles.photoText}>Add Photo</Text>
-                  </View>
-                )}
-                <View style={styles.editBadge}>
-                  <Camera size={16} color={Colors.white} />
-                </View>
-              </TouchableOpacity>
+              <View style={styles.photoUploadWrapper}>
+                <TouchableOpacity
+                  style={styles.photoUpload}
+                  onPress={pickImage}
+                  disabled={isUploadingPhoto}
+                >
+                  {photos.length > 0 ? (
+                    <Image source={{ uri: photos[0] }} style={styles.photo} />
+                  ) : (
+                    <View style={styles.photoPlaceholder}>
+                      <Camera size={32} color={Colors.textSecondary} />
+                      <Text style={styles.photoText}>Add Photo</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.editBadge}
+                  onPress={photos.length > 0 ? handleRemovePhoto : pickImage}
+                  disabled={isUploadingPhoto}
+                >
+                  {photos.length > 0 ? (
+                    <X size={16} color={Colors.white} />
+                  ) : (
+                    <Camera size={16} color={Colors.white} />
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
 
             <AppTextInput
@@ -686,6 +738,7 @@ export default function AddResidentScreen() {
         onSelect={(room) => {
           setSelectedRoom(room);
           if (entryMode === "manual") {
+            updateField("roomId", room.id);
             updateField("roomNo", room.roomNumber);
             if (room.price) {
               updateField("rentAmount", String(room.price));
@@ -904,6 +957,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#e0f2fe",
+  },
+  photoUploadWrapper: {
+    position: "relative",
   },
   photo: {
     width: 100,

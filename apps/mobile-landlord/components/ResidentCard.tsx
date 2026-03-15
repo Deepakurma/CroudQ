@@ -215,8 +215,21 @@ export function ResidentCard({
     },
   });
 
+  const isImageDeleteOnlyUpdate = (variables: Record<string, unknown>) => {
+    return (
+      variables.profileImage === null &&
+      Object.keys(variables).every((key) => key === "id" || key === "profileImage")
+    );
+  };
+
   const updateResidentMutation = trpc.resident.update.useMutation({
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
+      if (isImageDeleteOnlyUpdate(variables as Record<string, unknown>)) {
+        utils.resident.list.invalidate();
+        utils.resident.getResidentsByRoom.invalidate();
+        return;
+      }
+
       Toast.show({
         type: "success",
         text1: "Success",
@@ -227,7 +240,11 @@ export function ResidentCard({
       bottomSheetModalRef.current?.dismiss();
       // Form will be reset by the onChange handler when sheet dismisses
     },
-    onError: (error) => {
+    onError: (_error, variables) => {
+      if (isImageDeleteOnlyUpdate(variables as Record<string, unknown>)) {
+        return;
+      }
+
       Toast.show({
         type: "error",
         text1: "Error",
@@ -235,6 +252,46 @@ export function ResidentCard({
       });
     },
   });
+
+  const handleRemoveProfileImage = () => {
+    if (!editProfileImage) return;
+
+    const previousImage = editProfileImage;
+    const isLocalAsset =
+      previousImage.startsWith("file://") ||
+      previousImage.startsWith("content://");
+
+    if (isLocalAsset) {
+      setEditProfileImage("");
+      return;
+    }
+
+    setEditProfileImage("");
+    updateResidentMutation.mutate(
+      {
+        id: item.id,
+        profileImage: null,
+      },
+      {
+        onSuccess: () => {
+          Toast.show({
+            type: "success",
+            text1: "Photo removed",
+          });
+          utils.resident.list.invalidate();
+          utils.resident.getResidentsByRoom.invalidate();
+        },
+        onError: () => {
+          setEditProfileImage(previousImage);
+          Toast.show({
+            type: "error",
+            text1: "Error",
+            text2: "Could not remove photo. Please try again.",
+          });
+        },
+      },
+    );
+  };
 
   const checkoutResidentMutation = trpc.resident.checkout.useMutation({
     onSuccess: () => {
@@ -547,6 +604,7 @@ export function ResidentCard({
               itemName={item.name}
               editProfileImage={editProfileImage}
               pickImage={pickImage}
+              removeImage={handleRemoveProfileImage}
               editName={editName}
               setEditName={setEditName}
               editRoom={editRoom}

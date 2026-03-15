@@ -1,6 +1,7 @@
 import { ScreenWrapper } from "@/components/ScreenWrapper";
 import { ResidentsHeader } from "@/components/residents/ResidentsHeader";
 import { ResidentsList } from "@/components/residents/ResidentsList";
+import { useResidentsFilter } from "@/context/FilterContext";
 import { trpc } from "@/utils/api";
 import { format } from "date-fns";
 import React, { useRef, useState } from "react";
@@ -10,6 +11,10 @@ import { useProperty } from "@/context/PropertyContext";
 
 export default function Page() {
   const { selectedPropertyId } = useProperty();
+  const { status: residentsStatus, setStatus: setResidentsStatus } =
+    useResidentsFilter();
+  const uiFilter: "All" | "Pending Checkouts" =
+    residentsStatus === "pending_checkout" ? "Pending Checkouts" : "All";
   const scrollY = useRef(new Animated.Value(0)).current;
   const insets = useSafeAreaInsets();
   const headerHeight = insets.top + 65;
@@ -31,6 +36,7 @@ export default function Page() {
     refetch,
   } = trpc.resident.list.useQuery(
     {
+      status: residentsStatus,
       q: debouncedSearch || undefined,
       scopePropertyId: selectedPropertyId || undefined,
     },
@@ -39,6 +45,18 @@ export default function Page() {
       placeholderData: (previousData) => previousData,
     },
   );
+  const { data: pendingCheckoutResidents } = trpc.resident.list.useQuery(
+    {
+      status: "pending_checkout",
+      limit: 1,
+      scopePropertyId: selectedPropertyId || undefined,
+    },
+    {
+      enabled: !!selectedPropertyId,
+      placeholderData: (previousData) => previousData,
+    },
+  );
+  const hasPendingCheckouts = (pendingCheckoutResidents?.length ?? 0) > 0;
 
   const mappedResidents = residentsData?.map((r) => {
     const formattedDate = format(new Date(r.checkInDate), "dd/MM/yyyy");
@@ -77,6 +95,13 @@ export default function Page() {
           headerHeight={headerHeight}
           ListHeaderComponent={
             <ResidentsHeader
+              filter={uiFilter}
+              setFilter={(next) =>
+                setResidentsStatus(
+                  next === "Pending Checkouts" ? "pending_checkout" : "all",
+                )
+              }
+              hasPendingCheckouts={hasPendingCheckouts}
               searchQuery={searchQuery}
               onSearchChange={setSearchQuery}
             />

@@ -193,7 +193,7 @@ function OnboardingScreenContent() {
         const allowedPropertyTypes: OnboardingFormData['type'][] = [
           'Boys',
           'Girls',
-          'Co-living',
+          'coliving',
           'PG'
         ];
         const nextType = allowedPropertyTypes.includes(details.type as OnboardingFormData['type'])
@@ -649,12 +649,15 @@ function OnboardingScreenContent() {
         await submitCreateProperty(photos);
       }
     } catch (error) {
+      const message = error instanceof Error ? error.message.toLowerCase() : '';
       toast.error(
         isStructureOccupiedError(error)
           ? 'Rooms cannot be changed because residents exist in those rooms.'
-          : isEditMode
-            ? 'Failed to update property. Please try again.'
-            : 'Unable to complete onboarding right now. Please try again.'
+          : message.includes('up to 3 properties')
+            ? 'You can only add up to 3 properties.'
+            : isEditMode
+              ? 'Failed to update property. Please try again.'
+              : 'Unable to complete onboarding right now. Please try again.'
       );
     } finally {
       setIsSubmitting(false);
@@ -714,7 +717,7 @@ function OnboardingScreenContent() {
         />
       </div>
 
-      <div className="flex items-center justify-between gap-4">
+      <div className="mb-3 flex items-center justify-between gap-4">
         {currentStep > 1 ? (
           <Button variant="outline" onClick={prevStep} className="max-w-[150px] flex-1 gap-2">
             <ArrowLeft className="size-4" />

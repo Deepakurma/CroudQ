@@ -117,14 +117,19 @@ export function OnboardingStepContent({
           <div className="space-y-2">
             <Label>Property Type</Label>
             <div className="flex flex-wrap gap-2 text-sm">
-              {['Boys', 'Girls', 'Co-living', 'PG'].map((type) => (
+              {[
+                { value: 'Boys', label: 'Boys' },
+                { value: 'Girls', label: 'Girls' },
+                { value: 'coliving', label: 'Co-living' },
+                { value: 'PG', label: 'PG' }
+              ].map((type) => (
                 <Button
-                  key={type}
+                  key={type.value}
                   type="button"
-                  variant={formData.type === type ? 'default' : 'secondary'}
-                  onClick={() => updateField('type', type)}
+                  variant={formData.type === type.value ? 'default' : 'secondary'}
+                  onClick={() => updateField('type', type.value)}
                   className="rounded-full">
-                  {type}
+                  {type.label}
                 </Button>
               ))}
             </div>
@@ -676,23 +681,9 @@ export function OnboardingStepContent({
                 (sum, value) => sum + (parseInt(value || '0', 10) || 0),
                 0
               );
-              const bedCounts = (formData.roomTypes || [])
-                .map((type) => {
-                  if (type === 'Single') return 1;
-                  const parsed = parseInt(type, 10);
-                  return Number.isFinite(parsed) ? parsed : null;
-                })
-                .filter((value): value is number => value !== null);
-              const bedsTotal = bedCounts.reduce((sum, value) => sum + value, 0);
 
               return (
                 <div className="flex items-center justify-evenly py-2">
-                  <div className="text-center">
-                    <p className="text-primary text-2xl font-bold">{bedsTotal || 0}</p>
-                    <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                      Beds
-                    </p>
-                  </div>
                   <div className="text-center">
                     <p className="text-primary text-2xl font-bold">{roomsTotal}</p>
                     <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">

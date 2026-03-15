@@ -1,13 +1,21 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import React, { createContext, useContext, useEffect, useMemo , useSyncExternalStore } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useSyncExternalStore,
+} from "react";
 import { useProperty } from "./PropertyContext";
 
 export type RoomsStatus = "all" | "available" | "occupied";
 export type RentsStatus = "paid" | "due";
+export type ResidentsStatus = "all" | "pending_checkout";
 
 export interface PropertyFilters {
   rooms: { status: RoomsStatus };
   rents: { status: RentsStatus };
+  residents: { status: ResidentsStatus };
 }
 
 export type FiltersState = Record<string, PropertyFilters>;
@@ -22,6 +30,10 @@ type FilterAction =
       payload: { propertyId: string; status: RentsStatus };
     }
   | {
+      type: "SET_RESIDENTS_STATUS";
+      payload: { propertyId: string; status: ResidentsStatus };
+    }
+  | {
       type: "RESET_PROPERTY_FILTERS";
       payload: { propertyId: string };
     };
@@ -31,6 +43,7 @@ const STORAGE_KEY = "property_scoped_filters_v1";
 const defaultPropertyFilters = (): PropertyFilters => ({
   rooms: { status: "all" },
   rents: { status: "due" },
+  residents: { status: "all" },
 });
 
 const filtersReducer = (state: FiltersState, action: FilterAction): FiltersState => {
@@ -52,6 +65,14 @@ const filtersReducer = (state: FiltersState, action: FilterAction): FiltersState
         [propertyId]: {
           ...current,
           rents: { status: action.payload.status },
+        },
+      };
+    case "SET_RESIDENTS_STATUS":
+      return {
+        ...state,
+        [propertyId]: {
+          ...current,
+          residents: { status: action.payload.status },
         },
       };
     case "RESET_PROPERTY_FILTERS":
@@ -203,6 +224,39 @@ export function useRentsFilter() {
     if (!selectedPropertyId) return;
     store.dispatch({
       type: "SET_RENTS_STATUS",
+      payload: { propertyId: selectedPropertyId, status: nextStatus },
+    });
+  };
+
+  const resetPropertyFilters = () => {
+    if (!selectedPropertyId) return;
+    store.dispatch({
+      type: "RESET_PROPERTY_FILTERS",
+      payload: { propertyId: selectedPropertyId },
+    });
+  };
+
+  return { status, setStatus, resetPropertyFilters, isHydrated };
+}
+
+export function useResidentsFilter() {
+  const { selectedPropertyId } = useProperty();
+  const store = useFilterStore();
+
+  const status = useFilterSelector((state) => {
+    if (!selectedPropertyId) return "all";
+    const stored = state[selectedPropertyId]?.residents?.status;
+    return stored === "pending_checkout" || stored === "all"
+      ? stored
+      : "all";
+  });
+
+  const isHydrated = useSyncExternalStore(store.subscribe, store.isHydrated);
+
+  const setStatus = (nextStatus: ResidentsStatus) => {
+    if (!selectedPropertyId) return;
+    store.dispatch({
+      type: "SET_RESIDENTS_STATUS",
       payload: { propertyId: selectedPropertyId, status: nextStatus },
     });
   };

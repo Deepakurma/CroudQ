@@ -2,9 +2,15 @@ import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { Typography } from "@/constants/Typography";
 import { formatIndianCurrency } from "@/utils/common";
-import { Search } from "lucide-react-native";
+import { Search, X } from "lucide-react-native";
 import React from "react";
-import { StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 import { DatePicker } from "@/components/ui/DatePicker";
 import { CardShadow } from "@/constants/Shadows";
@@ -26,6 +32,8 @@ export function PaymentsHeader({
   rentsExpected,
   rentsReceived,
 }: PaymentsHeaderProps) {
+  const [searchQuery, setSearchQuery] = React.useState("");
+
   return (
     <View style={{ gap: Spacing.l }}>
       {/* Search Bar */}
@@ -35,7 +43,18 @@ export function PaymentsHeader({
           placeholder="Search by room or name"
           style={styles.searchInput}
           placeholderTextColor={Colors.textSecondary}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
         />
+        {!!searchQuery && (
+          <TouchableOpacity
+            onPress={() => setSearchQuery("")}
+            style={styles.clearButton}
+            activeOpacity={0.7}
+          >
+            <X size={18} color={Colors.textSecondary} />
+          </TouchableOpacity>
+        )}
       </View>
 
       <View style={styles.dateRangeContainer}>
@@ -102,6 +121,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: Colors.text,
     fontFamily: Typography.font.regular,
+  },
+  clearButton: {
+    padding: 6,
+    marginLeft: Spacing.s,
   },
   dateRangeContainer: {
     flexDirection: "row",

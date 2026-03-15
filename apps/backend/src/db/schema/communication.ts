@@ -119,7 +119,6 @@ export const supportQueries = pgTable(
     landlordName: text("landlordName"),
     inchargeName: text("inchargeName"),
     phoneNumber: text("phoneNumber"),
-    email: text("email"),
     city: text("city"),
     state: text("state"),
     pincode: text("pincode"),
@@ -153,7 +152,6 @@ export const feedbacks = pgTable(
     rating: integer("rating").notNull(),
     description: text("description"),
     createdAt: timestamp("createdAt").notNull().defaultNow(),
-    updatedAt: timestamp("updatedAt").notNull().defaultNow(),
   },
   (table) => ({
     userIdIdx: index("feedbacks_user_id_idx").on(table.userId),

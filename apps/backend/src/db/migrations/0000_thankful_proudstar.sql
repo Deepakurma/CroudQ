@@ -5,7 +5,6 @@ CREATE TYPE "public"."room_status" AS ENUM('vacant', 'occupied');--> statement-b
 CREATE TABLE "user" (
 	"id" text PRIMARY KEY NOT NULL,
 	"createdAt" timestamp NOT NULL,
-	"updatedAt" timestamp NOT NULL,
 	"phoneNumber" text,
 	CONSTRAINT "user_phoneNumber_unique" UNIQUE("phoneNumber")
 );
@@ -58,8 +57,7 @@ CREATE TABLE "property" (
 	"deletionRequestedAt" timestamp,
 	"deletionScheduledFor" timestamp,
 	"userId" text NOT NULL,
-	"createdAt" timestamp DEFAULT now() NOT NULL,
-	"updatedAt" timestamp DEFAULT now() NOT NULL
+	"createdAt" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "property_facility" (
@@ -200,7 +198,6 @@ CREATE TABLE "feedback" (
 	"rating" integer NOT NULL,
 	"description" text,
 	"createdAt" timestamp DEFAULT now() NOT NULL,
-	"updatedAt" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "feedbacks_rating_between_1_and_5" CHECK ("feedback"."rating" >= 1 AND "feedback"."rating" <= 5)
 );
 --> statement-breakpoint
@@ -223,7 +220,6 @@ CREATE TABLE "support_query" (
 	"landlordName" text,
 	"inchargeName" text,
 	"phoneNumber" text,
-	"email" text,
 	"city" text,
 	"state" text,
 	"pincode" text,

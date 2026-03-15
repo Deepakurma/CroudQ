@@ -42,7 +42,7 @@ export async function createServer(
   opts: ServerOptions = {},
 ) {
   server.register(rateLimit, {
-    max: 100,
+    max: 250,
     timeWindow: "1 minute",
   });
 
@@ -68,7 +68,8 @@ export async function createServer(
     }
 
     const hasAuthCookie = Boolean(
-      req.cookies?.bunkezy_landlord_token || req.cookies?.bunkezy_resident_token,
+      req.cookies?.bunkezy_landlord_token ||
+      req.cookies?.bunkezy_resident_token,
     );
     const hasBearerToken =
       req.headers.authorization?.startsWith("Bearer ") ?? false;
@@ -114,7 +115,8 @@ export async function createServer(
   });
 
   let revokedTokenCleanupTimer: ReturnType<typeof setInterval> | null = null;
-  let propertyDeletionCleanupTimer: ReturnType<typeof setInterval> | null = null;
+  let propertyDeletionCleanupTimer: ReturnType<typeof setInterval> | null =
+    null;
 
   const runRevokedTokenCleanup = async () => {
     const deleted = await db
@@ -159,7 +161,10 @@ export async function createServer(
 
     propertyDeletionCleanupTimer = setInterval(() => {
       runPropertyDeletionCleanup().catch((error) => {
-        server.log.error({ error }, "Failed scheduled property deletion cleanup");
+        server.log.error(
+          { error },
+          "Failed scheduled property deletion cleanup",
+        );
       });
     }, intervalMs);
 

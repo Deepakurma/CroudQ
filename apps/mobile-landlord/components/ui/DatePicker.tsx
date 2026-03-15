@@ -112,28 +112,39 @@ export function DatePicker({
               />
               <Pressable style={styles.pickerContainer} onPress={() => null}>
                 <View style={styles.pickerHeader}>
-                  <TouchableOpacity onPress={handleIosCancel}>
-                    <Text
-                      style={{
-                        color: Colors.error,
-                        fontSize: Typography.size.m,
-                        fontFamily: Typography.font.medium,
-                      }}
-                    >
-                      Cancel
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={handleIosConfirm}>
-                    <Text
-                      style={{
-                        color: Colors.primary,
-                        fontSize: Typography.size.m,
-                        fontFamily: Typography.font.semibold,
-                      }}
-                    >
-                      Done
-                    </Text>
-                  </TouchableOpacity>
+                  <Text
+                    style={{
+                      fontSize: Typography.size.m,
+                      fontFamily: Typography.font.medium,
+                    }}
+                  >
+                    Select a date
+                  </Text>
+
+                  <View style={styles.pickerSubHeader}>
+                    <TouchableOpacity onPress={handleIosCancel}>
+                      <Text
+                        style={{
+                          color: Colors.error,
+                          fontSize: Typography.size.m,
+                          fontFamily: Typography.font.medium,
+                        }}
+                      >
+                        Cancel
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={handleIosConfirm}>
+                      <Text
+                        style={{
+                          color: Colors.primary,
+                          fontSize: Typography.size.m,
+                          fontFamily: Typography.font.semibold,
+                        }}
+                      >
+                        Done
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
                 <DateTimePicker
                   value={tempDate}
@@ -214,10 +225,16 @@ const styles = StyleSheet.create({
   },
   pickerHeader: {
     flexDirection: "row",
-    justifyContent: "flex-end",
+    justifyContent: "space-between",
+    gap: Spacing.m,
     padding: Spacing.m,
+    paddingHorizontal: Spacing.l,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
+  },
+  pickerSubHeader: {
+    flexDirection: "row",
+    gap: Spacing.l,
   },
   iosPicker: {
     height: 200,

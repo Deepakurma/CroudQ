@@ -3,7 +3,7 @@ import { Spacing } from "@/constants/Spacing";
 import { Typography } from "@/constants/Typography";
 import { CardShadow } from "@/constants/Shadows";
 import * as Haptics from "expo-haptics";
-import { Search } from "lucide-react-native";
+import { Search, X } from "lucide-react-native";
 import React from "react";
 import {
   StyleSheet,
@@ -37,6 +37,15 @@ export function ComplaintsHeader({
           value={searchQuery}
           onChangeText={setSearchQuery}
         />
+        {!!searchQuery && (
+          <TouchableOpacity
+            onPress={() => setSearchQuery("")}
+            style={styles.clearButton}
+            activeOpacity={0.7}
+          >
+            <X size={18} color={Colors.textSecondary} />
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Radio Filters */}
@@ -111,6 +120,10 @@ const styles = StyleSheet.create({
     fontSize: Typography.size.l,
     color: Colors.text,
     fontFamily: Typography.font.regular,
+  },
+  clearButton: {
+    padding: 6,
+    marginLeft: Spacing.s,
   },
   filterContainer: {
     flexDirection: "row",

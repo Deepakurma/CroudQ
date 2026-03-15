@@ -40,6 +40,7 @@ type RoomInsert = typeof rooms.$inferInsert;
 type RoomUpdateData = Partial<
     Pick<RoomInsert, "typeId" | "customRentAmount" | "roomNumber" | "ac">
 >;
+const MAX_PROPERTIES_PER_LANDLORD = 3;
 
 export const propertyRouter = router({
     create: protectedProcedure
@@ -67,6 +68,19 @@ export const propertyRouter = router({
 
             const createdProperty = await db.transaction(async (tx) => {
                 await roleGuardService.assertCanBeLandlord(tx, ctx.user.id);
+
+                const existingProperties = await tx
+                    .select({ id: properties.id })
+                    .from(properties)
+                    .where(eq(properties.userId, ctx.user.id))
+                    .limit(MAX_PROPERTIES_PER_LANDLORD);
+
+                if (existingProperties.length >= MAX_PROPERTIES_PER_LANDLORD) {
+                    throw new TRPCError({
+                        code: "FORBIDDEN",
+                        message: `You can only add up to ${MAX_PROPERTIES_PER_LANDLORD} properties.`,
+                    });
+                }
 
                 const [newProperty] = await tx
                     .insert(properties)
@@ -1276,7 +1290,6 @@ export const propertyRouter = router({
                 .set({
                     inchargeName: input.inchargeName,
                     inchargePhone: input.inchargePhone,
-                    updatedAt: new Date(),
                 })
                 .where(and(eq(properties.id, ctx.propertyId), eq(properties.userId, ctx.user.id)))
                 .returning({

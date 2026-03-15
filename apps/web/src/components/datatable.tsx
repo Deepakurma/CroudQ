@@ -11,7 +11,7 @@ import {
   useReactTable
 } from '@tanstack/react-table';
 import { format } from 'date-fns';
-import { CalendarIcon, ChevronDown, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { CalendarIcon, ChevronDown, ChevronLeft, ChevronRight, Search, X } from 'lucide-react';
 import { type DateRange } from 'react-day-picker';
 
 import { cn } from '~/lib/utils';
@@ -179,6 +179,7 @@ export function DataTable<TData, TValue>({
   const canNextPage = serverSidePagination
     ? activePagination.pageIndex + 1 < totalPages
     : table.getCanNextPage();
+  const currentSearchValue = onSearchChange ? localSearch : globalFilter;
 
   return (
     <div className="space-y-3">
@@ -230,7 +231,7 @@ export function DataTable<TData, TValue>({
           <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
             placeholder={searchPlaceholder}
-            value={onSearchChange ? localSearch : globalFilter}
+            value={currentSearchValue}
             onChange={(event) => {
               if (onSearchChange) {
                 setLocalSearch(event.target.value);
@@ -238,9 +239,25 @@ export function DataTable<TData, TValue>({
               }
               setGlobalFilter(event.target.value);
             }}
-            className="bg-card pl-9"
+            className="bg-card pr-10 pl-9"
             disabled={isLoading}
           />
+          {currentSearchValue && (
+            <button
+              type="button"
+              onClick={() => {
+                if (onSearchChange) {
+                  setLocalSearch('');
+                  return;
+                }
+                setGlobalFilter('');
+              }}
+              className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
+              aria-label="Clear search"
+              disabled={isLoading}>
+              <X className="h-[18px] w-[18px]" />
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-5">

@@ -141,10 +141,19 @@ const LandingLayoutContent = ({ children }: { children: React.ReactNode }) => {
                 <Input
                   ref={searchInputRef}
                   placeholder="Search by property, locality, or address..."
-                  className="bg-accent border-input focus:bg-background focus:ring-primary/10 h-12 rounded-2xl pl-10 shadow-xs transition-all focus:ring-4"
+                  className="bg-accent border-input focus:bg-background focus:ring-primary/10 h-12 rounded-2xl pr-10 pl-10 shadow-xs transition-all focus:ring-4"
                   value={searchInput}
                   onChange={(event) => setSearchInput(event.target.value)}
                 />
+                {searchInput && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchInput('')}
+                    className="text-muted-foreground hover:text-foreground absolute top-1/2 right-3 -translate-y-1/2"
+                    aria-label="Clear search">
+                    <X className="h-[18px] w-[18px]" />
+                  </button>
+                )}
               </div>
 
               <div
@@ -162,7 +171,10 @@ const LandingLayoutContent = ({ children }: { children: React.ReactNode }) => {
                 {/* Close Button - Only show when search is open on mobile */}
                 {isSearchOpen && (
                   <button
-                    onClick={() => setIsSearchOpen(false)}
+                    onClick={() => {
+                      setSearchInput('');
+                      setIsSearchOpen(false);
+                    }}
                     className="hover:bg-accent rounded-lg p-2 transition-colors md:hidden"
                     aria-label="Close search">
                     <X className="text-foreground size-5" />

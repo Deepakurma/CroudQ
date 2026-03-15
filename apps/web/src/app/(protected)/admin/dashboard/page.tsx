@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
-import { Building2, ClipboardList, Clock } from 'lucide-react';
+import { Building2, ClipboardList, Clock, Users2 } from 'lucide-react';
 
 import { LandlordAnalytics } from '~/components/admin-dashboard/landlord-analytics';
 import { LandlordIntelligence } from '~/components/admin-dashboard/landlord-intelligence';
@@ -18,6 +18,7 @@ export default function page() {
   const [dashboard, setDashboard] = useState<{
     summary: {
       totalLandlords: number;
+      totalLandlordAccounts: number;
       pendingRenewals: number;
       totalQueries: number;
       totalCapacity: number;
@@ -55,13 +56,20 @@ export default function page() {
   const pulseData: PulseCardProps[] = useMemo(
     () => [
       {
-        label: 'Total Landlords',
+        label: 'Total Properties',
         value: dashboard?.summary.totalLandlords ?? 0,
-        sub: 'No of Landlords onboarded',
+        sub: 'No of properties onboarded',
         button: 'Add+',
         buttonLink: '#',
         color: 'green',
         icon: Building2
+      },
+      {
+        label: 'Total Landlord Accounts',
+        value: dashboard?.summary.totalLandlordAccounts ?? 0,
+        sub: 'Registered landlord accounts',
+        color: 'blue',
+        icon: Users2
       },
       {
         label: 'Pending Renewals',
@@ -87,7 +95,7 @@ export default function page() {
     <div className="flex flex-1 flex-col overflow-hidden">
       <div className="flex flex-col gap-2 p-4 sm:gap-3">
         <h1 className="text-sm font-semibold tracking-widest uppercase">Overview</h1>
-        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-3 lg:gap-6">
+        <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-6">
           {pulseData.map((card, index) => (
             <PulseCard key={index} {...card} isLoading={isLoading} />
           ))}

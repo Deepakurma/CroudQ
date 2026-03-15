@@ -283,7 +283,7 @@ export const residentRouter = router({
     .input(listPendingApprovalsSchema)
     .query(async ({ ctx, input }) => {
     const now = new Date();
-    const limit = input?.limit ?? 100;
+    const limit = input?.limit ?? 150;
 
     await db
       .update(residentJoinRequests)
@@ -666,7 +666,7 @@ export const residentRouter = router({
           ),
         )
         .orderBy(desc(residentPayments.paidAt))
-        .limit(input.limit ?? 24);
+        .limit(input.limit ?? 150);
 
       return rows.map((row) => ({
         id: row.id,
@@ -703,7 +703,7 @@ export const residentRouter = router({
           ),
         )
         .orderBy(desc(residents.createdAt))
-        .limit(input.limit ?? 100);
+        .limit(input.limit ?? 150);
 
       return result.map((r) => ({
         ...r,
@@ -718,7 +718,7 @@ export const residentRouter = router({
     .query(async ({ ctx, input }) => {
       const searchQuery = input?.q?.trim();
       const statusFilter = input?.status ?? "all";
-      const limit = input?.limit ?? 100;
+      const limit = input?.limit ?? 150;
       const today = startOfDay(new Date());
 
       const filters = [eq(residents.propertyId, ctx.propertyId)];
@@ -755,6 +755,9 @@ export const residentRouter = router({
             )!,
           )!,
         );
+      } else if (statusFilter === "pending_checkout") {
+        filters.push(isNotNull(residents.checkOutDate));
+        filters.push(lte(residents.checkOutDate, today));
       }
 
       const result = await db
@@ -812,7 +815,13 @@ export const residentRouter = router({
       const updateData: ResidentUpdateData = {};
 
       if (input.name) updateData.name = input.name;
-      if (input.profileImage) updateData.profileImage = input.profileImage;
+      if (input.profileImage !== undefined) {
+        const nextImage =
+          input.profileImage && input.profileImage.trim()
+            ? input.profileImage
+            : null;
+        updateData.profileImage = nextImage;
+      }
       if (input.rentAmount !== undefined)
         updateData.rentAmount = input.rentAmount;
       if (input.advanceMonths !== undefined)
@@ -999,7 +1008,7 @@ export const residentRouter = router({
       const result = await db.query.checkouts.findMany({
         where: and(...filters),
         orderBy: desc(checkouts.createdAt),
-        limit: input?.limit ?? 100,
+        limit: input?.limit ?? 150,
         with: {
           property: true,
         },

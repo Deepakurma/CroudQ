@@ -26,7 +26,7 @@ const propertyTypeLabelMap: Record<string, string> = {
   'boys-hostel': 'Boys Hostel',
   'girls-hostel': 'Girls Hostel',
   pg: 'PG',
-  coliving: 'Coliving'
+  coliving: 'Co-living'
 };
 
 const getFacilityIcon = (key: string) => {

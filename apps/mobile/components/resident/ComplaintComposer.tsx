@@ -1,4 +1,5 @@
 import { Colors } from "@/constants/Colors";
+import { CardShadow } from "@/constants/Shadows";
 import { Spacing } from "@/constants/Spacing";
 import { Typography } from "@/constants/Typography";
 import { AlertCircle, Send } from "lucide-react-native";
@@ -88,6 +89,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
   title: {

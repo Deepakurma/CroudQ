@@ -8,7 +8,7 @@ export const step1Schema = z.object({
   inchargePhone: z
     .string()
     .regex(/^[0-9]{10}$/, "Invalid phone number (10 digits required)"),
-  type: z.enum(["Boys", "Girls", "Co-living", "PG"]),
+  type: z.enum(["Boys", "Girls", "coliving", "PG"]),
 });
 
 export const step2Schema = z.object({
@@ -48,7 +48,7 @@ export type OnboardingFormData = {
   propertyName: string;
   inchargeName: string;
   inchargePhone: string;
-  type: "Boys" | "Girls" | "Co-living" | "PG";
+  type: "Boys" | "Girls" | "coliving" | "PG";
   address1: string;
   area: string;
   city: string;

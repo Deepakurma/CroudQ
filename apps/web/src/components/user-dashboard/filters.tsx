@@ -50,7 +50,7 @@ const propertyTypeOptions: Array<{ label: string; value: PropertyTypeFilter }> =
   { label: 'Boys Hostel', value: 'boys-hostel' },
   { label: 'Girls Hostel', value: 'girls-hostel' },
   { label: 'PG', value: 'pg' },
-  { label: 'Coliving', value: 'coliving' }
+  { label: 'Co-living', value: 'coliving' }
 ];
 
 export function Filters({

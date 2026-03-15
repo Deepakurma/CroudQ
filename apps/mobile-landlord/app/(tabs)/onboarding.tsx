@@ -133,7 +133,7 @@ export default function OnboardingScreen() {
       const allowedPropertyTypes: OnboardingFormData["type"][] = [
         "Boys",
         "Girls",
-        "Co-living",
+        "coliving",
         "PG",
       ];
       const nextType = allowedPropertyTypes.includes(
@@ -694,14 +694,20 @@ export default function OnboardingScreen() {
               router.replace("/manage-rooms" as any);
             },
             onError: (error) => {
+              const errorMessage = getTrpcErrorLogMessage(error);
+              const isPropertyLimitError = errorMessage
+                .toLowerCase()
+                .includes("up to 3 properties");
               console.error(
                 "Failed to create property:",
-                getTrpcErrorLogMessage(error),
+                errorMessage,
               );
               Toast.show({
                 type: "error",
-                text1: "Error",
-                text2: "Failed to create property. Please try again.",
+                text1: isPropertyLimitError ? "Property Limit Reached" : "Error",
+                text2: isPropertyLimitError
+                  ? "You can only add up to 3 properties."
+                  : "Failed to create property. Please try again.",
               });
             },
           },
@@ -1097,7 +1103,7 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
+    justifyContent: "space-evenly",
     backgroundColor: Colors.white,
     padding: Spacing.m,
     borderRadius: Spacing.s,

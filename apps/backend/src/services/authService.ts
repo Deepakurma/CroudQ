@@ -97,14 +97,13 @@ const ensureUserByPhone = async (
         sql`right(regexp_replace(coalesce(${users.phoneNumber}, ''), '\D', '', 'g'), 10) = ${phoneNumber}`,
       )
       .limit(1);
-    if (normalizedMatch) {
+      if (normalizedMatch) {
       existing = normalizedMatch;
       if (existing.phoneNumber !== phoneNumber) {
         await db
           .update(users)
           .set({
             phoneNumber,
-            updatedAt: new Date(),
           })
           .where(eq(users.id, existing.id));
       }
@@ -122,7 +121,6 @@ const ensureUserByPhone = async (
       id: userId,
       phoneNumber,
       createdAt: new Date(),
-      updatedAt: new Date(),
     })
     .returning();
 

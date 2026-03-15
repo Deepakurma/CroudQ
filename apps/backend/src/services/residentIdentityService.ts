@@ -27,7 +27,6 @@ const ensureUserByPhone = async (
       id: userId,
       phoneNumber,
       createdAt: new Date(),
-      updatedAt: new Date(),
     })
     .returning();
 

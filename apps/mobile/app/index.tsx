@@ -2,6 +2,7 @@ import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 import { EmptyState } from "@/components/EmptyState";
 import { SkeletonLoader } from "@/components/ui/SkeletonLoader";
 import { Colors } from "@/constants/Colors";
+import { CardShadow } from "@/constants/Shadows";
 import { Spacing } from "@/constants/Spacing";
 import { Typography } from "@/constants/Typography";
 import { useAuth } from "@/context/AuthContext";
@@ -220,7 +221,10 @@ export default function ResidentDashboardScreen() {
             <InfoRow
               icon={<CalendarClock size={18} color={Colors.textSecondary} />}
               label="Check-in Date"
-              value={format(new Date(residentProfile.checkInDate), "dd MMM yyyy")}
+              value={format(
+                new Date(residentProfile.checkInDate),
+                "dd MMM yyyy",
+              )}
             />
             {residentProfile.checkOutDate && (
               <InfoRow
@@ -515,6 +519,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
 
@@ -568,6 +573,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.12,
     shadowRadius: 10,
+    ...CardShadow,
     elevation: 2,
   },
 
@@ -646,6 +652,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
 
@@ -731,6 +738,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 10,
+    ...CardShadow,
     elevation: 5,
   },
 
@@ -775,6 +783,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
   profileSection: {
@@ -902,6 +911,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
 
@@ -989,6 +999,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
 
@@ -1043,6 +1054,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.05,
     shadowRadius: 25,
+    ...CardShadow,
     elevation: 1,
   },
 
