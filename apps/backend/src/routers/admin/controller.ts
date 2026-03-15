@@ -139,12 +139,6 @@ const getLandlordsForAdmin = async ({
     with: {
       facilities: true,
       roomTypes: true,
-      rooms: {
-        columns: {
-          id: true,
-          typeId: true,
-        },
-      },
       residents: {
         columns: {
           id: true,
@@ -159,32 +153,18 @@ const getLandlordsForAdmin = async ({
 
   const items = propertiesData.map((property) => {
     const facility = property.facilities[0];
-    const roomCountsByType = new Map<string, number>();
-    for (const room of property.rooms) {
-      if (!room.typeId) continue;
-      roomCountsByType.set(
-        room.typeId,
-        (roomCountsByType.get(room.typeId) || 0) + 1,
-      );
-    }
 
     const roomTypes = property.roomTypes.map((roomType) => {
       const capacity = Math.max(roomType.maxOccupancy || 1, 1);
       const roomPrice = roomType.rentAmount || 0;
       const personPrice = Math.round(roomPrice / capacity);
-      const roomsCount = roomCountsByType.get(roomType.id) || 0;
       return {
         capacity,
         roomPrice,
         personPrice,
-        rooms: roomsCount,
       };
     });
 
-    const totalCapacity = roomTypes.reduce(
-      (sum, roomType) => sum + roomType.capacity * roomType.rooms,
-      0,
-    );
     const activeResidents = property.residents.filter(
       (resident) => resident.active,
     ).length;
@@ -228,7 +208,6 @@ const getLandlordsForAdmin = async ({
           : "Active",
       startDate,
       endDate,
-      totalCapacity,
       activeResidents,
     };
   });
@@ -280,6 +259,181 @@ const getLandlordAccountStats = async () => {
     totalLandlordAccounts: landlordAccountUserIds.length,
     convertedLandlordAccounts: new Set(landlordPropertyUserIds).size,
   };
+};
+
+const getDashboardSummaryStats = async () => {
+  const landlordAccountStats = await getLandlordAccountStats();
+
+  const now = new Date();
+  const pendingCutoff = new Date(now.getTime() - 335 * DAY_MS);
+
+  const [totalLandlordsRows, pendingRenewalsRows, totalCapacityRows] =
+    await Promise.all([
+      db
+        .select({
+          count: sql<number>`count(*)::int`,
+        })
+        .from(properties),
+      db
+        .select({
+          count: sql<number>`count(*)::int`,
+        })
+        .from(properties)
+        .where(
+          and(
+            sql`${properties.isFrozen} is not true`,
+            lte(properties.createdAt, pendingCutoff),
+          ),
+        ),
+      db
+        .select({
+          totalCapacity: sql<number>`coalesce(sum(
+                        case
+                            when ${rooms.typeId} is not null then coalesce(${propertyRoomTypes.maxOccupancy}, 1)
+                            else 1
+                        end
+                    ), 0)::int`,
+        })
+        .from(rooms)
+        .leftJoin(propertyRoomTypes, eq(rooms.typeId, propertyRoomTypes.id)),
+    ]);
+
+  const totalLandlords = totalLandlordsRows[0]?.count ?? 0;
+  const totalCapacity = totalCapacityRows[0]?.totalCapacity ?? 0;
+  const pendingRenewals = pendingRenewalsRows[0]?.count ?? 0;
+
+  let totalQueries = 0;
+  try {
+    const [queriesRow] = await db
+      .select({
+        count: sql<number>`count(*)::int`,
+      })
+      .from(supportQueries);
+    totalQueries = queriesRow?.count || 0;
+  } catch {
+    totalQueries = 0;
+  }
+
+  let openIssues = 0;
+  try {
+    const [openIssuesRow] = await db
+      .select({
+        count: sql<number>`count(*)::int`,
+      })
+      .from(complaints)
+      .where(sql`${complaints.status} <> 'resolved'`);
+    openIssues = openIssuesRow?.count || 0;
+  } catch {
+    openIssues = 0;
+  }
+
+  return {
+    totalLandlords,
+    totalLandlordAccounts: landlordAccountStats.totalLandlordAccounts,
+    pendingRenewals,
+    totalQueries,
+    openIssues,
+    totalCapacity,
+  };
+};
+
+const buildDashboardLandlordAnalytics = async () => {
+  const now = sql`now()`;
+  const todayStart = sql`date_trunc('day', now())`;
+  const yesterdayStart = sql`date_trunc('day', now()) - interval '1 day'`;
+  const weekStart = sql`now() - interval '7 days'`;
+  const prevWeekStart = sql`now() - interval '14 days'`;
+  const monthStart = sql`now() - interval '30 days'`;
+  const prevMonthStart = sql`now() - interval '60 days'`;
+
+  const [analyticsRow] = await db
+    .select({
+      todayPrevious: sql<number>`coalesce(sum(case when ${properties.createdAt} >= ${yesterdayStart} and ${properties.createdAt} < ${todayStart} then 1 else 0 end), 0)::int`,
+      todayCurrent: sql<number>`coalesce(sum(case when ${properties.createdAt} >= ${todayStart} and ${properties.createdAt} < ${now} then 1 else 0 end), 0)::int`,
+      weekPrevious: sql<number>`coalesce(sum(case when ${properties.createdAt} >= ${prevWeekStart} and ${properties.createdAt} < ${weekStart} then 1 else 0 end), 0)::int`,
+      weekCurrent: sql<number>`coalesce(sum(case when ${properties.createdAt} >= ${weekStart} and ${properties.createdAt} < ${now} then 1 else 0 end), 0)::int`,
+      monthPrevious: sql<number>`coalesce(sum(case when ${properties.createdAt} >= ${prevMonthStart} and ${properties.createdAt} < ${monthStart} then 1 else 0 end), 0)::int`,
+      monthCurrent: sql<number>`coalesce(sum(case when ${properties.createdAt} >= ${monthStart} and ${properties.createdAt} < ${now} then 1 else 0 end), 0)::int`,
+    })
+    .from(properties);
+
+  return {
+    today: {
+      previous: analyticsRow?.todayPrevious ?? 0,
+      current: analyticsRow?.todayCurrent ?? 0,
+    },
+    week: {
+      previous: analyticsRow?.weekPrevious ?? 0,
+      current: analyticsRow?.weekCurrent ?? 0,
+    },
+    month: {
+      previous: analyticsRow?.monthPrevious ?? 0,
+      current: analyticsRow?.monthCurrent ?? 0,
+    },
+  };
+};
+
+const buildDashboardCityDistribution = async () => {
+  const capacityByProperty = db
+    .select({
+      propertyId: rooms.propertyId,
+      totalCapacity: sql<number>`coalesce(sum(
+                    case
+                        when ${rooms.typeId} is not null then coalesce(${propertyRoomTypes.maxOccupancy}, 1)
+                        else 1
+                    end
+                ), 0)::int`.as("totalCapacity"),
+    })
+    .from(rooms)
+    .leftJoin(propertyRoomTypes, eq(rooms.typeId, propertyRoomTypes.id))
+    .groupBy(rooms.propertyId)
+    .as("capacityByProperty");
+
+  const activeResidentsByProperty = db
+    .select({
+      propertyId: residents.propertyId,
+      activeResidents: sql<number>`count(*)::int`.as("activeResidents"),
+    })
+    .from(residents)
+    .where(eq(residents.status, "active"))
+    .groupBy(residents.propertyId)
+    .as("activeResidentsByProperty");
+
+  const cityRows = await db
+    .select({
+      city: properties.city,
+      landlords: sql<number>`count(*)::int`,
+      totalCapacity: sql<number>`coalesce(sum(${capacityByProperty.totalCapacity}), 0)::int`,
+      activeResidents: sql<number>`coalesce(sum(${activeResidentsByProperty.activeResidents}), 0)::int`,
+    })
+    .from(properties)
+    .leftJoin(
+      capacityByProperty,
+      eq(capacityByProperty.propertyId, properties.id),
+    )
+    .leftJoin(
+      activeResidentsByProperty,
+      eq(activeResidentsByProperty.propertyId, properties.id),
+    )
+    .groupBy(properties.city);
+
+  return (cityRows ?? [])
+    .map((row) => {
+      const name = row.city || "Unknown";
+      const occupancy =
+        row.totalCapacity > 0
+          ? `${Math.min(100, Math.round((row.activeResidents / row.totalCapacity) * 100))}%`
+          : "0%";
+      return {
+        name,
+        landlords: row.landlords,
+        capacity: row.totalCapacity,
+        occupancy,
+        revenue: "N/A",
+      };
+    })
+    .sort((a, b) => b.landlords - a.landlords)
+    .slice(0, 10);
 };
 
 export const adminRouter = router({
@@ -498,186 +652,16 @@ export const adminRouter = router({
       };
     }),
 
-  getDashboardSummary: superAdminProcedure.query(async () => {
-    const landlordAccountStats = await getLandlordAccountStats();
+  getDashboardSummaryCards: superAdminProcedure.query(async () => {
+    return getDashboardSummaryStats();
+  }),
 
-    const now = new Date();
-    const pendingCutoff = new Date(now.getTime() - 335 * DAY_MS);
+  getDashboardLandlordAnalytics: superAdminProcedure.query(async () => {
+    return buildDashboardLandlordAnalytics();
+  }),
 
-    const [totalLandlordsRows, pendingRenewalsRows, totalCapacityRows] =
-      await Promise.all([
-        db
-          .select({
-            count: sql<number>`count(*)::int`,
-          })
-          .from(properties),
-        db
-          .select({
-            count: sql<number>`count(*)::int`,
-          })
-          .from(properties)
-          .where(
-            and(
-              sql`${properties.isFrozen} is not true`,
-              lte(properties.createdAt, pendingCutoff),
-            ),
-          ),
-        db
-          .select({
-            totalCapacity: sql<number>`coalesce(sum(
-                        case
-                            when ${rooms.typeId} is not null then coalesce(${propertyRoomTypes.maxOccupancy}, 1)
-                            else 1
-                        end
-                    ), 0)::int`,
-          })
-          .from(rooms)
-          .leftJoin(propertyRoomTypes, eq(rooms.typeId, propertyRoomTypes.id)),
-      ]);
-    const totalLandlordsRow = totalLandlordsRows[0];
-    const pendingRenewalsRow = pendingRenewalsRows[0];
-    const totalCapacityRow = totalCapacityRows[0];
-
-    const totalLandlords = totalLandlordsRow?.count ?? 0;
-    const totalCapacity = totalCapacityRow?.totalCapacity ?? 0;
-    const pendingRenewals = pendingRenewalsRow?.count ?? 0;
-    let totalQueries = 0;
-    try {
-      const [queriesRow] = await db
-        .select({
-          count: sql<number>`count(*)::int`,
-        })
-        .from(supportQueries);
-      totalQueries = queriesRow?.count || 0;
-    } catch {
-      totalQueries = 0;
-    }
-
-    let openIssues = 0;
-    try {
-      const [openIssuesRow] = await db
-        .select({
-          count: sql<number>`count(*)::int`,
-        })
-        .from(complaints)
-        .where(sql`${complaints.status} <> 'resolved'`);
-      openIssues = openIssuesRow?.count || 0;
-    } catch {
-      openIssues = 0;
-    }
-
-    const todayStart = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-    );
-    const yesterdayStart = new Date(todayStart.getTime() - DAY_MS);
-    const weekStart = new Date(now.getTime() - 7 * DAY_MS);
-    const prevWeekStart = new Date(now.getTime() - 14 * DAY_MS);
-    const monthStart = new Date(now.getTime() - 30 * DAY_MS);
-    const prevMonthStart = new Date(now.getTime() - 60 * DAY_MS);
-
-    const capacityByProperty = db
-      .select({
-        propertyId: rooms.propertyId,
-        totalCapacity: sql<number>`coalesce(sum(
-                    case
-                        when ${rooms.typeId} is not null then coalesce(${propertyRoomTypes.maxOccupancy}, 1)
-                        else 1
-                    end
-                ), 0)::int`,
-      })
-      .from(rooms)
-      .leftJoin(propertyRoomTypes, eq(rooms.typeId, propertyRoomTypes.id))
-      .groupBy(rooms.propertyId)
-      .as("capacityByProperty");
-
-    const activeResidentsByProperty = db
-      .select({
-        propertyId: residents.propertyId,
-        activeResidents: sql<number>`count(*)::int`,
-      })
-      .from(residents)
-      .where(eq(residents.status, "active"))
-      .groupBy(residents.propertyId)
-      .as("activeResidentsByProperty");
-
-    const [analyticsRows, cityRows] = await Promise.all([
-      db
-        .select({
-          todayPrevious: sql<number>`coalesce(sum(case when ${properties.createdAt} >= ${yesterdayStart} and ${properties.createdAt} < ${todayStart} then 1 else 0 end), 0)::int`,
-          todayCurrent: sql<number>`coalesce(sum(case when ${properties.createdAt} >= ${todayStart} and ${properties.createdAt} < ${now} then 1 else 0 end), 0)::int`,
-          weekPrevious: sql<number>`coalesce(sum(case when ${properties.createdAt} >= ${prevWeekStart} and ${properties.createdAt} < ${weekStart} then 1 else 0 end), 0)::int`,
-          weekCurrent: sql<number>`coalesce(sum(case when ${properties.createdAt} >= ${weekStart} and ${properties.createdAt} < ${now} then 1 else 0 end), 0)::int`,
-          monthPrevious: sql<number>`coalesce(sum(case when ${properties.createdAt} >= ${prevMonthStart} and ${properties.createdAt} < ${monthStart} then 1 else 0 end), 0)::int`,
-          monthCurrent: sql<number>`coalesce(sum(case when ${properties.createdAt} >= ${monthStart} and ${properties.createdAt} < ${now} then 1 else 0 end), 0)::int`,
-        })
-        .from(properties),
-      db
-        .select({
-          city: properties.city,
-          landlords: sql<number>`count(*)::int`,
-          totalCapacity: sql<number>`coalesce(sum(${capacityByProperty.totalCapacity}), 0)::int`,
-          activeResidents: sql<number>`coalesce(sum(${activeResidentsByProperty.activeResidents}), 0)::int`,
-        })
-        .from(properties)
-        .leftJoin(
-          capacityByProperty,
-          eq(capacityByProperty.propertyId, properties.id),
-        )
-        .leftJoin(
-          activeResidentsByProperty,
-          eq(activeResidentsByProperty.propertyId, properties.id),
-        )
-        .groupBy(properties.city),
-    ]);
-    const analyticsRow = analyticsRows[0];
-
-    const landlordAnalytics = {
-      today: {
-        previous: analyticsRow?.todayPrevious ?? 0,
-        current: analyticsRow?.todayCurrent ?? 0,
-      },
-      week: {
-        previous: analyticsRow?.weekPrevious ?? 0,
-        current: analyticsRow?.weekCurrent ?? 0,
-      },
-      month: {
-        previous: analyticsRow?.monthPrevious ?? 0,
-        current: analyticsRow?.monthCurrent ?? 0,
-      },
-    };
-
-    const cityDistribution = (cityRows ?? [])
-      .map((row) => {
-        const name = row.city || "Unknown";
-        const occupancy =
-          row.totalCapacity > 0
-            ? `${Math.min(100, Math.round((row.activeResidents / row.totalCapacity) * 100))}%`
-            : "0%";
-        return {
-          name,
-          landlords: row.landlords,
-          capacity: row.totalCapacity,
-          occupancy,
-          revenue: "N/A",
-        };
-      })
-      .sort((a, b) => b.landlords - a.landlords)
-      .slice(0, 10);
-
-    return {
-      summary: {
-        totalLandlords,
-        totalLandlordAccounts: landlordAccountStats.totalLandlordAccounts,
-        pendingRenewals,
-        totalQueries,
-        openIssues,
-        totalCapacity,
-      },
-      landlordAnalytics,
-      cityDistribution,
-    };
+  getDashboardCityDistribution: superAdminProcedure.query(async () => {
+    return buildDashboardCityDistribution();
   }),
 
   getMomAnalytics: superAdminProcedure.query(async () => {

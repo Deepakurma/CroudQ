@@ -70,7 +70,6 @@ interface RoomType {
   capacity: number;
   roomPrice: number;
   personPrice: number;
-  rooms: number;
 }
 
 export interface Landlord {
@@ -326,9 +325,6 @@ const columns: ColumnDef<Landlord>[] = [
                   <span className="text-[12px] font-bold">
                     {room.capacity === 1 ? 'Single' : `${room.capacity}-Sharing`}
                   </span>
-                  <span className="text-muted-foreground text-[12px] font-medium">
-                    {room.rooms} rooms
-                  </span>
                 </div>
 
                 {/* Pricing */}
@@ -359,9 +355,6 @@ const columns: ColumnDef<Landlord>[] = [
                       <Badge variant="secondary" className="h-5 px-2 text-[12px] font-bold">
                         {room.capacity === 1 ? 'Single' : `${room.capacity}-Sharing`}
                       </Badge>
-                      <span className="text-muted-foreground text-[14px] font-medium">
-                        {room.rooms} units
-                      </span>
                     </div>
 
                     <ul className="flex flex-col gap-1">
@@ -576,8 +569,6 @@ const pulseData: PulseCardProps[] = [
     label: 'Total Properties',
     value: 100,
     sub: 'No of properties onboarded',
-    button: 'Add+',
-    buttonLink: '#',
     color: 'green',
     icon: Building2
   },

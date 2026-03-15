@@ -16,6 +16,8 @@ const hasLandlordWebAccess = (identity: { roles: string[]; needsOnboarding: bool
 const hasResidentWebAccess = (identity: { roles: string[] }) =>
     identity.roles.includes("RESIDENT");
 
+const MAX_SUPER_ADMINS = 5;
+
 export const authRouter = router({
     sendOTP: publicProcedure
         .input(sendOtpSchema)
@@ -171,29 +173,57 @@ export const authRouter = router({
         };
     }),
 
-    // Temporary setup helper to create/replace the single super admin account.
+    // Temporary setup helper to create up to five super admin accounts.
     setupSuperAdmin: publicProcedure
         .input(setupSuperAdminSchema)
         .mutation(async ({ input }) => {
-            const targetUser = await db.query.users.findFirst({
-                where: eq(users.phoneNumber, input.phoneNumber),
-            });
-
-            if (!targetUser) {
-                throw new TRPCError({
-                    code: "NOT_FOUND",
-                    message:
-                        "User not found for this phone. Login once with this phone first.",
+            const targetUser = await db.transaction(async (tx) => {
+                const existingUser = await tx.query.users.findFirst({
+                    where: eq(users.phoneNumber, input.phoneNumber),
                 });
-            }
 
-            await db.transaction(async (tx) => {
-                await tx.delete(superAdmins);
+                if (existingUser) {
+                    const existingSuperAdmin = await tx.query.superAdmins.findFirst({
+                        where: eq(superAdmins.userId, existingUser.id),
+                    });
+
+                    if (existingSuperAdmin) {
+                        return existingUser;
+                    }
+                }
+
+                const currentSuperAdmins = await tx.query.superAdmins.findMany({
+                    columns: { id: true },
+                    limit: MAX_SUPER_ADMINS,
+                });
+
+                if (currentSuperAdmins.length >= MAX_SUPER_ADMINS) {
+                    throw new TRPCError({
+                        code: "FORBIDDEN",
+                        message: `You can only create up to ${MAX_SUPER_ADMINS} super admins.`,
+                    });
+                }
+
+                const userToPromote = existingUser
+                    ? existingUser
+                    : (
+                        await tx
+                            .insert(users)
+                            .values({
+                                id: crypto.randomUUID(),
+                                createdAt: new Date(),
+                                phoneNumber: input.phoneNumber,
+                            })
+                            .returning()
+                    )[0];
+
                 await tx.insert(superAdmins).values({
                     id: crypto.randomUUID(),
-                    userId: targetUser.id,
+                    userId: userToPromote.id,
                     updatedAt: new Date(),
                 });
+
+                return userToPromote;
             });
 
             return {

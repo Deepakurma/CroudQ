@@ -104,10 +104,24 @@ function UnifiedAuthPageContent() {
     const checkExistingSession = async () => {
       try {
         const payload = await trpcClient.auth.getLandlordWebSession.query();
+        const isLandlord = Array.isArray(payload?.identity?.roles)
+          ? payload.identity.roles.includes('LANDLORD')
+          : false;
+        const isSuperAdmin = Array.isArray(payload?.identity?.roles)
+          ? payload.identity.roles.includes('SUPER_ADMIN')
+          : false;
         let targetPath =
           requestedRedirect && !isGenericRoleRootRedirect(redirect)
             ? redirect
             : (payload?.nextPath ?? DEFAULT_REDIRECT);
+
+        if (targetPath.startsWith('/landlord') && !isLandlord) {
+          targetPath = payload?.nextPath ?? DEFAULT_REDIRECT;
+        }
+
+        if (targetPath.startsWith('/admin') && !isSuperAdmin) {
+          targetPath = payload?.nextPath ?? DEFAULT_REDIRECT;
+        }
 
         if (
           targetPath.startsWith('/landlord/onboarding') &&

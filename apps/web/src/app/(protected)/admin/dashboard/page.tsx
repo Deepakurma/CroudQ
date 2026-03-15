@@ -15,36 +15,54 @@ import type { PulseCardProps } from '~/components/pulsecard';
 
 export default function page() {
   const [isLoading, setIsLoading] = useState(true);
-  const [dashboard, setDashboard] = useState<{
-    summary: {
-      totalLandlords: number;
-      totalLandlordAccounts: number;
-      pendingRenewals: number;
-      totalQueries: number;
-      totalCapacity: number;
-    };
-    landlordAnalytics: {
-      today: { previous: number; current: number };
-      week: { previous: number; current: number };
-      month: { previous: number; current: number };
-    };
-    cityDistribution: Array<{
+  const [summary, setSummary] = useState<{
+    totalLandlords: number;
+    totalLandlordAccounts: number;
+    pendingRenewals: number;
+    totalQueries: number;
+    totalCapacity: number;
+  } | null>(null);
+  const [landlordAnalytics, setLandlordAnalytics] = useState<{
+    today: { previous: number; current: number };
+    week: { previous: number; current: number };
+    month: { previous: number; current: number };
+  } | null>(null);
+  const [cityDistribution, setCityDistribution] = useState<
+    Array<{
       name: string;
       landlords: number;
       occupancy: string;
       capacity: number;
       revenue: string;
-    }>;
-  } | null>(null);
+    }>
+  >([]);
 
   useEffect(() => {
     const fetchDashboard = async () => {
       setIsLoading(true);
       try {
-        const payload = await trpcClient.admin.getDashboardSummary.query();
-        setDashboard(payload);
+        const summaryResult = await trpcClient.admin.getDashboardSummaryCards
+          .query()
+          .catch(() => null);
+        const analyticsResult = await trpcClient.admin.getDashboardLandlordAnalytics
+          .query()
+          .catch(() => null);
+        const cityResult = await trpcClient.admin.getDashboardCityDistribution
+          .query()
+          .catch(() => []);
+
+        const hasAnySplitSuccess =
+          summaryResult !== null || analyticsResult !== null || cityResult.length > 0;
+
+        if (hasAnySplitSuccess) {
+          setSummary(summaryResult);
+          setLandlordAnalytics(analyticsResult);
+          setCityDistribution(cityResult);
+        }
       } catch {
-        setDashboard(null);
+        setSummary(null);
+        setLandlordAnalytics(null);
+        setCityDistribution([]);
       } finally {
         setIsLoading(false);
       }
@@ -57,23 +75,21 @@ export default function page() {
     () => [
       {
         label: 'Total Properties',
-        value: dashboard?.summary.totalLandlords ?? 0,
+        value: summary?.totalLandlords ?? 0,
         sub: 'No of properties onboarded',
-        button: 'Add+',
-        buttonLink: '#',
         color: 'green',
         icon: Building2
       },
       {
         label: 'Total Landlord Accounts',
-        value: dashboard?.summary.totalLandlordAccounts ?? 0,
+        value: summary?.totalLandlordAccounts ?? 0,
         sub: 'Registered landlord accounts',
         color: 'blue',
         icon: Users2
       },
       {
         label: 'Pending Renewals',
-        value: dashboard?.summary.pendingRenewals ?? 0,
+        value: summary?.pendingRenewals ?? 0,
         sub: 'Requires Action',
         button: 'View All',
         buttonLink: '/admin/landlords',
@@ -82,13 +98,13 @@ export default function page() {
       },
       {
         label: 'Queries',
-        value: dashboard?.summary.totalQueries ?? 0,
+        value: summary?.totalQueries ?? 0,
         sub: 'Landlord queries received',
         color: 'orange',
         icon: ClipboardList
       }
     ],
-    [dashboard]
+    [summary]
   );
 
   return (
@@ -102,10 +118,10 @@ export default function page() {
         </div>
       </div>
 
-      <LandlordAnalytics analytics={dashboard?.landlordAnalytics} isLoading={isLoading} />
+      <LandlordAnalytics analytics={landlordAnalytics ?? undefined} isLoading={isLoading} />
       <Analytics />
 
-      <LandlordIntelligence data={dashboard?.cityDistribution} isLoading={isLoading} />
+      <LandlordIntelligence data={cityDistribution} isLoading={isLoading} />
 
       <div className="grid grid-cols-1 gap-0 px-4 sm:gap-4 lg:gap-6">
         <AdminQuickActions />
