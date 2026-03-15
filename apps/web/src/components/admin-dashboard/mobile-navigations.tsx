@@ -49,7 +49,7 @@ export default function AdminMobileNavigation() {
         <button
           key={btn.label}
           onClick={btn.onClick}
-          className={`flex w-16 flex-col items-center gap-0.5 rounded-xl p-2 transition-colors active:scale-95 ${btn.active ? 'text-primary bg-primary/20' : 'text-muted-foreground'}`}>
+          className={`flex w-16 flex-col items-center gap-0.5 rounded-xl p-2 transition-colors active:scale-95 ${btn.active ? 'text-primary bg-primary/5' : 'text-muted-foreground'}`}>
           <btn.icon size={24} />
           <p className="text-[8px]">{btn.label}</p>
         </button>
