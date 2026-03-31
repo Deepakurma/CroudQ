@@ -2,8 +2,8 @@ import { type FastifyCorsOptions } from "@fastify/cors";
 
 const ALLOWED_ORIGINS = [
   "http://localhost:3000",
-  "https://www.bunkezy.com",
-  "https://bunkezy.com",
+  "https://www.croudq.com",
+  "https://croudq.com",
   "https://main.dp5wz64tofctj.amplifyapp.com",
 ];
 
@@ -18,7 +18,6 @@ export const CorsConfig: FastifyCorsOptions = {
   allowedHeaders: [
     "Content-Type",
     "Authorization",
-    "x-property-id",
     "x-trpc-source",
     "X-Requested-With",
   ],

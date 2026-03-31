@@ -1,6 +1,6 @@
-import { Colors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { Typography } from "@/constants/Typography";
+import { useAppTheme } from "@/context/ThemeContext";
 import { LucideIcon } from "lucide-react-native";
 import React from "react";
 import { StyleSheet, Text, View, ViewStyle } from "react-native";
@@ -20,11 +20,14 @@ export function EmptyState({
   style,
   children,
 }: EmptyStateProps) {
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
+
   return (
     <View style={[styles.container, style]}>
       {Icon && (
         <View style={styles.iconContainer}>
-          <Icon size={25} color={Colors.textSecondary} />
+          <Icon size={25} color={colors.textSecondary} />
         </View>
       )}
       {title && <Text style={styles.title}>{title}</Text>}
@@ -34,33 +37,36 @@ export function EmptyState({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: Spacing.xl,
-    gap: Spacing.xs,
-  },
-  iconContainer: {
-    width: 45,
-    height: 45,
-    borderRadius: 40,
-    backgroundColor: "#F3F4F6",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  title: {
-    fontSize: Typography.size.l,
-    fontFamily: Typography.font.semibold,
-    color: Colors.text,
-    textAlign: "center",
-  },
-  description: {
-    fontSize: Typography.size.m,
-    fontFamily: Typography.font.regular,
-    color: Colors.textSecondary,
-    textAlign: "center",
-    maxWidth: 250,
-  },
-});
+const getStyles = (colors: ReturnType<typeof useAppTheme>["colors"]) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: Spacing.xl,
+      gap: Spacing.xs,
+    },
+    iconContainer: {
+      width: 45,
+      height: 45,
+      borderRadius: 40,
+      backgroundColor: colors.cardSecondary,
+      borderWidth: 1,
+      borderColor: colors.border,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    title: {
+      fontSize: Typography.size.l,
+      fontFamily: Typography.font.semibold,
+      color: colors.text,
+      textAlign: "center",
+    },
+    description: {
+      fontSize: Typography.size.m,
+      fontFamily: Typography.font.regular,
+      color: colors.textSecondary,
+      textAlign: "center",
+      maxWidth: 300,
+    },
+  });

@@ -1,40 +1,22 @@
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
+import type { FastifyTRPCPluginOptions } from "@trpc/server/adapters/fastify";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
-import type { FastifyInstance } from "fastify";
-import { lt } from "drizzle-orm";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 import { CorsConfig, isAllowedOrigin } from "../config/cors-config";
-import { db } from "../db";
-import { revokedTokens } from "../db/schema";
 import { appRouter } from "../routers";
-import { finalizeDuePropertyDeletions } from "../services/property-deletion";
+import { registerWebClaimRoute } from "../routers/auth/web-claim-route";
+import { registerRazorpayWebhookRoute } from "../routers/billing/razorpay-webhook-route";
+import { registerYoutubeCallbackRoute } from "../routers/youtube/controller";
 import { createContext } from "./context";
+import { registerRevokedTokenCleanup } from "./revoked-token-cleanup";
+import type { AppRouter } from "../routers";
 
 export type ServerOptions = {
   port?: number;
   host?: string;
-};
-
-const getCleanupIntervalMs = () => {
-  const rawMinutes = Number(
-    process.env.REVOKED_TOKEN_CLEANUP_INTERVAL_MINUTES ?? "60",
-  );
-  if (!Number.isFinite(rawMinutes) || rawMinutes < 1) {
-    return 60 * 60 * 1000;
-  }
-  return Math.floor(rawMinutes * 60 * 1000);
-};
-
-const getPropertyDeletionCleanupIntervalMs = () => {
-  const rawMinutes = Number(
-    process.env.PROPERTY_DELETION_CLEANUP_INTERVAL_MINUTES ?? "60",
-  );
-  if (!Number.isFinite(rawMinutes) || rawMinutes < 1) {
-    return 60 * 60 * 1000;
-  }
-  return Math.floor(rawMinutes * 60 * 1000);
 };
 
 export async function createServer(
@@ -57,7 +39,11 @@ export async function createServer(
     return { message: "I'm Healthy!" };
   });
 
-  server.addHook("onRequest", async (req, reply) => {
+  await registerYoutubeCallbackRoute(server);
+  await registerWebClaimRoute(server);
+  await registerRazorpayWebhookRoute(server);
+
+  server.addHook("onRequest", async (req: FastifyRequest, reply: FastifyReply) => {
     const isMutationMethod =
       req.method === "POST" ||
       req.method === "PUT" ||
@@ -67,10 +53,7 @@ export async function createServer(
       return;
     }
 
-    const hasAuthCookie = Boolean(
-      req.cookies?.bunkezy_landlord_token ||
-      req.cookies?.bunkezy_resident_token,
-    );
+    const hasAuthCookie = Boolean(req.cookies?.auth_token);
     const hasBearerToken =
       req.headers.authorization?.startsWith("Bearer ") ?? false;
     if (!hasAuthCookie || hasBearerToken) {
@@ -111,84 +94,14 @@ export async function createServer(
           "tRPC handler error",
         );
       },
-    },
+    } satisfies FastifyTRPCPluginOptions<AppRouter>["trpcOptions"],
   });
 
-  let revokedTokenCleanupTimer: ReturnType<typeof setInterval> | null = null;
-  let propertyDeletionCleanupTimer: ReturnType<typeof setInterval> | null =
-    null;
-
-  const runRevokedTokenCleanup = async () => {
-    const deleted = await db
-      .delete(revokedTokens)
-      .where(lt(revokedTokens.expiresAt, new Date()))
-      .returning({ jti: revokedTokens.jti });
-
-    if (deleted.length > 0) {
-      server.log.info(
-        { deletedCount: deleted.length },
-        "Expired revoked tokens cleaned up",
-      );
-    }
-  };
-
-  const startRevokedTokenCleanup = () => {
-    const intervalMs = getCleanupIntervalMs();
-
-    runRevokedTokenCleanup().catch((error) => {
-      server.log.error({ error }, "Failed initial revoked token cleanup");
-    });
-
-    revokedTokenCleanupTimer = setInterval(() => {
-      runRevokedTokenCleanup().catch((error) => {
-        server.log.error({ error }, "Failed scheduled revoked token cleanup");
-      });
-    }, intervalMs);
-
-    server.log.info({ intervalMs }, "Started revoked token cleanup scheduler");
-  };
-
-  const runPropertyDeletionCleanup = async () => {
-    await finalizeDuePropertyDeletions(server.log);
-  };
-
-  const startPropertyDeletionCleanup = () => {
-    const intervalMs = getPropertyDeletionCleanupIntervalMs();
-
-    runPropertyDeletionCleanup().catch((error) => {
-      server.log.error({ error }, "Failed initial property deletion cleanup");
-    });
-
-    propertyDeletionCleanupTimer = setInterval(() => {
-      runPropertyDeletionCleanup().catch((error) => {
-        server.log.error(
-          { error },
-          "Failed scheduled property deletion cleanup",
-        );
-      });
-    }, intervalMs);
-
-    server.log.info(
-      { intervalMs },
-      "Started property deletion cleanup scheduler",
-    );
-  };
-
-  server.addHook("onClose", async () => {
-    if (revokedTokenCleanupTimer) {
-      clearInterval(revokedTokenCleanupTimer);
-      revokedTokenCleanupTimer = null;
-    }
-    if (propertyDeletionCleanupTimer) {
-      clearInterval(propertyDeletionCleanupTimer);
-      propertyDeletionCleanupTimer = null;
-    }
-  });
+  const { startRevokedTokenCleanup } = registerRevokedTokenCleanup(server);
 
   const start = async () => {
     try {
       startRevokedTokenCleanup();
-      startPropertyDeletionCleanup();
       const port = opts.port ?? Number(process.env.PORT || "4000");
       const host = opts.host ?? "0.0.0.0";
       await server.listen({ port, host });

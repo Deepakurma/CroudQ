@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from 'react';
 
+import { toast } from 'sonner';
+
 import { Skeleton } from '~/shared/shadcn/skeleton';
+
+import { trpcClient } from '~/utils/trpc';
 
 import { AnalyticsCard } from '../analytics/analytics-card';
 
@@ -11,21 +15,21 @@ export const description = 'A radial chart with stacked sections';
 const visitorStats = [
   {
     key: 'today',
-    title: 'Daily Visitors',
+    title: 'New Creators',
     growth: '',
     description: 'Past 24 hours',
     note: 'from past 24 hours'
   },
   {
     key: 'week',
-    title: 'Weekly Visitors',
+    title: 'New Creators',
     growth: '',
     description: 'Last 7 days',
     note: 'vs last week'
   },
   {
     key: 'month',
-    title: 'Monthly Visitors',
+    title: 'New Creators',
     growth: '',
     description: 'Last 30 days',
     note: 'vs previous month'
@@ -53,31 +57,33 @@ export function Analytics() {
   } | null>(null);
 
   const [loading, setLoading] = useState<boolean>(true);
-  useEffect(() => {
-    let isMounted = true;
 
-    fetch('/api/analytics')
-      .then((res) => res.json())
-      .then((data) => {
-        if (!isMounted) return;
-        setAnalytics({
-          today: { previous: data.yesterday, current: data.today },
-          week: { previous: data.lastWeek, current: data.week },
-          month: { previous: data.lastMonth, current: data.month }
-        });
-      })
-      .catch((err) => {
-        console.error(err);
-      })
-      .finally(() => setLoading(false));
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchCreatorJoinAnalytics = async () => {
+      setLoading(true);
+      try {
+        const data = await trpcClient.adminDashboard.creatorJoins.query();
+        if (mounted) setAnalytics(data);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unable to load creator analytics.';
+        toast.error(message);
+        if (mounted) setAnalytics(EMPTY_ANALYTICS);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    void fetchCreatorJoinAnalytics();
 
     return () => {
-      isMounted = false;
+      mounted = false;
     };
   }, []);
 
   return (
-    <div className="flex flex-col gap-2 p-4 sm:gap-3">
+    <div className="mt-6 flex flex-col gap-2 sm:gap-3">
       <h1 className="text-sm font-semibold tracking-widest uppercase">Traffic Overview</h1>
       <div className="no-scrollbar flex w-full gap-3 overflow-x-auto sm:grid sm:grid-cols-3 sm:gap-4 lg:gap-6">
         {loading

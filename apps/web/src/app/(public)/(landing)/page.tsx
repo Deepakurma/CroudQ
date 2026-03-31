@@ -1,189 +1,148 @@
-'use client';
+import { CardFanSection } from '~/components/landing/card-fan-section';
+import { FinalCtaSection } from '~/components/landing/final-cta-section';
+import { HeroSection } from '~/components/landing/hero-section';
+import { ServicesSection } from '~/components/landing/services-section';
+import { StepsSection } from '~/components/landing/steps-section';
 
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+const chips = [
+  'BUILT FOR REAL CREATOR WORKFLOWS',
+  'AI-ASSISTED INSIGHTS FROM YOUR CONTENT DATA',
+  'SPOT WHAT YOUR AUDIENCE RESPONDS TO'
+] as const;
 
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { Loader2, MapPin } from 'lucide-react';
+const fanCards = [
+  {
+    title: 'SOLO CREATORS',
+    color: 'color-mix(in srgb, var(--primary) 14%, var(--card))',
+    dot: 'var(--primary)',
+    titleColor: 'color-mix(in srgb, var(--foreground) 72%, var(--primary))',
+    descColor: 'color-mix(in srgb, var(--foreground) 90%, var(--primary))',
+    rot: -15,
+    x: -210,
+    desc: 'Running everything alone is hard. CroudQ helps you decide what to make next without second-guessing.'
+  },
+  {
+    title: 'CONSISTENT CREATORS',
+    color: 'color-mix(in srgb, var(--secondary) 16%, var(--card))',
+    dot: 'var(--secondary)',
+    titleColor: 'color-mix(in srgb, var(--foreground) 86%, var(--secondary))',
+    descColor: 'color-mix(in srgb, var(--foreground) 90%, var(--secondary))',
+    rot: -9,
+    x: -130,
+    desc: 'Stay consistent with clearer signals on what is working so your next content decision is easier.'
+  },
+  {
+    title: 'SHORT-FORM CREATORS',
+    color: 'color-mix(in srgb, var(--chart-5) 14%, var(--card))',
+    dot: 'var(--chart-5)',
+    titleColor: 'color-mix(in srgb, var(--foreground) 74%, var(--chart-5))',
+    descColor: 'color-mix(in srgb, var(--foreground) 90%, var(--chart-5))',
+    rot: -3,
+    x: -48,
+    desc: 'See which formats and hooks drive stronger response so you can iterate your short-form strategy.'
+  },
+  {
+    title: 'LONG-FORM CREATORS',
+    color: 'color-mix(in srgb, var(--chart-3) 14%, var(--card))',
+    dot: 'var(--chart-3)',
+    titleColor: 'color-mix(in srgb, var(--foreground) 74%, var(--chart-3))',
+    descColor: 'color-mix(in srgb, var(--foreground) 90%, var(--chart-3))',
+    rot: 3,
+    x: 38,
+    desc: 'Understand retention and audience behavior so each upload starts with a clearer game plan.'
+  },
+  {
+    title: 'CREATOR TEAMS',
+    color: 'color-mix(in srgb, var(--chart-4) 14%, var(--card))',
+    dot: 'var(--chart-4)',
+    titleColor: 'color-mix(in srgb, var(--foreground) 74%, var(--chart-4))',
+    descColor: 'color-mix(in srgb, var(--foreground) 90%, var(--chart-4))',
+    rot: 9,
+    x: 120,
+    desc: 'Give your editor, strategist, and social manager one shared view of what is performing and why.'
+  },
+  {
+    title: 'GROWTH-FOCUSED BRANDS',
+    color: 'color-mix(in srgb, var(--primary) 10%, var(--accent))',
+    dot: 'var(--primary)',
+    titleColor: 'color-mix(in srgb, var(--foreground) 72%, var(--primary))',
+    descColor: 'color-mix(in srgb, var(--foreground) 90%, var(--primary))',
+    rot: 15,
+    x: 202,
+    desc: 'Check how your brand content is landing with audiences, then decide your next content priorities.'
+  }
+] as const;
 
-import { Button } from '~/shared/shadcn/button';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '~/shared/shadcn/card';
+const servicesNodes = [
+  {
+    title: 'CONNECTED CHANNELS',
+    desc: 'Connect your YouTube channel first, then add other platforms to keep your performance view in one place.'
+  },
+  {
+    title: 'PERFORMANCE INSIGHTS',
+    desc: 'See which videos and topics are moving your growth, and which ones are quietly slowing you down.'
+  },
+  {
+    title: 'COMMENT INTELLIGENCE',
+    desc: 'Learn what your audience keeps asking for so your next content feels timely, relevant, and wanted.'
+  },
+  {
+    title: 'AI TREND SIGNALS',
+    desc: 'Use AI-assisted pattern detection to spot rising topics in your recent content and comments.'
+  },
+  {
+    title: 'AI CONTENT SUGGESTIONS',
+    desc: 'Get practical AI-generated content suggestions based on your recent performance and audience feedback.'
+  },
+  {
+    title: 'WEEKLY CLARITY',
+    desc: 'Know where to focus each week so your content and community keep improving with less stress.'
+  }
+] as const;
 
-import { Filters } from '~/components/user-dashboard/filters';
-import { PropertyCard } from '~/components/user-dashboard/property-card';
-import { useFilters } from '~/components/user-dashboard/usefilters';
-import { trpcClient } from '~/utils/trpc';
-
-const getPriceRange = (pricingFilter: 'all' | 'under-5000' | '5000-7000' | 'above-7000') => {
-  if (pricingFilter === 'under-5000') return { minPrice: 0, maxPrice: 4999 };
-  if (pricingFilter === '5000-7000') return { minPrice: 5000, maxPrice: 7000 };
-  if (pricingFilter === 'above-7000') return { minPrice: 7001, maxPrice: undefined };
-  return { minPrice: undefined, maxPrice: undefined };
-};
-
-function LandingPageContent() {
-  const searchParams = useSearchParams();
-  const searchValue = searchParams.get('search') ?? '';
-  const selectedLocation = searchParams.get('location') ?? 'all';
-  const {
-    pricingFilter,
-    setPricingFilter,
-    sharingFilter,
-    setSharingFilter,
-    propertyTypeFilter,
-    setPropertyTypeFilter
-  } = useFilters();
-
-  const { minPrice, maxPrice } = getPriceRange(pricingFilter);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const [supportsIntersectionObserver, setSupportsIntersectionObserver] = useState(false);
-  const queryInput = useMemo(
-    () => ({
-      search: searchValue.trim() || undefined,
-      location: selectedLocation === 'all' ? undefined : selectedLocation,
-      sharingType: sharingFilter === 'all' ? undefined : sharingFilter,
-      propertyType: propertyTypeFilter === 'all' ? undefined : propertyTypeFilter,
-      minPrice,
-      maxPrice,
-      limit: 24
-    }),
-    [maxPrice, minPrice, propertyTypeFilter, searchValue, selectedLocation, sharingFilter]
-  );
-
-  const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } = useInfiniteQuery({
-    queryKey: ['publicProperty.list', queryInput],
-    initialPageParam: undefined as string | undefined,
-    queryFn: ({ pageParam }) =>
-      trpcClient.publicProperty.list.query({
-        ...queryInput,
-        cursor: pageParam
-      }),
-    getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined
-  });
-
-  const properties = useMemo(() => {
-    return data?.pages.flatMap((page) => page.items) ?? [];
-  }, [data]);
-
-  useEffect(() => {
-    setSupportsIntersectionObserver(typeof IntersectionObserver !== 'undefined');
-  }, []);
-
-  useEffect(() => {
-    if (!supportsIntersectionObserver) return;
-    if (!hasNextPage) return;
-    if (!sentinelRef.current) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((entry) => entry.isIntersecting) && !isFetchingNextPage) {
-          void fetchNextPage();
-        }
-      },
-      { rootMargin: '200px 0px' }
-    );
-
-    observer.observe(sentinelRef.current);
-    return () => observer.disconnect();
-  }, [fetchNextPage, hasNextPage, isFetchingNextPage, supportsIntersectionObserver]);
-
-  const hasAppliedFilters =
-    pricingFilter !== 'all' || sharingFilter !== 'all' || propertyTypeFilter !== 'all';
-
-  const clearFilters = () => {
-    setPricingFilter('all');
-    setSharingFilter('all');
-    setPropertyTypeFilter('all');
-  };
-
-  return (
-    <main className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-6 sm:gap-8">
-      <Filters
-        pricingFilter={pricingFilter}
-        onPricingFilterChange={setPricingFilter}
-        sharingFilter={sharingFilter}
-        onSharingFilterChange={setSharingFilter}
-        propertyTypeFilter={propertyTypeFilter}
-        onPropertyTypeFilterChange={setPropertyTypeFilter}
-        hasAppliedFilters={hasAppliedFilters}
-        onClearFilters={clearFilters}
-      />
-
-      {selectedLocation !== 'all' && (
-        <div className="mx-auto flex w-full max-w-7xl items-center gap-2 text-xl font-medium sm:text-2xl">
-          Properties in {selectedLocation}
-        </div>
-      )}
-
-      {isLoading ? (
-        <Card className="flex w-full flex-1 flex-col justify-center border-dashed text-center">
-          <CardHeader className="space-y-3">
-            <Loader2 className="text-muted-foreground mx-auto size-5 animate-spin sm:size-6" />
-            <CardTitle className="text-base sm:text-xl">Loading properties...</CardTitle>
-          </CardHeader>
-        </Card>
-      ) : properties.length === 0 ? (
-        <Card className="flex w-full flex-1 flex-col justify-center border-dashed text-center">
-          <CardHeader className="space-y-4">
-            <div className="bg-muted text-muted-foreground mx-auto flex size-14 items-center justify-center rounded-3xl sm:size-16">
-              <MapPin className="size-7 sm:size-8" />
-            </div>
-            <CardTitle className="text-lg sm:text-2xl">No results found</CardTitle>
-          </CardHeader>
-          <CardContent className="text-muted-foreground mx-auto max-w-md text-sm sm:text-base">
-            We couldn't find any properties matching your search criteria. Try adjusting your
-            filters or searching in a different area.
-          </CardContent>
-          <CardFooter className="justify-center">
-            <Button
-              onClick={() => (window.location.href = '/')}
-              variant="outline"
-              className="rounded-2xl px-8">
-              Clear all filters
-            </Button>
-          </CardFooter>
-        </Card>
-      ) : (
-        <>
-          <section className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {properties.map((property) => (
-              <PropertyCard key={property.id} property={property} />
-            ))}
-          </section>
-          {/* {supportsIntersectionObserver ? <div ref={sentinelRef} className="h-8 w-full" /> : null} */}
-          {supportsIntersectionObserver ? (
-            <div
-              ref={sentinelRef}
-              className="pointer-events-none absolute bottom-0 left-0 h-px w-px"
-            />
-          ) : null}
-          {isFetchingNextPage ? (
-            <div className="text-muted-foreground flex items-center justify-center gap-2 py-2 text-xs sm:text-sm">
-              <Loader2 className="size-4 animate-spin sm:size-5" />
-              Loading more properties...
-            </div>
-          ) : null}
-          {!supportsIntersectionObserver && hasNextPage ? (
-            <div className="flex justify-center py-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="rounded-2xl px-8"
-                onClick={() => void fetchNextPage()}>
-                Load more
-              </Button>
-            </div>
-          ) : null}
-        </>
-      )}
-    </main>
-  );
-}
+const steps = [
+  {
+    id: 'FOUNDATION',
+    title: 'CONNECT YOUR CHANNELS',
+    sub: 'START WITH YOUTUBE, THEN EXPAND',
+    copy: 'Link your YouTube account and CroudQ organizes your core performance data into one clean view.',
+    bg: 'var(--background)',
+    card: 'var(--accent)'
+  },
+  {
+    id: 'ANALYSIS',
+    title: 'SEE WHAT IS WORKING',
+    sub: 'PERFORMANCE, RETENTION, AND AUDIENCE SIGNALS TOGETHER',
+    copy: 'Move beyond surface metrics. Understand what content is helping performance and what to improve next.',
+    bg: 'color-mix(in srgb, var(--chart-3) 8%, var(--muted))',
+    card: 'var(--muted)'
+  },
+  {
+    id: 'PLANNING',
+    title: 'PLAN YOUR NEXT MOVES',
+    sub: 'AI SUGGESTIONS YOU CAN REVIEW AND SHIP THIS WEEK',
+    copy: 'Use AI-assisted suggestions as a starting point, then choose the ideas that fit your voice and goals.',
+    bg: 'color-mix(in srgb, var(--chart-5) 8%, var(--accent))',
+    card: 'var(--card)'
+  },
+  {
+    id: 'ITERATION',
+    title: 'GROW WITH CONFIDENCE',
+    sub: 'LESS NOISE, BETTER DECISIONS, STRONGER CONTENT',
+    copy: 'Spend less time overthinking dashboards and more time refining content based on clear audience feedback.',
+    bg: 'var(--secondary)',
+    card: 'var(--accent)'
+  }
+] as const;
 
 export default function LandingPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen" />}>
-      <LandingPageContent />
-    </Suspense>
+    <div className="bg-background text-foreground w-full overflow-clip">
+      <HeroSection chips={chips} />
+      <CardFanSection fanCards={fanCards} />
+      <ServicesSection servicesNodes={servicesNodes} />
+      <StepsSection steps={steps} />
+      <FinalCtaSection />
+    </div>
   );
 }

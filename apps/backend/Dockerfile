@@ -22,7 +22,7 @@ ENV PGSSLROOTCERT=/rds-ca.pem
 
 # Runtime deps from deps stage + application source.
 COPY --from=deps --chown=bun:bun /app/node_modules ./node_modules
-COPY --chown=bun:bun package.json tsconfig.json drizzle.config.ts index.ts ./
+COPY --chown=bun:bun package.json tsconfig.json drizzle.config.ts ./
 COPY --chown=bun:bun src ./src
 COPY --chown=bun:bun scripts ./scripts
 

@@ -1,7 +1,8 @@
-import { type AppRouter } from '@bunkezy/backend';
+import { type AppRouter } from '@croudq/backend';
 import { QueryClient } from '@tanstack/react-query';
 import { createTRPCClient, httpBatchLink } from '@trpc/client';
 import { createTRPCOptionsProxy } from '@trpc/tanstack-react-query';
+import superjson from 'superjson';
 
 import { env } from '../env';
 
@@ -21,27 +22,14 @@ export const trpcClient = createTRPCClient<AppRouter>({
   links: [
     httpBatchLink({
       url: `${env.NEXT_PUBLIC_API_ENDPOINT}/trpc`,
+      transformer: superjson,
+
       fetch: (input, init) => {
         return fetch(input, { ...init, credentials: 'include' });
       }
     })
   ]
 });
-
-export const createPropertyScopedTrpcClient = (propertyId: string) =>
-  createTRPCClient<AppRouter>({
-    links: [
-      httpBatchLink({
-        url: `${env.NEXT_PUBLIC_API_ENDPOINT}/trpc`,
-        headers() {
-          return { 'x-property-id': propertyId };
-        },
-        fetch: (input, init) => {
-          return fetch(input, { ...init, credentials: 'include' });
-        }
-      })
-    ]
-  });
 
 export const trpcHttp = createTRPCOptionsProxy<AppRouter>({
   client: trpcClient,

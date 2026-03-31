@@ -1,24 +1,28 @@
 {
   "expo": {
-    "name": "Bunkezy",
-    "slug": "bunkezy-resident",
+    "name": "CroudQ",
+    "slug": "croudq",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "orientation": "portrait",
-    "icon": "./assets/images/Logo.png",
-    "scheme": "bunkezy-resident",
+    "icon": "./assets/images/Logo.jpeg",
+    "scheme": "croudq",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.bunkezy.resident",
+      "bundleIdentifier": "com.croudq.app",
       "buildNumber": "1",
       "icon": "./assets/images/Logo.png",
       "infoPlist": {
+        "NSCameraUsageDescription": "This app uses camera to upload property images.",
+        "NSPhotoLibraryUsageDescription": "This app needs access to photos to upload property images.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
-      "package": "com.bunkezy.resident",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/Logo.png",
@@ -26,7 +30,8 @@
         "monochromeImage": "./assets/images/Logo.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.croudq.app"
     },
     "web": {
       "output": "static",
@@ -56,9 +61,8 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "393769f3-a071-456b-8ff2-aad01635cfad"
+        "projectId": "5506e01e-8937-4f62-a02e-724f22ef1562"
       }
-    },
-    "owner": "deepakurma"
+    }
   }
 }

@@ -1,26 +1,23 @@
+import { createTRPCRouter } from "../server/trpc";
 
-import { router } from "../server/trpc";
-
+import { adminAuthRouter } from "./admin-auth/controller";
+import { adminDashboardRouter } from "./admin-dashboard/controller";
+import { adminFeedbackRouter } from "./admin-feedback/controller";
 import { authRouter } from "./auth/controller";
-import { adminRouter } from "./admin/controller";
-import { complaintRouter } from "./complaint/controller";
-import { mediaRouter } from "./media/controller";
-import { noticeRouter } from "./notice/controller";
-import { propertyRouter } from "./property/controller";
-import { publicPropertyRouter } from "./publicProperty/controller";
-import { publicResidentRouter } from "./publicResident/controller";
-import { residentRouter } from "./resident/controller";
+import { billingRouter } from "./billing/controller";
+import { feedbackRouter } from "./feedback/controller";
+import { insightsRouter } from "./insights/controller";
+import { youtubeRouter } from "./youtube/controller";
 
-export const appRouter = router({
-    auth: authRouter,
-    admin: adminRouter,
-    property: propertyRouter,
-    publicProperty: publicPropertyRouter,
-    publicResident: publicResidentRouter,
-    resident: residentRouter,
-    complaint: complaintRouter,
-    notice: noticeRouter,
-    media: mediaRouter,
+export const appRouter = createTRPCRouter({
+  adminAuth: adminAuthRouter,
+  adminDashboard: adminDashboardRouter,
+  adminFeedback: adminFeedbackRouter,
+  auth: authRouter,
+  billing: billingRouter,
+  feedback: feedbackRouter,
+  insights: insightsRouter,
+  youtube: youtubeRouter,
 });
 
 export type AppRouter = typeof appRouter;

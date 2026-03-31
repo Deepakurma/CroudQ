@@ -13,7 +13,7 @@
     },
     "production": {
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.bunkezy.com"
+        "EXPO_PUBLIC_API_URL": "https://api.croudq.com"
       },
       "autoIncrement": true
     }

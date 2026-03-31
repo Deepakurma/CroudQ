@@ -1,6 +1,6 @@
-# Bunkezy Frontend
+# CroudQ Frontend
 
-This folder contains the frontend application for the Bunkezy project, built with [Next.js](https://nextjs.org).
+This folder contains the frontend application for the CroudQ project, built with [Next.js](https://nextjs.org).
 
 ## Features
 

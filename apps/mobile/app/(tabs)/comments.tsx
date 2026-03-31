@@ -1,0 +1,359 @@
+import { EmptyState } from "@/components/EmptyState";
+import { LoadingState } from "@/components/LoadingState";
+import { Badge } from "@/components/ui/Badge";
+import { Card } from "@/components/ui/Card";
+import { SCREEN_CONTENT_GAP } from "@/components/ui/AppScreen";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { TabScreen } from "@/components/ui/TabScreen";
+import { AppColors } from "@/constants/Colors";
+import { Spacing } from "@/constants/Spacing";
+import { Typography } from "@/constants/Typography";
+import { useAuth } from "@/context/AuthContext";
+import { useAppTheme } from "@/context/ThemeContext";
+import { trpc } from "@/utils/api";
+import { useQuery } from "@tanstack/react-query";
+import { LinearGradient } from "expo-linear-gradient";
+import {
+  Lightbulb,
+  MessageSquareMore,
+  TriangleAlert,
+  Youtube,
+} from "lucide-react-native";
+import React from "react";
+import { StyleSheet, Text, View } from "react-native";
+import Toast from "react-native-toast-message";
+
+export default function CommentsScreen() {
+  const { user, youtubeConnection } = useAuth();
+  const { colors } = useAppTheme();
+  const styles = getStyles(colors);
+  const commentsQuery = useQuery(
+    trpc.insights.comments.queryOptions(undefined, {
+      enabled: Boolean(user?.id && youtubeConnection.isConnected),
+      retry: false,
+    }),
+  );
+
+  React.useEffect(() => {
+    if (!commentsQuery.error) {
+      return;
+    }
+
+    Toast.show({
+      type: "error",
+      text1: "Comments",
+      text2: "Could not load your AI comment insights.",
+    });
+  }, [commentsQuery.error]);
+
+  const insights = commentsQuery.data?.payload;
+
+  return (
+    <TabScreen
+      contentContainerStyle={
+        !youtubeConnection.isConnected || commentsQuery.isLoading
+          ? styles.fullHeightContent
+          : undefined
+      }
+    >
+      <View style={styles.section}>
+        <SectionHeader
+          title="Comments"
+          subtitle="Hear your audience clearly and spot what matters"
+        />
+
+        {!youtubeConnection.isConnected ? (
+          <EmptyState
+            icon={Youtube}
+            title="Connect YouTube"
+            description="Connect and sync to generate comment insights."
+          />
+        ) : commentsQuery.isLoading ? null : insights ? (
+          <Card style={styles.pulseCard}>
+            <LinearGradient
+              colors={colors.gradients.card}
+              style={styles.pulseGradient}
+            >
+              <View style={styles.pulseHeader}>
+                <View style={styles.pulseIconWrap}>
+                  <Lightbulb size={18} color={colors.secondary} />
+                </View>
+                <Badge text="AI summary" variant="active" />
+              </View>
+              <Text style={styles.pulseTitle}>Comment pulse</Text>
+              <Text style={styles.pulseText}>{insights.pulse}</Text>
+            </LinearGradient>
+          </Card>
+        ) : (
+          <EmptyState
+            icon={Lightbulb}
+            title="No comment pulse yet"
+            description="Comment insights will appear after analysis is ready."
+          />
+        )}
+      </View>
+
+      {youtubeConnection.isConnected && commentsQuery.isLoading ? (
+        <View style={styles.loadingState}>
+          <LoadingState
+            title="Analyzing comments"
+            descriptions={[
+              "Reading recent comments...",
+              "Grouping audience themes...",
+              "Generating comment insights...",
+            ]}
+          />
+        </View>
+      ) : null}
+
+      {!commentsQuery.isLoading ? (
+        <>
+          <View style={styles.section}>
+            <SectionHeader
+              title="Top Themes"
+              subtitle="What people keep bringing up most"
+            />
+            {(insights?.topThemes ?? []).length > 0 ? (
+              <View style={styles.stack}>
+                {(insights?.topThemes ?? []).map((theme) => (
+                  <Card key={theme.id} style={styles.themeCard}>
+                    <View style={styles.themeHeader}>
+                      <View style={styles.themeTopRow}>
+                        <View style={styles.themeIconWrap}>
+                          <MessageSquareMore size={16} color={colors.text} />
+                        </View>
+                        <View style={styles.themeCopy}>
+                          <Text style={styles.themeTitle}>{theme.title}</Text>
+                          <View style={styles.themeBadgeWrap}>
+                            <Badge
+                              text={`${theme.count} comments`}
+                              variant="default"
+                            />
+                          </View>
+                        </View>
+                      </View>
+                      <Text style={styles.themeImplication}>
+                        {theme.implication}
+                      </Text>
+                    </View>
+                    <View style={styles.quoteList}>
+                      {theme.quotes.map((quote) => (
+                        <Text key={quote} style={styles.quoteText}>
+                          &quot;{quote}&quot;
+                        </Text>
+                      ))}
+                    </View>
+                  </Card>
+                ))}
+              </View>
+            ) : (
+              <EmptyState
+                icon={MessageSquareMore}
+                title="No themes yet"
+                description="Themes will appear once more comments are available."
+              />
+            )}
+          </View>
+
+          <View style={styles.section}>
+            <SectionHeader
+              title="Needs Attention"
+              subtitle="The issues worth responding to first"
+            />
+            {insights && insights.needsAttention.length > 0 ? (
+              <Card style={styles.attentionCard}>
+                {insights.needsAttention.map((theme) => (
+                  <View key={theme.id} style={styles.attentionRow}>
+                    <View style={styles.attentionCopy}>
+                      <View style={styles.attentionIconWrap}>
+                        <TriangleAlert size={16} color={colors.negative} />
+                      </View>
+                      <Text style={styles.attentionTitle}>{theme.title}</Text>
+                    </View>
+
+                    <Text style={styles.attentionText}>
+                      {theme.implication}
+                    </Text>
+                  </View>
+                ))}
+              </Card>
+            ) : (
+              <Card style={styles.calmCard}>
+                <Text style={styles.calmTitle}>
+                  Nothing urgent is standing out.
+                </Text>
+                <Text style={styles.calmText}>
+                  The current comments do not show a strong negative pattern
+                  right now.
+                </Text>
+              </Card>
+            )}
+          </View>
+        </>
+      ) : null}
+    </TabScreen>
+  );
+}
+
+const getStyles = (colors: AppColors) =>
+  StyleSheet.create({
+    fullHeightContent: {
+      flex: 1,
+    },
+    section: {
+      gap: SCREEN_CONTENT_GAP,
+    },
+    loadingState: {
+      flex: 1,
+      justifyContent: "center",
+    },
+    stack: {
+      gap: Spacing.l,
+    },
+    pulseCard: {
+      padding: 0,
+      overflow: "hidden",
+    },
+    pulseGradient: {
+      gap: Spacing.l,
+      padding: Spacing.xl,
+    },
+    pulseHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      gap: Spacing.m,
+    },
+    pulseIconWrap: {
+      width: 40,
+      height: 40,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.accentSoft,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    pulseTitle: {
+      color: colors.text,
+      fontSize: Typography.size.xl,
+      fontFamily: Typography.font.bold,
+    },
+    pulseText: {
+      color: colors.textSecondary,
+      fontSize: Typography.size.l,
+      fontFamily: Typography.font.medium,
+    },
+    themeCard: {
+      gap: Spacing.m,
+      backgroundColor: colors.backgroundElevated,
+    },
+    themeHeader: {
+      gap: Spacing.s,
+    },
+    themeTopRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: Spacing.m,
+    },
+    themeIconWrap: {
+      width: 38,
+      height: 38,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.cardSecondary,
+      borderWidth: 1,
+      borderColor: colors.border,
+      flexShrink: 0,
+    },
+    themeCopy: {
+      flex: 1,
+      minWidth: 0,
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "flex-start",
+      gap: Spacing.s,
+    },
+    themeTitle: {
+      flex: 1,
+      minWidth: 0,
+      flexShrink: 1,
+      color: colors.text,
+      fontSize: Typography.size.l,
+      fontFamily: Typography.font.bold,
+    },
+    themeBadgeWrap: {
+      flexShrink: 0,
+    },
+    themeImplication: {
+      flexShrink: 1,
+      color: colors.textSecondary,
+      fontSize: Typography.size.m,
+      fontFamily: Typography.font.regular,
+    },
+    quoteList: {
+      gap: 8,
+    },
+    quoteText: {
+      flexShrink: 1,
+      color: colors.textMuted,
+      fontSize: Typography.size.m,
+      fontFamily: Typography.font.regular,
+    },
+    attentionCard: {
+      gap: Spacing.l,
+      backgroundColor: colors.backgroundElevated,
+    },
+    attentionRow: {
+      width: "100%",
+      alignItems: "flex-start",
+      gap: Spacing.s,
+    },
+    attentionIconWrap: {
+      width: 38,
+      height: 38,
+      borderRadius: 14,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: colors.cardSecondary,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    attentionCopy: {
+      width: "100%",
+      minWidth: 0,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: Spacing.m,
+    },
+    attentionTitle: {
+      flex: 1,
+      minWidth: 0,
+      flexShrink: 1,
+      color: colors.text,
+      fontSize: Typography.size.l,
+      fontFamily: Typography.font.semibold,
+    },
+    attentionText: {
+      width: "100%",
+      flexShrink: 1,
+      color: colors.textSecondary,
+      fontSize: Typography.size.m,
+      fontFamily: Typography.font.regular,
+    },
+    calmCard: {
+      gap: 8,
+      backgroundColor: colors.backgroundElevated,
+    },
+    calmTitle: {
+      color: colors.text,
+      fontSize: Typography.size.l,
+      fontFamily: Typography.font.bold,
+    },
+    calmText: {
+      color: colors.textSecondary,
+      fontSize: Typography.size.m,
+      fontFamily: Typography.font.regular,
+    },
+  });

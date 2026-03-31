@@ -1,4 +1,4 @@
-import { Colors } from "@/constants/Colors";
+import { useAppTheme } from "@/context/ThemeContext";
 import * as Haptics from "expo-haptics";
 import React from "react";
 import {
@@ -41,6 +41,7 @@ export function Switch({
   accessibilityHint,
   accessible,
 }: CustomSwitchProps) {
+  const { colors } = useAppTheme();
   const translateX = React.useRef(
     new Animated.Value(value ? getTranslateX() : 0),
   ).current;
@@ -60,13 +61,11 @@ export function Switch({
   };
 
   const trackColors = {
-    false: "#767577",
-    true: Colors.primary,
-    ...trackColor,
+    false: trackColor?.false ?? colors.accentStrong,
+    true: trackColor?.true ?? colors.primary,
   };
 
-  const resolvedThumbColor =
-    thumbColor || (value ? Colors.white : "#f4f3f4");
+  const resolvedThumbColor = thumbColor || colors.white;
 
   return (
     <Pressable
@@ -77,7 +76,11 @@ export function Switch({
       accessibilityLabel={accessibilityLabel}
       accessibilityHint={accessibilityHint}
       accessible={accessible}
-      style={[styles.container, disabled && styles.disabled, style as ViewStyle]}
+      style={[
+        styles.container,
+        disabled && styles.disabled,
+        style as ViewStyle,
+      ]}
     >
       <Animated.View
         style={[

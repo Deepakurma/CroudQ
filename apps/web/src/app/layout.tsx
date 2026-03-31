@@ -69,44 +69,24 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'Bunkezy - Living Made Easy',
+  title: 'CroudQ',
   icons: {
     icon: '/favicon.ico'
   },
-  description:
-    'Find a hostel or rental that fits, apply fast, and settle in without the usual hassle.',
-  keywords: [
-    'hostels',
-    'apartments',
-    'co-living',
-    'boys hostel',
-    'girls hostel',
-    'pg',
-    'pgs near me',
-    'hostels near me',
-    'rentals near me',
-    'rooms for rent',
-    'apartments for rent',
-    'student housing',
-    'shared accommodation',
-    'rental application',
-    'tenant portal',
-    'move in checklist'
-  ],
-  authors: [{ name: 'Bunkezy' }],
-  creator: 'Bunkezy',
-  publisher: 'Bunkezy',
+  description: 'CroudQ web platform.',
+  keywords: ['croudq', 'analytics', 'creator tools'],
+  authors: [{ name: 'CroudQ' }],
+  creator: 'CroudQ',
+  publisher: 'CroudQ',
   openGraph: {
-    title: 'Bunkezy',
-    description:
-      'Find a hostel or rental that fits, apply fast, and settle in without the usual hassle.',
+    title: 'CroudQ',
+    description: 'CroudQ web platform.',
     type: 'website'
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Bunkezy - Living Made Easy',
-    description:
-      'Find a hostel or rental that fits, apply fast, and settle in without the usual hassle.'
+    title: 'CroudQ',
+    description: 'CroudQ web platform.'
   },
   robots: {
     index: true,

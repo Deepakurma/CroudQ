@@ -1,93 +1,130 @@
-import { ShieldCheck } from 'lucide-react';
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy | CroudQ',
+  description: 'How CroudQ collects, uses, and protects your data.'
+};
+
+const lastUpdated = 'March 27, 2026';
 
 export default function PrivacyPolicyPage() {
   return (
-    <main className="mx-auto w-full max-w-7xl">
-      <div className="space-y-8">
-        <div className="flex items-center gap-3">
-          <div className="bg-primary/10 inline-flex h-12 w-12 items-center justify-center rounded-2xl sm:h-14 sm:w-14">
-            <ShieldCheck className="text-primary h-6 w-6 shrink-0 sm:h-8 sm:w-8" />
-          </div>
-          <div className="space-y-0.5 sm:space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Privacy Policy</h1>{' '}
-            <p className="text-muted-foreground text-sm">
-              Last updated:{' '}
-              {new Date().toLocaleDateString('en-US', {
-                month: 'long',
-                day: 'numeric',
-                year: 'numeric'
-              })}
-            </p>
-          </div>
+    <section className="bg-background text-foreground px-4 py-4 sm:px-6 sm:py-8">
+      <div className="mx-auto w-full max-w-4xl space-y-8">
+        <div className="space-y-2">
+          <h1 className="text-4xl leading-tight font-black tracking-tight sm:text-5xl">
+            Privacy Policy
+          </h1>
+          <p className="text-muted-foreground text-sm">Last updated: {lastUpdated}</p>
+          <p className="text-foreground/80 max-w-3xl text-base leading-relaxed font-medium">
+            This policy explains what data CroudQ collects, how we use it, and the choices you have.
+            CroudQ is built to help creators review content performance, audience response, and
+            AI-assisted recommendations.
+          </p>
         </div>
 
-        <div className="prose prose-slate dark:prose-invert text-muted-foreground max-w-none space-y-6">
-          <section className="space-y-3">
-            <h2 className="text-foreground text-xl font-semibold tracking-tight sm:text-2xl">
-              1. Information We Collect
-            </h2>
-            <p className="leading-relaxed">
-              When you use Bunkezy, we collect information that helps us provide and improve our
-              services. This includes:
-            </p>
-            <ul className="mt-2 list-disc space-y-1 pl-5">
-              <li>Contact information (name, email address, phone number)</li>
-              <li>Identity verification documents (as required by local authorities)</li>
-              <li>Payment and billing information</li>
-              <li>Usage data and preferences when you interact with our platform</li>
-            </ul>
-          </section>
+        <div className="border-border bg-card space-y-6 rounded-2xl border p-6 sm:p-8">
+          <PolicySection
+            title="1. Data We Collect"
+            body={[
+              'Account details such as your name, email, and authentication identifiers.',
+              'Connected channel data you authorize us to access (including YouTube channel and content performance metrics).',
+              'Audience feedback signals, such as comment text and engagement-related metadata, when available through connected platforms.',
+              'Product usage and device data (for example, pages viewed, feature usage, browser type, IP address, and timestamps).',
+              'Support and communication data when you contact us.'
+            ]}
+          />
 
-          <section className="space-y-3">
-            <h2 className="text-foreground text-xl font-semibold tracking-tight sm:text-2xl">
-              2. How We Use Your Information
-            </h2>
-            <p className="leading-relaxed">
-              We primarily use your information to manage your accommodation bookings, process
-              payments, and ensure a safe living environment. Specifically, we use it to:
-            </p>
-            <ul className="mt-2 list-disc space-y-1 pl-5">
-              <li>Communicate with you regarding bookings, updates, or support queries</li>
-              <li>Verify your identity for security and compliance purposes</li>
-              <li>Personalize your experience and improve our platform</li>
-              <li>Send important notices regarding terms and policies</li>
-            </ul>
-          </section>
+          <PolicySection
+            title="2. How We Use Data"
+            body={[
+              'To provide and maintain CroudQ features.',
+              'To generate analytics views and AI-assisted suggestions inside the app.',
+              'To improve product reliability, quality, and safety.',
+              'To detect abuse, prevent fraud, and enforce our terms.',
+              'To communicate important service updates and support responses.'
+            ]}
+          />
 
-          <section className="space-y-3">
-            <h2 className="text-foreground text-xl font-semibold tracking-tight sm:text-2xl">
-              3. Data Sharing and Security
-            </h2>
-            <p className="leading-relaxed">
-              We do not sell your personal data. We only share information with third parties when
-              necessary to provide our services, such as payment processors or when required by law
-              enforcement. We implement industry-standard security measures, including encryption
-              and strict access controls, to protect your data from unauthorized access.
-            </p>
-          </section>
+          <PolicySection
+            title="3. AI-Assisted Features"
+            body={[
+              'CroudQ uses your connected content and performance context to generate suggestions and summaries.',
+              'AI outputs are assistive and should be reviewed by you before publishing or business decisions.',
+              'We do not claim AI outputs are always complete, accurate, or suitable for every use case.'
+            ]}
+          />
 
-          <section className="space-y-3">
-            <h2 className="text-foreground text-xl font-semibold tracking-tight sm:text-2xl">
-              4. Your Rights
-            </h2>
-            <p className="leading-relaxed">
-              You have the right to access, correct, or request deletion of your personal
-              information. You can manage certain preferences through your account settings or by
-              contacting our support team.
-            </p>
-          </section>
+          <PolicySection
+            title="4. Sharing of Data"
+            body={[
+              'We do not sell your personal data.',
+              'We may share data with service providers who help us operate hosting, analytics, customer support, or infrastructure under contractual safeguards.',
+              'If you connect third-party platforms, data handling is also subject to those platform terms and policies.',
+              'We may disclose information when required by law or to protect legal rights and user safety.'
+            ]}
+          />
 
-          <section className="space-y-3">
-            <h2 className="text-foreground text-xl font-semibold tracking-tight sm:text-2xl">
-              5. Contact Us
-            </h2>
-            <p className="leading-relaxed">
-              If you have any questions about this Privacy Policy or how we handle your data, please
-              contact us at support@bunkezy.com.
-            </p>
-          </section>
+          <PolicySection
+            title="5. Data Retention"
+            body={[
+              'We retain data while your account is active and as needed to provide the service.',
+              'We may keep limited records for security, legal, or compliance reasons.',
+              'When deletion is requested, we remove or anonymize data unless retention is legally required.'
+            ]}
+          />
+
+          <PolicySection
+            title="6. Your Choices"
+            body={[
+              'You can disconnect linked channels from your account settings.',
+              'You can request access, correction, or deletion of your data by contacting us.',
+              'You can opt out of non-essential product messages when those controls are available.'
+            ]}
+          />
+
+          <PolicySection
+            title="7. Security"
+            body={[
+              'We use reasonable technical and organizational safeguards to protect data.',
+              'No system is perfectly secure, but we continuously improve controls to reduce risk.'
+            ]}
+          />
+
+          <PolicySection
+            title="8. Children’s Privacy"
+            body={[
+              'CroudQ is not intended for children under 13. If we learn that data from a child under 13 was collected, we will take steps to delete it.'
+            ]}
+          />
+
+          <PolicySection
+            title="9. Policy Updates"
+            body={[
+              'We may update this policy as our product or legal obligations change.',
+              'If changes are material, we will update the date above and provide notice where appropriate.'
+            ]}
+          />
+
+          <PolicySection
+            title="10. Contact"
+            body={['For privacy questions or requests, contact us at hello@croudq.app.']}
+          />
         </div>
       </div>
-    </main>
+    </section>
+  );
+}
+
+function PolicySection({ title, body }: { title: string; body: string[] }) {
+  return (
+    <div className="space-y-3">
+      <h2 className="text-xl font-bold tracking-tight sm:text-2xl">{title}</h2>
+      <ul className="text-foreground/85 space-y-2 text-sm leading-relaxed font-medium sm:text-base">
+        {body.map((point) => (
+          <li key={point}>{point}</li>
+        ))}
+      </ul>
+    </div>
   );
 }

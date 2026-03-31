@@ -1,106 +1,125 @@
+import { AlertCircle, CheckCircle2, Info } from "lucide-react-native";
 import React from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { CheckCircle, AlertCircle, Info } from "lucide-react-native";
-import { BaseToastProps, ToastConfig } from "react-native-toast-message";
-import { LinearGradient } from "expo-linear-gradient";
+import { StyleSheet, Text, View } from "react-native";
+import type { BaseToastProps, ToastConfig } from "react-native-toast-message";
 
-import { Colors } from "@/constants/Colors";
+import { darkColors } from "@/constants/Colors";
 import { CardShadow } from "@/constants/Shadows";
-import { Typography } from "@/constants/Typography";
 import { Spacing } from "@/constants/Spacing";
+import { Typography } from "@/constants/Typography";
 
-export const toastConfig: ToastConfig = {
-  success: ({ text1, text2 }: BaseToastProps) => (
-    <LinearGradient
-      colors={["#F3FBF7", "#EAF7F0", "#E1F2E8"]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={[styles.container, styles.gradientToast]}
-    >
-      <CheckCircle size={18} color="#29be38" />
-      <View style={styles.textWrap}>
-        {text1 ? <Text style={styles.successTitle}>{text1}</Text> : null}
-        {text2 ? <Text style={styles.subtitle}>{text2}</Text> : null}
-      </View>
-    </LinearGradient>
-  ),
+type ToastTone = "success" | "error" | "info";
 
-  error: ({ text1, text2 }: BaseToastProps) => (
-    <LinearGradient
-      colors={["#FDF4F4", "#FBECEC", "#F9E3E3"]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={[styles.container, styles.gradientToast]}
-    >
-      <AlertCircle size={18} color="#f00c0c" />
-      <View style={styles.textWrap}>
-        {text1 ? <Text style={styles.errorTitle}>{text1}</Text> : null}
-        {text2 ? <Text style={styles.subtitle}>{text2}</Text> : null}
-      </View>
-    </LinearGradient>
-  ),
-
-  info: ({ text1, text2 }: BaseToastProps) => (
-    <LinearGradient
-      colors={["#F5F9FF", "#EDF4FF", "#E4EEFF"]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={[styles.container, styles.gradientToast]}
-    >
-      <Info size={18} color={Colors.primary} />
-      <View style={styles.textWrap}>
-        {text1 ? <Text style={styles.infoTitle}>{text1}</Text> : null}
-        {text2 ? <Text style={styles.subtitle}>{text2}</Text> : null}
-      </View>
-    </LinearGradient>
-  ),
+type ToastCardProps = BaseToastProps & {
+  tone: ToastTone;
 };
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 14,
-    borderRadius: Spacing.m,
-    marginHorizontal: 16,
-    backgroundColor: Colors.white,
-    borderWidth: 1,
-    borderColor: Colors.cardBorder,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
+const hexToRgba = (hex: string, alpha: number) => {
+  const normalized = hex.replace("#", "");
+  if (normalized.length !== 6) {
+    return hex;
+  }
+
+  const value = Number.parseInt(normalized, 16);
+  const r = (value >> 16) & 255;
+  const g = (value >> 8) & 255;
+  const b = value & 255;
+
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+function ToastCard({ text1, text2, tone }: ToastCardProps) {
+  const styles = getStyles();
+  const toneStyles = getToneStyles(tone);
+  const Icon = tone === "success" ? CheckCircle2 : tone === "error" ? AlertCircle : Info;
+
+  return (
+    <View style={[styles.container, { borderColor: toneStyles.borderColor }]}>
+      <View
+        style={[
+          styles.iconWrap,
+          {
+            backgroundColor: toneStyles.iconBackground,
+            borderColor: toneStyles.iconBorder,
+          },
+        ]}
+      >
+        <Icon size={16} color={toneStyles.iconColor} />
+      </View>
+
+      <View style={styles.textWrap}>
+        {text1 ? <Text style={styles.title}>{text1}</Text> : null}
+        {text2 ? <Text style={styles.subtitle}>{text2}</Text> : null}
+      </View>
+    </View>
+  );
+}
+
+const getToneStyles = (tone: ToastTone) => {
+  const accentColor =
+    tone === "success"
+      ? darkColors.success
+      : tone === "error"
+        ? darkColors.error
+        : darkColors.info;
+
+  return {
+    borderColor: hexToRgba(accentColor, 0.28),
+    iconBackground: hexToRgba(accentColor, 0.14),
+    iconBorder: hexToRgba(accentColor, 0.22),
+    iconColor: accentColor,
+  };
+};
+
+const getStyles = () =>
+  StyleSheet.create({
+    container: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: Spacing.m,
+      marginHorizontal: Spacing.l,
+      paddingHorizontal: Spacing.l,
+      paddingVertical: Spacing.m,
+      borderRadius: 22,
+      borderWidth: 1,
+      backgroundColor: darkColors.backgroundElevated,
+      ...CardShadow,
+      shadowColor: "#000",
+      shadowOpacity: 0.18,
+      shadowRadius: 18,
+      shadowOffset: { width: 0, height: 10 },
+      elevation: 8,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    ...CardShadow,
-    elevation: 5,
-  },
-  gradientToast: {
-    borderWidth: 0,
-  },
-  textWrap: {
-    marginLeft: 10,
-    flex: 1,
-  },
-  infoTitle: {
-    fontFamily: Typography.font.medium,
-    fontSize: 14,
-    color: Colors.primary,
-  },
-  subtitle: {
-    fontFamily: Typography.font.regular,
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  successTitle: {
-    fontFamily: Typography.font.medium,
-    fontSize: 14,
-    color: "#29be38",
-  },
-  errorTitle: {
-    fontFamily: Typography.font.medium,
-    fontSize: 14,
-    color: "#f00c0c",
-  },
-});
+    iconWrap: {
+      width: 34,
+      height: 34,
+      borderRadius: 12,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      flexShrink: 0,
+    },
+    textWrap: {
+      flex: 1,
+      gap: 2,
+    },
+    title: {
+      color: darkColors.text,
+      fontSize: Typography.size.m,
+      lineHeight: Typography.lineHeight.m,
+      fontFamily: Typography.font.semibold,
+    },
+    subtitle: {
+      color: darkColors.textSecondary,
+      fontSize: Typography.size.s,
+      lineHeight: Typography.lineHeight.s,
+      fontFamily: Typography.font.medium,
+    },
+  });
+
+export const toastConfig: ToastConfig = {
+  success: (props) => <ToastCard {...props} tone="success" />,
+  error: (props) => <ToastCard {...props} tone="error" />,
+  info: (props) => <ToastCard {...props} tone="info" />,
+};
+

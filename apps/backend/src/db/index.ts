@@ -1,7 +1,7 @@
 import { SQL } from "bun";
 import { drizzle } from "drizzle-orm/bun-sql";
 import { logger } from "../fastify";
-import * as schema from "./schema/index";
+import * as schema from "./schema";
 
 import type { SQLOptions } from "bun";
 import type { Logger } from "drizzle-orm/logger";
@@ -36,9 +36,11 @@ export const conn =
 
 if (process.env.NODE_ENV !== "production") globalForDb.conn = conn;
 
+const isDevelopment = process.env.NODE_ENV === "development";
+
 export const db = drizzle(conn, {
   schema,
-  logger: new CustomDbLogger(),
+  logger: isDevelopment ? new CustomDbLogger() : false,
   casing: "snake_case",
 });
-export * from "./schema/index";
+export * from "./schema";

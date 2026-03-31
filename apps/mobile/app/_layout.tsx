@@ -5,40 +5,35 @@ import {
   Outfit_700Bold,
   useFonts,
 } from "@expo-google-fonts/outfit";
-import { BottomSheetModalProvider } from "@gorhom/bottom-sheet";
 import {
   DarkTheme,
   DefaultTheme,
-  ThemeProvider,
+  ThemeProvider as NavigationThemeProvider,
 } from "@react-navigation/native";
-import { Redirect, Stack, useSegments } from "expo-router";
+import { QueryClientProvider } from "@tanstack/react-query";
+import * as ExpoLinking from "expo-linking";
+import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
-import { ReactNode, useEffect, useState } from "react";
+import { useEffect } from "react";
+import { View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 import "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-
-import { toastConfig } from "@/components/ui/ToastConfig";
-import {
-  AuthProvider,
-  useAuth,
-  getGlobalAuthToken,
-  globalLogout,
-} from "@/context/AuthContext";
-import { ResidentProvider } from "@/context/ResidentContext";
-import { useColorScheme } from "@/hooks/use-color-scheme";
-import { getBaseUrl, trpc } from "@/utils/api";
-import {
-  QueryCache,
-  QueryClient,
-  QueryClientProvider,
-} from "@tanstack/react-query";
-import { httpLink } from "@trpc/client";
 import Toast from "react-native-toast-message";
 
+import { toastConfig } from "@/components/ui/ToastConfig";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
+import {
+  ThemeProvider as AppThemeProvider,
+  useAppTheme,
+} from "@/context/ThemeContext";
+import { queryClient } from "@/utils/api";
+
+void SplashScreen.preventAutoHideAsync();
+
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   const [loaded] = useFonts({
     Outfit_400Regular,
     Outfit_500Medium,
@@ -46,113 +41,92 @@ export default function RootLayout() {
     Outfit_700Bold,
   });
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  const [queryClient] = useState(
-    () =>
-      new QueryClient({
-        queryCache: new QueryCache({
-          onError: (error: any) => {
-            if (
-              error?.data?.httpStatus === 401 ||
-              error?.shape?.code === -32001
-            ) {
-              console.log("Session expired, logging out...");
-              globalLogout();
-              Toast.show({
-                type: "error",
-                text1: "Session Expired",
-                text2: "Please login again.",
-              });
-            }
-          },
-        }),
-        defaultOptions: {
-          queries: {
-            retry: false,
-          },
-          mutations: {
-            retry: false,
-          },
-        },
-      }),
-  );
-
-  const [trpcClient] = useState(() =>
-    trpc.createClient({
-      links: [
-        httpLink({
-          url: `${getBaseUrl()}/trpc`,
-          async headers() {
-            const token = await getGlobalAuthToken();
-            return {
-              authorization: token ? `Bearer ${token}` : "",
-            };
-          },
-        }),
-      ],
-    }),
-  );
-
   if (!loaded) {
     return null;
   }
 
   return (
     <>
-      <AuthProvider>
-        <trpc.Provider client={trpcClient} queryClient={queryClient}>
-          <QueryClientProvider client={queryClient}>
-            <ResidentProvider>
-              <AuthBootstrapGate>
-                <GestureHandlerRootView style={{ flex: 1 }}>
-                  <BottomSheetModalProvider>
-                    <SafeAreaProvider>
-                      <ThemeProvider
-                        value={colorScheme === "dark" ? DarkTheme : DefaultTheme}
-                      >
-                        <Stack initialRouteName="login" screenOptions={{ headerShown: false }}>
-                          <Stack.Screen name="index" />
-                          <Stack.Screen name="complaint" />
-                          <Stack.Screen name="receipts" />
-                        </Stack>
-                        <StatusBar style="auto" />
-                      </ThemeProvider>
-                    </SafeAreaProvider>
-                  </BottomSheetModalProvider>
-                </GestureHandlerRootView>
-              </AuthBootstrapGate>
-            </ResidentProvider>
-          </QueryClientProvider>
-        </trpc.Provider>
-      </AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <AppThemeProvider>
+            <AppShell />
+          </AppThemeProvider>
+        </AuthProvider>
+      </QueryClientProvider>
       <Toast config={toastConfig} />
     </>
   );
 }
 
-function AuthBootstrapGate({ children }: { children: ReactNode }) {
-  const { isLoading, isAuthenticated, postLoginInitializing } = useAuth();
-  const segments = useSegments();
-  const firstSegment = segments[0] ?? "";
-  const isPublicRoute =
-    firstSegment === "login" || firstSegment === "verify-otp";
+function AppShell() {
+  const { isDark, colors } = useAppTheme();
+  const { handleYoutubeRedirect, isLoading, isAuthenticated } = useAuth();
 
-  if (isLoading) {
-    return null;
-  }
+  useEffect(() => {
+    const handleInitialUrl = async () => {
+      const initialUrl = await ExpoLinking.getInitialURL();
+      if (initialUrl) {
+        await handleYoutubeRedirect(initialUrl);
+      }
+    };
 
-  if (!isAuthenticated && !isPublicRoute) {
-    return <Redirect href="/login" />;
-  }
+    void handleInitialUrl();
 
-  if (isAuthenticated && isPublicRoute && !postLoginInitializing) {
-    return <Redirect href="/" />;
-  }
+    const subscription = ExpoLinking.addEventListener("url", ({ url }) => {
+      void handleYoutubeRedirect(url);
+    });
 
-  return <>{children}</>;
+    return () => {
+      subscription.remove();
+    };
+  }, [handleYoutubeRedirect]);
+
+  useEffect(() => {
+    if (!isLoading) {
+      void SplashScreen.hideAsync();
+    }
+  }, [isLoading]);
+
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <KeyboardProvider>
+        <SafeAreaProvider>
+          <NavigationThemeProvider value={isDark ? DarkTheme : DefaultTheme}>
+            <View style={{ flex: 1, backgroundColor: colors.background }}>
+              {!isLoading ? (
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: colors.background },
+                  }}
+                >
+                  <Stack.Protected guard={!isAuthenticated}>
+                    <Stack.Screen name="login" />
+                    <Stack.Screen name="signup" />
+                    <Stack.Screen name="forgot-password" />
+                    <Stack.Screen name="reset-password" />
+                  </Stack.Protected>
+
+                  <Stack.Protected guard={isAuthenticated}>
+                    <Stack.Screen name="(tabs)" />
+                    <Stack.Screen name="connect-account" />
+                    <Stack.Screen name="auth/youtube" />
+                    <Stack.Screen
+                      name="videos/[id]"
+                      options={{
+                        presentation: "card",
+                        animation: "slide_from_right",
+                      }}
+                    />
+                  </Stack.Protected>
+                </Stack>
+              ) : null}
+              <StatusBar style={isDark ? "light" : "dark"} />
+            </View>
+          </NavigationThemeProvider>
+        </SafeAreaProvider>
+      </KeyboardProvider>
+    </GestureHandlerRootView>
+  );
 }

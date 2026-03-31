@@ -58,6 +58,6 @@ export function SkeletonLoader({
 
 const styles = StyleSheet.create({
   skeleton: {
-    backgroundColor: Colors.border,
+    backgroundColor: Colors.skeleton,
   },
 });

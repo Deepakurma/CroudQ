@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import Fastify from "fastify";
 
 const app = Fastify({
+    maxParamLength: 2500,
     logger:
         process.env.NODE_ENV === "production"
             ? true
