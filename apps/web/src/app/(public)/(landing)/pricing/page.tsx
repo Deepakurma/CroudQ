@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 
 import { CheckCircle2, CircleAlert, Loader2, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
@@ -308,5 +308,14 @@ function PricingContent({ user }: { user: AuthUser }) {
 }
 
 export default function PricingPage() {
-  return <CreatorWebAuthGuard>{(user) => <PricingContent user={user} />}</CreatorWebAuthGuard>;
+  return (
+    <Suspense
+      fallback={
+        <div className="text-muted-foreground flex min-h-[60dvh] w-full items-center justify-center gap-2 px-4 text-center text-sm font-medium">
+          <Loader2 className="size-4 animate-spin" /> Loading pricing...
+        </div>
+      }>
+      <CreatorWebAuthGuard>{(user) => <PricingContent user={user} />}</CreatorWebAuthGuard>
+    </Suspense>
+  );
 }
