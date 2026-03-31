@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import { toast } from 'sonner';
@@ -11,9 +11,19 @@ import { Label } from '~/shared/shadcn/label';
 
 import { trpcClient } from '~/utils/trpc';
 
-import type { FormEvent } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 
-export default function AdminResetPasswordPage() {
+function ResetPageShell({ children }: { children: ReactNode }) {
+  return (
+    <main className="bg-background text-foreground flex min-h-dvh items-center justify-center px-4 py-8">
+      <section className="border-border bg-card w-full max-w-md space-y-6 rounded-2xl border p-6 sm:p-8">
+        {children}
+      </section>
+    </main>
+  );
+}
+
+function AdminResetPasswordPageContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
 
@@ -75,69 +85,75 @@ export default function AdminResetPasswordPage() {
   const isResetFlow = Boolean(token);
 
   return (
-    <main className="bg-background text-foreground flex min-h-dvh items-center justify-center px-4 py-8">
-      <section className="border-border bg-card w-full max-w-md space-y-6 rounded-2xl border p-6 sm:p-8">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">
-            {isResetFlow ? 'Set New Password' : 'Reset Admin Password'}
-          </h1>
-          <p className="text-muted-foreground text-sm">
-            {isResetFlow
-              ? 'Enter your new password to complete reset.'
-              : 'Enter your admin email to receive a reset link.'}
-          </p>
-        </div>
+    <ResetPageShell>
+      <div className="space-y-1">
+        <h1 className="text-2xl font-bold tracking-tight">
+          {isResetFlow ? 'Set New Password' : 'Reset Admin Password'}
+        </h1>
+        <p className="text-muted-foreground text-sm">
+          {isResetFlow
+            ? 'Enter your new password to complete reset.'
+            : 'Enter your admin email to receive a reset link.'}
+        </p>
+      </div>
 
-        {isResetFlow ? (
-          <form onSubmit={handleResetPassword} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="password">New Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+      {isResetFlow ? (
+        <form onSubmit={handleResetPassword} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="password">New Password</Label>
+            <Input
+              id="password"
+              type="password"
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+            />
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-            </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">Confirm Password</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+            />
+          </div>
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Updating...' : 'Update Password'}
-            </Button>
-          </form>
-        ) : (
-          <form onSubmit={handleRequestReset} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? 'Updating...' : 'Update Password'}
+          </Button>
+        </form>
+      ) : (
+        <form onSubmit={handleRequestReset} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+          </div>
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Sending...' : 'Send Reset Link'}
-            </Button>
-          </form>
-        )}
-      </section>
-    </main>
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? 'Sending...' : 'Send Reset Link'}
+          </Button>
+        </form>
+      )}
+    </ResetPageShell>
+  );
+}
+
+export default function AdminResetPasswordPage() {
+  return (
+    <Suspense fallback={<ResetPageShell>Loading...</ResetPageShell>}>
+      <AdminResetPasswordPageContent />
+    </Suspense>
   );
 }
