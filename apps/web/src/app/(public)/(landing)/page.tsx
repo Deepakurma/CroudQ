@@ -129,7 +129,7 @@ const steps = [
     id: 'ITERATION',
     title: 'GROW WITH CONFIDENCE',
     sub: 'LESS NOISE, BETTER DECISIONS, STRONGER CONTENT',
-    copy: 'Spend less time overthinking dashboards and more time refining content based on clear audience feedback.',
+    copy: 'Spend less time second-guessing and more time refining content based on clear audience feedback.',
     bg: 'var(--secondary)',
     card: 'var(--accent)'
   }
