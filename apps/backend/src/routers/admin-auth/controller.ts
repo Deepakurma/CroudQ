@@ -5,7 +5,7 @@ import {
   loginAdminWithEmail,
   logoutSession,
   requestAdminPasswordReset,
-  refreshAuthSession,
+  refreshAdminAuthSession,
   resetAdminPassword,
 } from "../../modules/auth/controller";
 import { enforceRateLimit } from "../../modules/rate-limit/controller";
@@ -123,7 +123,7 @@ export const adminAuthRouter = createTRPCRouter({
       });
     }
 
-    const session = await refreshAuthSession(
+    const session = await refreshAdminAuthSession(
       { refreshToken },
       {
         ipAddress: getRequestIp(ctx.req),
@@ -134,7 +134,6 @@ export const adminAuthRouter = createTRPCRouter({
       },
     );
 
-    await assertUserIsAdmin(session.user.id);
     setAdminAuthCookies(ctx.res, session);
 
     return authUserSchema.parse(session.user);

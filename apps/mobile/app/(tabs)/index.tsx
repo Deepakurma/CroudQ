@@ -3,9 +3,9 @@ import { InsightCarousel } from "@/components/dashboard/InsightCarousel";
 import { OverviewGrid } from "@/components/dashboard/OverviewGrid";
 import { SentimentCard } from "@/components/dashboard/SentimentCard";
 import { SuggestionList } from "@/components/dashboard/SuggestionList";
-import { EmptyState } from "@/components/EmptyState";
 import { LoadingState } from "@/components/LoadingState";
 import { SCREEN_CONTENT_GAP } from "@/components/ui/AppScreen";
+import { AccessGateState } from "@/components/ui/AccessGateState";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { TabScreen } from "@/components/ui/TabScreen";
 import { AppColors } from "@/constants/Colors";
@@ -16,7 +16,13 @@ import { useAppTheme } from "@/context/ThemeContext";
 import { trpc } from "@/utils/api";
 import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle, Clock3, RefreshCw, Youtube } from "lucide-react-native";
+import {
+  AlertTriangle,
+  Clock3,
+  RefreshCw,
+  Sparkles,
+  Youtube,
+} from "lucide-react-native";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Toast from "react-native-toast-message";
@@ -32,6 +38,8 @@ export default function DashboardScreen() {
   const { colors } = useAppTheme();
   const {
     cancelAccountDeletion,
+    hasActiveSubscription,
+    openUpgradePage,
     user,
     youtubeConnection,
     connectYouTube,
@@ -45,9 +53,12 @@ export default function DashboardScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const styles = getStyles(colors, tabBarHeight);
   const scheduledDeletionAt = user?.scheduledDeletionAt ?? null;
+  const isEndedSubscription = user?.subscriptionState === "ended";
   const dashboardQuery = useQuery(
     trpc.insights.dashboard.queryOptions(undefined, {
-      enabled: Boolean(user?.id && youtubeConnection.isConnected),
+      enabled: Boolean(
+        user?.id && hasActiveSubscription && youtubeConnection.isConnected,
+      ),
       retry: false,
     }),
   );
@@ -79,14 +90,34 @@ export default function DashboardScreen() {
       <TabScreen
         bottomContentOffset={40}
         contentContainerStyle={[
-          !youtubeConnection.isConnected || dashboardQuery.isLoading
+          !hasActiveSubscription ||
+          !youtubeConnection.isConnected ||
+          dashboardQuery.isLoading
             ? styles.fullHeightContent
             : null,
         ]}
       >
         <GreetingHeader selectedPlatform={selectedHomePlatform} />
 
-        {scheduledDeletionAt ? (
+        {!hasActiveSubscription ? (
+          <AccessGateState
+            icon={Sparkles}
+            title={
+              isEndedSubscription
+                ? "Your Subscription has ended"
+                : "Subscribe to CroudQ Pro"
+            }
+            description={
+              isEndedSubscription
+                ? "Renew your plan and you're good to go again."
+                : "Subscribe to get access to your dashboard and performance insights."
+            }
+            buttonText={isEndedSubscription ? "Renew plan" : "Subscribe now"}
+            onPress={() => void openUpgradePage()}
+          />
+        ) : null}
+
+        {hasActiveSubscription && scheduledDeletionAt ? (
           <View style={styles.deletionBanner}>
             <View style={styles.deletionBannerHeader}>
               <View style={styles.deletionIconWrap}>
@@ -119,22 +150,15 @@ export default function DashboardScreen() {
           </View>
         ) : null}
 
-        {!youtubeConnection.isConnected ? (
-          <View style={styles.disconnectedState}>
-            <EmptyState
-              icon={Youtube}
-              title="Connect YouTube"
-              description="Connect your YouTube account to unlock dashboard, videos insights, and comments analysis."
-              style={styles.disconnectedEmptyState}
-            />
-            <Pressable
-              style={styles.connectButton}
-              onPress={() => void connectYouTube()}
-            >
-              <Text style={styles.connectButtonText}>Connect YouTube</Text>
-            </Pressable>
-          </View>
-        ) : dashboardQuery.isLoading ? (
+        {hasActiveSubscription && !youtubeConnection.isConnected ? (
+          <AccessGateState
+            icon={Youtube}
+            title="Connect YouTube"
+            description="Connect your YouTube account to unlock your dashboard and performance insights."
+            buttonText="Connect YouTube"
+            onPress={() => void connectYouTube()}
+          />
+        ) : hasActiveSubscription && dashboardQuery.isLoading ? (
           <View style={styles.loadingState}>
             <LoadingState
               title="Building your dashboard"
@@ -145,7 +169,7 @@ export default function DashboardScreen() {
               ]}
             />
           </View>
-        ) : (
+        ) : hasActiveSubscription ? (
           <>
             <View style={styles.section}>
               <SectionHeader
@@ -221,10 +245,10 @@ export default function DashboardScreen() {
               <View style={styles.lastSyncedLine} />
             </View>
           </>
-        )}
+        ) : null}
       </TabScreen>
 
-      {youtubeConnection.isConnected ? (
+      {hasActiveSubscription && youtubeConnection.isConnected ? (
         <View style={styles.syncWrap} pointerEvents="box-none">
           <Pressable
             style={[
@@ -320,38 +344,9 @@ const getStyles = (colors: AppColors, tabBarHeight: number) =>
     fullHeightContent: {
       flex: 1,
     },
-    disconnectedState: {
-      flex: 1,
-      justifyContent: "center",
-      alignItems: "center",
-      paddingBottom: 50,
-    },
     loadingState: {
       flex: 1,
       justifyContent: "center",
-    },
-    disconnectedEmptyState: {
-      flexGrow: 0,
-      justifyContent: "center",
-      width: "100%",
-    },
-    connectButton: {
-      paddingHorizontal: Spacing.xl,
-      paddingVertical: Spacing.m,
-      borderRadius: 24,
-      backgroundColor: colors.primary,
-      alignItems: "center",
-      justifyContent: "center",
-      shadowColor: "#000",
-      shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.16,
-      shadowRadius: 18,
-      elevation: 8,
-    },
-    connectButtonText: {
-      color: colors.white,
-      fontSize: Typography.size.m,
-      fontFamily: Typography.font.semibold,
     },
     lastSyncedRow: {
       flexDirection: "row",

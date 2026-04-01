@@ -19,7 +19,6 @@ import { useMutation } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import {
   AlertTriangle,
-  ArrowUpRight,
   BellRing,
   Check,
   ChevronDown,
@@ -30,7 +29,6 @@ import {
   Sun,
   MoonStar,
   PencilLine,
-  ShieldCheck,
   Trash2,
   Youtube,
 } from "lucide-react-native";
@@ -56,12 +54,16 @@ const formatDeletionDate = (value: string) =>
     year: "numeric",
   }).format(new Date(value));
 
+const getAvatarLetter = (
+  name: string | null | undefined,
+  email: string | null | undefined,
+) => (name?.trim().charAt(0) || email?.trim().charAt(0) || "U").toUpperCase();
+
 export default function SettingsScreen() {
   const { colors, mode, setMode } = useAppTheme();
   const {
     cancelAccountDeletion,
     logout,
-    openUpgradePage,
     requestAccountDeletion,
     updateProfile,
     user,
@@ -69,7 +71,6 @@ export default function SettingsScreen() {
     isYouTubeConnecting,
     connectYouTube,
     selectedHomePlatform,
-    setSelectedHomePlatform,
   } = useAuth();
   const router = useRouter();
   const styles = getStyles(colors);
@@ -278,6 +279,10 @@ export default function SettingsScreen() {
   const activeTheme = themeOptions.find((option) => option.id === mode);
   const scheduledDeletionAt = user?.scheduledDeletionAt ?? null;
   const isDeletionPending = Boolean(scheduledDeletionAt);
+  const displayName = user?.name?.trim() || "Your account";
+  const displayEmail = user?.email?.trim() || "Email unavailable";
+  const displayPlan = user?.tier?.trim() || "No active plan";
+  const avatarLetter = getAvatarLetter(user?.name, user?.email);
 
   const handleDeletionAction = async () => {
     setIsDeletionSubmitting(true);
@@ -303,15 +308,15 @@ export default function SettingsScreen() {
 
       <Card style={styles.profileCard}>
         <View style={styles.avatar}>
-          <Text style={styles.avatarText}>D</Text>
+          <Text style={styles.avatarText}>{avatarLetter}</Text>
         </View>
         <View style={styles.profileCopy}>
           <View style={{ gap: 2 }}>
-            <Text style={styles.name}>{user?.name ?? "Deepak"}</Text>
-            <Text style={styles.handle}>{user?.email ?? "Not available"}</Text>
+            <Text style={styles.name}>{displayName}</Text>
+            <Text style={styles.handle}>{displayEmail}</Text>
           </View>
 
-          <Text style={styles.plan}>{user?.tier ?? "CroudQ Pro"}</Text>
+          <Text style={styles.plan}>{displayPlan}</Text>
         </View>
         <Pressable
           style={styles.editButton}
@@ -323,90 +328,27 @@ export default function SettingsScreen() {
         </Pressable>
       </Card>
 
-      <Pressable style={styles.upgradeBanner} onPress={() => void openUpgradePage()}>
-        <View style={styles.upgradeCopy}>
-          <Text style={styles.upgradeEyebrow}>WEB ONLY</Text>
-          <Text style={styles.upgradeTitle}>Upgrade to CroudQ Pro</Text>
-          <Text style={styles.upgradeDescription}>
-            Continue securely in your browser without signing in again.
-          </Text>
-        </View>
-        <View style={styles.upgradeIconWrap}>
-          <ArrowUpRight size={18} color={colors.white} />
-        </View>
-      </Pressable>
-
       <Card style={styles.platformCard}>
         <View style={styles.platformSection}>
-          <FloatingDropdownMenu
-            align="right"
-            menuWidth={180}
-            renderTrigger={({ isOpen, toggle }) => (
-              <Pressable style={styles.platformTrigger} onPress={toggle}>
-                <View style={styles.platformCopy}>
-                  <View
-                    style={[
-                      styles.platformBadge,
-                      { backgroundColor: `${activePlatform.accent}20` },
-                    ]}
-                  >
-                    <activePlatform.Icon
-                      size={20}
-                      color={activePlatform.accent}
-                    />
-                  </View>
-                  <View style={styles.platformTextWrap}>
-                    <Text style={styles.platformTitle}>Currently Showing</Text>
-                    <Text style={styles.platformSubtitle}>
-                      Showing insights for {activePlatform.label}
-                    </Text>
-                  </View>
-                </View>
-                <ChevronDown
-                  size={20}
-                  color={colors.textSecondary}
-                  style={isOpen ? styles.chevronOpen : undefined}
-                />
-              </Pressable>
-            )}
-          >
-            {({ close }) => (
-              <View style={styles.platformOptions}>
-                {platformOptions.map((option) => {
-                  const isActive = option.id === selectedHomePlatform;
-
-                  return (
-                    <Pressable
-                      key={option.id}
-                      style={[
-                        styles.platformOption,
-                        isActive ? styles.platformOptionActive : null,
-                      ]}
-                      onPress={() => {
-                        void setSelectedHomePlatform(option.id);
-                        close();
-                      }}
-                    >
-                      <View
-                        style={[
-                          styles.platformOptionBadge,
-                          { backgroundColor: `${option.accent}20` },
-                        ]}
-                      >
-                        <option.Icon size={16} color={option.accent} />
-                      </View>
-                      <Text style={styles.platformOptionLabel}>
-                        {option.label}
-                      </Text>
-                      {isActive ? (
-                        <Check size={16} color={colors.text} />
-                      ) : null}
-                    </Pressable>
-                  );
-                })}
+          <View style={styles.platformTrigger}>
+            <View style={styles.platformCopy}>
+              <View
+                style={[
+                  styles.platformBadge,
+                  { backgroundColor: `${activePlatform.accent}20` },
+                ]}
+              >
+                <activePlatform.Icon size={20} color={activePlatform.accent} />
               </View>
-            )}
-          </FloatingDropdownMenu>
+              <View style={styles.platformTextWrap}>
+                <Text style={styles.platformTitle}>Currently Showing</Text>
+                <Text style={styles.platformSubtitle}>
+                  Showing insights for {activePlatform.label}
+                </Text>
+              </View>
+            </View>
+            <ChevronDown size={20} color={colors.textMuted} />
+          </View>
         </View>
       </Card>
 
@@ -490,13 +432,10 @@ export default function SettingsScreen() {
           onPress={openFeedbackDialog}
         />
         <SettingsRow
-          icon={ShieldCheck}
-          title="Privacy"
-          subtitle="Review permissions and exports"
-        />
-        <SettingsRow
           icon={isDeletionPending ? AlertTriangle : Trash2}
-          title={isDeletionPending ? "Account deletion pending" : "Delete account"}
+          title={
+            isDeletionPending ? "Account deletion pending" : "Delete account"
+          }
           subtitle={
             isDeletionPending
               ? `Your account will be deleted on ${formatDeletionDate(
@@ -536,9 +475,7 @@ export default function SettingsScreen() {
       <ConfirmationDialog
         visible={isDeleteDialogVisible}
         title={
-          isDeletionPending
-            ? "Cancel account deletion?"
-            : "Delete account?"
+          isDeletionPending ? "Cancel account deletion?" : "Delete account?"
         }
         description={
           isDeletionPending
@@ -723,46 +660,6 @@ const getStyles = (colors: AppColors) =>
       color: colors.secondary,
       fontSize: Typography.size.s,
       fontFamily: Typography.font.semibold,
-    },
-    upgradeBanner: {
-      padding: Spacing.l,
-      borderRadius: 24,
-      backgroundColor: colors.primary,
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      gap: Spacing.m,
-    },
-    upgradeCopy: {
-      flex: 1,
-      gap: 4,
-    },
-    upgradeEyebrow: {
-      color: "rgba(255,255,255,0.72)",
-      fontSize: Typography.size.xs,
-      fontFamily: Typography.font.semibold,
-      letterSpacing: 1,
-    },
-    upgradeTitle: {
-      color: colors.white,
-      fontSize: Typography.size.l,
-      fontFamily: Typography.font.bold,
-    },
-    upgradeDescription: {
-      color: "rgba(255,255,255,0.82)",
-      fontSize: Typography.size.s,
-      fontFamily: Typography.font.regular,
-      lineHeight: 20,
-    },
-    upgradeIconWrap: {
-      width: 42,
-      height: 42,
-      borderRadius: 21,
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: "rgba(255,255,255,0.14)",
-      borderWidth: 1,
-      borderColor: "rgba(255,255,255,0.12)",
     },
     list: {
       gap: 12,

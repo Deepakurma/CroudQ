@@ -4,6 +4,7 @@ export const adminDashboardOverviewSchema = z.object({
   totalCreators: z.number().int().nonnegative(),
   connectedCreators: z.number().int().nonnegative(),
   conversionRate: z.number().nonnegative(),
+  pendingRenewals: z.number().int().nonnegative(),
   totalFeedbacks: z.number().int().nonnegative(),
 });
 

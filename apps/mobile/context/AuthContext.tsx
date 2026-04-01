@@ -3,7 +3,13 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { registerAuthRefreshHandler, setAuthTokens, trpc } from "@/utils/api";
 import * as ExpoLinking from "expo-linking";
 import * as SecureStore from "expo-secure-store";
-import React, { createContext, useContext, useEffect, useRef, useState } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Linking } from "react-native";
 import Toast from "react-native-toast-message";
 
@@ -13,6 +19,7 @@ interface User {
   email: string;
   handle: string | null;
   tier: string | null;
+  subscriptionState: "active" | "ended" | "none";
   deletionRequestedAt: string | null;
   scheduledDeletionAt: string | null;
 }
@@ -43,6 +50,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  hasActiveSubscription: boolean;
   youtubeConnection: YoutubeConnection;
   selectedHomePlatform: HomePlatform;
   isYouTubeConnecting: boolean;
@@ -67,6 +75,7 @@ interface AuthContextType {
   openUpgradePage: () => Promise<void>;
   logout: () => Promise<void>;
   connectYouTube: () => Promise<void>;
+  disconnectYouTube: () => Promise<void>;
   syncYouTube: () => Promise<void>;
   setSelectedHomePlatform: (platform: HomePlatform) => Promise<void>;
   handleYoutubeRedirect: (url: string) => Promise<boolean>;
@@ -86,7 +95,7 @@ const defaultYoutubeConnection: YoutubeConnection = {
   lastSyncedAt: null,
 };
 
-const SYNC_COOLDOWN_MS = 10 * 60 * 1000;
+const SYNC_COOLDOWN_MS = 60 * 60 * 1000;
 
 const formatLastSyncedLabel = (value: string | null, now: number) => {
   if (!value) {
@@ -188,10 +197,7 @@ const getFriendlyYoutubeMessage = (message: string) => {
     return "Could not start the YouTube connection.";
   }
 
-  if (
-    message.includes("Could not load") ||
-    message.includes("not connected")
-  ) {
+  if (message.includes("Could not load") || message.includes("not connected")) {
     return "Could not load your YouTube connection.";
   }
 
@@ -203,11 +209,15 @@ const getFriendlyYoutubeMessage = (message: string) => {
     return "Could not sync your YouTube data right now.";
   }
 
+  if (message.includes("Could not disconnect")) {
+    return "Could not disconnect your YouTube account. Please try again.";
+  }
+
   if (
-    message.includes("available every 10 minutes") ||
+    message.includes("available every 1 hour") ||
     message.includes("every 10 mins")
   ) {
-    return "Sync is available every 10 minutes.";
+    return "Sync is available every 1 hour.";
   }
 
   if (message.includes("Could not connect")) {
@@ -221,10 +231,21 @@ const shouldClearSessionOnRefreshFailure = (message: string) =>
   message.includes("Refresh session is invalid or expired") ||
   message.includes("UNAUTHORIZED");
 
+const isLegacySession = (
+  session: AuthSession | LegacyAuthSession,
+): session is LegacyAuthSession =>
+  !("accessToken" in session && "refreshToken" in session);
+
+const shouldClearYoutubeConnectionState = (message: string) =>
+  message.includes("YouTube account is not connected") ||
+  message.includes("Not authenticated") ||
+  message.includes("UNAUTHORIZED");
+
 const AuthContext = createContext<AuthContextType>({
   user: null,
   isLoading: true,
   isAuthenticated: false,
+  hasActiveSubscription: false,
   youtubeConnection: defaultYoutubeConnection,
   selectedHomePlatform: "youtube",
   isYouTubeConnecting: false,
@@ -241,6 +262,7 @@ const AuthContext = createContext<AuthContextType>({
   openUpgradePage: async () => {},
   logout: async () => {},
   connectYouTube: async () => {},
+  disconnectYouTube: async () => {},
   syncYouTube: async () => {},
   setSelectedHomePlatform: async () => {},
   handleYoutubeRedirect: async () => false,
@@ -261,9 +283,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isYouTubeConnecting, setIsYouTubeConnecting] = useState(false);
   const [isYouTubeSyncing, setIsYouTubeSyncing] = useState(false);
   const [cooldownNow, setCooldownNow] = useState(() => Date.now());
-  const refreshSessionRunnerRef = useRef<(
-    refreshToken: string,
-  ) => Promise<AuthSession | null>>(async () => null);
+  const refreshSessionRunnerRef = useRef<
+    (refreshToken: string) => Promise<AuthSession | null>
+  >(async () => null);
+  const lastRefreshFailureWasInvalidRef = useRef(false);
   const loginMutation = useMutation(trpc.auth.login.mutationOptions());
   const signupMutation = useMutation(trpc.auth.signup.mutationOptions());
   const updateProfileMutation = useMutation(
@@ -288,6 +311,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const createUpgradeLinkMutation = useMutation(
     trpc.auth.createUpgradeLink.mutationOptions(),
   );
+  const disconnectYouTubeMutation = useMutation(
+    trpc.youtube.disconnect.mutationOptions(),
+  );
   const youtubeSyncMutation = useMutation(trpc.youtube.sync.mutationOptions());
   const isYouTubeSyncAvailable =
     youtubeConnection.isConnected &&
@@ -298,6 +324,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     youtubeConnection.lastSyncedAt,
     cooldownNow,
   );
+  const hasActiveSubscription = user?.subscriptionState === "active";
 
   useEffect(() => {
     if (!youtubeConnection.lastSyncedAt) {
@@ -321,14 +348,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem(HOME_PLATFORM_STORAGE_KEY, platform);
   };
 
-  const refreshYoutubeConnection = async () => {
+  const refreshYoutubeConnection = async ({
+    silent = false,
+  }: {
+    silent?: boolean;
+  } = {}) => {
     const token = await SecureStore.getItemAsync(STORAGE_KEY);
     if (!token) {
       return false;
     }
 
     try {
-      const payload = await queryClient.fetchQuery(trpc.youtube.data.queryOptions({}));
+      const payload = await queryClient.fetchQuery(
+        trpc.youtube.data.queryOptions({}),
+      );
 
       await persistYoutubeConnection({
         isConnected: true,
@@ -344,10 +377,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Could not load YouTube data";
-      await persistYoutubeConnection({
-        ...defaultYoutubeConnection,
-      });
-      showYoutubeErrorToast(getFriendlyYoutubeMessage(message));
+
+      if (shouldClearYoutubeConnectionState(message)) {
+        await persistYoutubeConnection({
+          ...defaultYoutubeConnection,
+        });
+      }
+
+      if (!silent) {
+        showYoutubeErrorToast(getFriendlyYoutubeMessage(message));
+      }
+
       return false;
     }
   };
@@ -396,6 +436,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   refreshSessionRunnerRef.current = async (refreshToken: string) => {
     try {
+      lastRefreshFailureWasInvalidRef.current = false;
       const refreshedSession = await refreshSessionMutation.mutateAsync({
         refreshToken,
       });
@@ -404,6 +445,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       const message = error instanceof Error ? error.message : "";
       if (shouldClearSessionOnRefreshFailure(message)) {
+        lastRefreshFailureWasInvalidRef.current = true;
         await clearSession();
       }
       return null;
@@ -414,15 +456,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     registerAuthRefreshHandler(async (refreshToken) => {
       const refreshedSession =
         (await refreshSessionRunnerRef.current?.(refreshToken)) ?? null;
-      if (!refreshedSession) {
+      if (!refreshedSession && lastRefreshFailureWasInvalidRef.current) {
         queryClient.clear();
-        return null;
       }
 
-      return {
-        accessToken: refreshedSession.accessToken,
-        refreshToken: refreshedSession.refreshToken,
-      };
+      return refreshedSession
+        ? {
+            accessToken: refreshedSession.accessToken,
+            refreshToken: refreshedSession.refreshToken,
+          }
+        : null;
     });
 
     return () => {
@@ -444,14 +487,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const parsedSession = JSON.parse(storedSession) as
           | AuthSession
           | LegacyAuthSession;
-        const session: AuthSession =
-          "accessToken" in parsedSession && "refreshToken" in parsedSession
-            ? parsedSession
-            : {
-                accessToken: parsedSession.token,
-                refreshToken: "",
-                user: parsedSession.user,
-              };
+        if (isLegacySession(parsedSession)) {
+          await clearSession();
+          shouldRestoreLocalPreferences = false;
+          setIsLoading(false);
+          return;
+        }
+
+        const session: AuthSession = parsedSession;
         setAuthTokens({
           accessToken: session.accessToken,
           refreshToken: session.refreshToken || null,
@@ -472,31 +515,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             } satisfies AuthSession),
           );
 
-          try {
-            const payload = await queryClient.fetchQuery(
-              trpc.youtube.data.queryOptions({}),
-            );
+          await refreshYoutubeConnection({ silent: true });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : "";
 
-            await persistYoutubeConnection({
-              isConnected: true,
-              channelId: payload.channel.id,
-              channelName: payload.channel.title,
-              videosCount: payload.videos.length,
-              commentsCount: payload.commentsCount,
-              lastSyncedAt: payload.lastSyncedAt
-                ? payload.lastSyncedAt.toISOString()
-                : null,
-            });
-          } catch {
-            await persistYoutubeConnection(defaultYoutubeConnection);
-          }
-        } catch {
           // The tRPC client already attempts a single refresh on unauthorized
           // responses. If the request still fails here, the session is no
           // longer recoverable and a second refresh attempt would reuse a stale
           // rotated refresh token.
-          await clearSession();
-          shouldRestoreLocalPreferences = false;
+          if (shouldClearSessionOnRefreshFailure(message)) {
+            await clearSession();
+            shouldRestoreLocalPreferences = false;
+          }
         }
       }
 
@@ -506,8 +536,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (
         shouldRestoreLocalPreferences &&
-        (storedHomePlatform === "youtube" ||
-          storedHomePlatform === "instagram")
+        (storedHomePlatform === "youtube" || storedHomePlatform === "instagram")
       ) {
         setSelectedHomePlatformState(storedHomePlatform);
       }
@@ -522,7 +551,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const session = await loginMutation.mutateAsync(input);
       await persistSession(session);
-      await refreshYoutubeConnection();
+      await refreshYoutubeConnection({ silent: true });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Could not sign in";
@@ -539,7 +568,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const session = await signupMutation.mutateAsync(input);
       await persistSession(session);
-      await refreshYoutubeConnection();
+      await refreshYoutubeConnection({ silent: true });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Could not create account";
@@ -561,11 +590,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         error instanceof Error
           ? error.message
           : "Could not send password reset email";
-      showAuthToast(
-        "error",
-        "Reset failed",
-        getFriendlyAuthMessage(message),
-      );
+      showAuthToast("error", "Reset failed", getFriendlyAuthMessage(message));
       throw error;
     }
   };
@@ -580,11 +605,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Could not reset password";
-      showAuthToast(
-        "error",
-        "Reset failed",
-        getFriendlyAuthMessage(message),
-      );
+      showAuthToast("error", "Reset failed", getFriendlyAuthMessage(message));
       throw error;
     }
   };
@@ -630,7 +651,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Could not open upgrade page";
-      showAuthToast("error", "Upgrade unavailable", getFriendlyAuthMessage(message));
+      showAuthToast(
+        "error",
+        "Upgrade unavailable",
+        getFriendlyAuthMessage(message),
+      );
       throw error;
     }
   };
@@ -643,15 +668,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const nextUser = await updateProfileMutation.mutateAsync(input);
       await persistCurrentUser(nextUser);
-      showAuthToast("success", "Profile updated", "Your account details were saved.");
+      showAuthToast(
+        "success",
+        "Profile updated",
+        "Your account details were saved.",
+      );
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Could not update profile";
-      showAuthToast(
-        "error",
-        "Update failed",
-        getFriendlyAuthMessage(message),
-      );
+      showAuthToast("error", "Update failed", getFriendlyAuthMessage(message));
       throw error;
     }
   };
@@ -661,7 +686,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (user) {
         const storedSession = await SecureStore.getItemAsync(STORAGE_KEY);
         const refreshToken = storedSession
-          ? ((JSON.parse(storedSession) as Partial<AuthSession>).refreshToken ?? "")
+          ? ((JSON.parse(storedSession) as Partial<AuthSession>).refreshToken ??
+            "")
           : "";
         await logoutMutation.mutateAsync(
           refreshToken ? { refreshToken } : undefined,
@@ -707,6 +733,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const disconnectYouTube = async () => {
+    if (!user) {
+      showYoutubeErrorToast("Please log in first.");
+      return;
+    }
+
+    try {
+      const result = await disconnectYouTubeMutation.mutateAsync();
+      await persistYoutubeConnection({
+        ...defaultYoutubeConnection,
+      });
+      await queryClient.removeQueries({
+        predicate: (query) => {
+          const key = JSON.stringify(query.queryKey);
+          return key.includes('"youtube"') || key.includes('"insights"');
+        },
+      });
+      Toast.show({
+        type: "success",
+        text1: "YouTube disconnected",
+        text2: result.message,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Could not disconnect your YouTube account.";
+      showYoutubeErrorToast(getFriendlyYoutubeMessage(message));
+      throw error;
+    }
+  };
+
   const syncYouTube = async () => {
     if (!user) {
       showYoutubeErrorToast("Please log in first.");
@@ -719,15 +777,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     if (!isYouTubeSyncAvailable) {
-      showYoutubeErrorToast("Sync is available every 10 minutes.");
+      showYoutubeErrorToast("Sync is available every 1 hour.");
       return;
     }
 
     setIsYouTubeSyncing(true);
 
     try {
-      await youtubeSyncMutation.mutateAsync({
-      });
+      await youtubeSyncMutation.mutateAsync({});
 
       const refreshed = await refreshYoutubeConnection();
       if (refreshed) {
@@ -756,7 +813,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return false;
     }
 
-    const queryParams = parsed.queryParams as Record<string, string | undefined>;
+    const queryParams = parsed.queryParams as Record<
+      string,
+      string | undefined
+    >;
     const status = queryParams.status;
     const message = queryParams.message;
 
@@ -785,6 +845,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         isLoading,
         isAuthenticated: Boolean(user),
+        hasActiveSubscription,
         youtubeConnection,
         selectedHomePlatform,
         isYouTubeConnecting,
@@ -801,6 +862,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         openUpgradePage,
         logout,
         connectYouTube,
+        disconnectYouTube,
         syncYouTube,
         setSelectedHomePlatform,
         handleYoutubeRedirect,

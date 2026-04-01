@@ -1,14 +1,13 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
-import { CheckCircle2, CircleAlert, Loader2, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '~/shared/shadcn/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/shared/shadcn/card';
 
-import CreatorWebAuthGuard from '~/components/landing/creator-web-auth-guard';
 import { trpcClient } from '~/utils/trpc';
 
 type AuthUser = Awaited<ReturnType<typeof trpcClient.auth.me.query>>;
@@ -89,7 +88,7 @@ const formatDateTime = (value: string | null) => {
   }).format(new Date(value));
 };
 
-function PricingContent({ user }: { user: AuthUser }) {
+export default function PricingClient({ user }: { user: AuthUser }) {
   const [overview, setOverview] = useState<BillingOverview | null>(null);
   const [loading, setLoading] = useState(true);
   const [activePlanCode, setActivePlanCode] = useState<string | null>(null);
@@ -194,67 +193,64 @@ function PricingContent({ user }: { user: AuthUser }) {
 
   if (loading) {
     return (
-      <div className="text-muted-foreground flex min-h-[60dvh] w-full items-center justify-center gap-2 px-4 text-center text-sm font-medium">
+      <div className="text-muted-foreground flex min-h-dvh w-full items-center justify-center gap-2 px-4 text-center text-sm font-medium">
         <Loader2 className="size-4 animate-spin" /> Loading pricing...
       </div>
     );
   }
 
   return (
-    <main className="mx-auto flex min-h-[calc(100dvh-4rem)] w-full max-w-6xl flex-col px-4 py-10 sm:px-6">
+    <main className="mx-auto flex w-full max-w-7xl flex-col px-4 py-10 lg:py-14">
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="max-w-2xl space-y-3">
-          <p className="text-primary text-sm font-black tracking-[0.18em] uppercase">
-            Secure Web Upgrade
+          <p className="text-foreground text-lg font-bold tracking-tight sm:text-xl">
+            Croud<span className="text-primary">Q</span>
           </p>
-          <h1 className="text-foreground text-4xl leading-tight font-black tracking-tight sm:text-5xl">
-            Upgrade on web with Razorpay
-          </h1>
-          <p className="text-muted-foreground text-base leading-7 sm:text-lg">
-            Signed in as <span className="text-foreground font-semibold">{user.email}</span>.
-            Checkout stays on web, and your app will reflect Pro as soon as the subscription state
-            syncs back.
-          </p>
-        </div>
 
-        <div className="flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
-          <ShieldCheck className="size-4" />
-          {overview?.environment === 'test' ? 'Razorpay Test Mode' : 'Razorpay Live Mode'}
+          {overview?.currentSubscription ? (
+            <>
+              <h1 className="text-foreground text-4xl leading-tight font-black tracking-tight sm:text-5xl">
+                You are subscribed already.
+              </h1>
+              <p className="text-muted-foreground text-base leading-7 sm:text-lg">
+                <span className="text-foreground font-semibold">{user.email}</span>. Your
+                subscription is active! Head over to the app to start using it.{' '}
+              </p>
+            </>
+          ) : (
+            <>
+              <h1 className="text-foreground text-4xl leading-tight font-black tracking-tight sm:text-5xl">
+                Upgrade on web with Razorpay
+              </h1>
+              <p className="text-muted-foreground text-base leading-7 sm:text-lg">
+                Signed in as <span className="text-foreground font-semibold">{user.email}</span>.
+                Checkout stays on web, and your app will reflect Pro as soon as the subscription
+                state syncs back.
+              </p>
+            </>
+          )}
         </div>
       </div>
 
       {overview?.currentSubscription ? (
         <Card className="mb-8 rounded-3xl border border-emerald-200 bg-emerald-50/80">
           <CardContent className="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
-                <CheckCircle2 className="size-4" />
-                Current subscription
-              </div>
-              <p className="text-foreground text-lg font-bold">
-                {currentPlanLabel ?? 'Subscription active'}
-              </p>
-              <p className="text-muted-foreground text-sm">
-                Status: {overview.currentSubscription.status}
-              </p>
+            <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
+              <CheckCircle2 className="size-4" />
+              Current subscription
             </div>
-            <div className="text-muted-foreground text-sm">
+            <p className="text-foreground text-lg font-bold">
+              {currentPlanLabel ?? 'Subscription active'}
+            </p>
+            <p className="text-muted-foreground text-sm">
+              Status: {overview.currentSubscription.status}
+            </p>
+            <p className="text-sm text-[#49A8FF]">
               Tier: {overview.currentSubscription.tier ?? 'CroudQ Free'}
-            </div>
+            </p>
           </CardContent>
         </Card>
       ) : null}
-
-      <div className="mb-6 rounded-3xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm leading-6 text-amber-900">
-        <div className="mb-1 flex items-center gap-2 font-semibold">
-          <CircleAlert className="size-4" />
-          Test mode checklist
-        </div>
-        <p>
-          Use Razorpay test keys, point the webhook to your public test backend URL, and trigger a
-          test subscription payment from one of the plans below.
-        </p>
-      </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         {overview?.plans.map((plan) => {
@@ -295,7 +291,7 @@ function PricingContent({ user }: { user: AuthUser }) {
                   ) : isCurrentPlan ? (
                     'Current plan'
                   ) : (
-                    'Start Test Subscription'
+                    'Start Subscription'
                   )}
                 </Button>
               </CardContent>
@@ -304,18 +300,5 @@ function PricingContent({ user }: { user: AuthUser }) {
         })}
       </div>
     </main>
-  );
-}
-
-export default function PricingPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="text-muted-foreground flex min-h-[60dvh] w-full items-center justify-center gap-2 px-4 text-center text-sm font-medium">
-          <Loader2 className="size-4 animate-spin" /> Loading pricing...
-        </div>
-      }>
-      <CreatorWebAuthGuard>{(user) => <PricingContent user={user} />}</CreatorWebAuthGuard>
-    </Suspense>
   );
 }

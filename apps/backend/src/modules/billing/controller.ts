@@ -83,18 +83,7 @@ const DEFAULT_BILLING_PLANS: BillingPlanSeed[] = [
     currency: "INR",
     interval: 1,
     period: "monthly",
-    totalCount: 1200,
-    tier: "CroudQ Pro",
-  },
-  {
-    code: "creator-pro-yearly",
-    name: "Creator Pro Yearly",
-    description: "Yearly recurring plan for active creators",
-    amount: 999900,
-    currency: "INR",
-    interval: 1,
-    period: "yearly",
-    totalCount: 100,
+    totalCount: 60,
     tier: "CroudQ Pro",
   },
 ];
@@ -108,6 +97,16 @@ const formatPrice = (amount: number, currency: string) =>
     currency,
     maximumFractionDigits: 0,
   }).format(amount / 100);
+
+const hasProviderPlanConfigChanged = (
+  existingPlan: typeof billingPlans.$inferSelect,
+  nextPlan: BillingPlanSeed,
+) =>
+  existingPlan.amount !== nextPlan.amount ||
+  existingPlan.currency !== nextPlan.currency ||
+  existingPlan.interval !== nextPlan.interval ||
+  existingPlan.period !== nextPlan.period ||
+  existingPlan.totalCount !== nextPlan.totalCount;
 
 const getRazorpayCredentials = () => {
   const keyId = process.env.RAZORPAY_KEY_ID?.trim();
@@ -181,6 +180,7 @@ const razorpayRequest = async <TResponse>(
 
 const ensureBillingPlansSeeded = async () => {
   const existingPlans = await db.query.billingPlans.findMany();
+  const defaultPlanCodes = new Set(DEFAULT_BILLING_PLANS.map((plan) => plan.code));
   const existingPlanCodes = new Set(existingPlans.map((plan) => plan.code));
   const now = new Date();
 
@@ -196,6 +196,62 @@ const ensureBillingPlansSeeded = async () => {
         updatedAt: now,
       })),
     );
+  }
+
+  for (const plan of DEFAULT_BILLING_PLANS) {
+    const existingPlan = existingPlans.find((entry) => entry.code === plan.code);
+
+    if (!existingPlan) {
+      continue;
+    }
+
+    const needsUpdate =
+      existingPlan.name !== plan.name ||
+      existingPlan.description !== plan.description ||
+      existingPlan.amount !== plan.amount ||
+      existingPlan.currency !== plan.currency ||
+      existingPlan.interval !== plan.interval ||
+      existingPlan.period !== plan.period ||
+      existingPlan.totalCount !== plan.totalCount ||
+      existingPlan.tier !== plan.tier ||
+      existingPlan.isActive !== true;
+
+    if (!needsUpdate) {
+      continue;
+    }
+
+    await db
+      .update(billingPlans)
+      .set({
+        name: plan.name,
+        description: plan.description,
+        amount: plan.amount,
+        currency: plan.currency,
+        interval: plan.interval,
+        period: plan.period,
+        totalCount: plan.totalCount,
+        tier: plan.tier,
+        providerPlanId: hasProviderPlanConfigChanged(existingPlan, plan)
+          ? null
+          : existingPlan.providerPlanId,
+        isActive: true,
+        updatedAt: now,
+      })
+      .where(eq(billingPlans.id, existingPlan.id));
+  }
+
+  for (const existingPlan of existingPlans) {
+    if (defaultPlanCodes.has(existingPlan.code) || !existingPlan.isActive) {
+      continue;
+    }
+
+    await db
+      .update(billingPlans)
+      .set({
+        isActive: false,
+        updatedAt: now,
+      })
+      .where(eq(billingPlans.id, existingPlan.id));
   }
 
   return db.query.billingPlans.findMany({
@@ -252,6 +308,12 @@ const applySubscriptionSnapshot = async (input: {
   latestInvoiceId?: string | null;
 }) => {
   const now = new Date();
+  const existing = await db.query.billingSubscriptions.findFirst({
+    where: eq(
+      billingSubscriptions.providerSubscriptionId,
+      input.subscription.id,
+    ),
+  });
   const payload = {
     planId: input.localPlanId,
     provider: "razorpay",
@@ -273,28 +335,29 @@ const applySubscriptionSnapshot = async (input: {
     endAt: toDate(input.subscription.end_at),
     expireBy: toDate(input.subscription.expire_by),
     authenticatedAt:
-      input.subscription.status === "authenticated" ||
+      existing?.authenticatedAt ??
+      (input.subscription.status === "authenticated" ||
       input.subscription.status === "active"
         ? now
-        : null,
-    activatedAt: input.subscription.status === "active" ? now : null,
-    cancelledAt: input.subscription.status === "cancelled" ? now : null,
-    completedAt: input.subscription.status === "completed" ? now : null,
+        : null),
+    activatedAt:
+      existing?.activatedAt ??
+      (input.subscription.status === "active" ? now : null),
+    cancelledAt:
+      existing?.cancelledAt ??
+      (input.subscription.status === "cancelled" ? now : null),
+    completedAt:
+      existing?.completedAt ??
+      (input.subscription.status === "completed" ? now : null),
     endedAt:
-      input.subscription.status === "cancelled" ||
+      existing?.endedAt ??
+      (input.subscription.status === "cancelled" ||
       input.subscription.status === "completed"
         ? now
-        : null,
+        : null),
     notesJson: serializeNotes(input.subscription.notes),
     updatedAt: now,
   };
-
-  const existing = await db.query.billingSubscriptions.findFirst({
-    where: eq(
-      billingSubscriptions.providerSubscriptionId,
-      input.subscription.id,
-    ),
-  });
 
   if (existing) {
     const [updated] = await db
@@ -347,6 +410,25 @@ const getCurrentSubscriptionRecord = async (userId: string) =>
     orderBy: [desc(billingSubscriptions.updatedAt)],
   });
 
+export const getCurrentUserSubscriptionState = async (
+  userId: string,
+): Promise<"active" | "ended" | "none"> => {
+  const latestSubscription = await db.query.billingSubscriptions.findFirst({
+    where: eq(billingSubscriptions.userId, userId),
+    orderBy: [desc(billingSubscriptions.updatedAt)],
+  });
+
+  if (!latestSubscription) {
+    return "none";
+  }
+
+  return ACTIVE_SUBSCRIPTION_STATUSES.includes(
+    latestSubscription.status as (typeof ACTIVE_SUBSCRIPTION_STATUSES)[number],
+  )
+    ? "active"
+    : "ended";
+};
+
 const fetchSubscriptionFromProvider = (subscriptionId: string) =>
   razorpayRequest<RazorpaySubscriptionResponse>(
     `/subscriptions/${encodeURIComponent(subscriptionId)}`,
@@ -366,9 +448,6 @@ export const getBillingPlansOverview = async (userId: string) => {
     }));
 
   return {
-    environment: getRazorpayCredentials().keyId.startsWith("rzp_test_")
-      ? "test"
-      : "live",
     plans: plans.map((plan) => ({
       code: plan.code,
       name: plan.name,
@@ -545,12 +624,34 @@ export const verifyCheckoutSignature = async (input: {
     });
   }
 
+  const matchesPlan =
+    subscription.plan_id === plan.providerPlanId ||
+    subscription.notes?.plan_code === input.planCode;
+
+  if (!matchesPlan) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "This checkout does not match the selected billing plan",
+    });
+  }
+
   await applySubscriptionSnapshot({
     userId: input.userId,
     subscription,
     localPlanId: plan.id,
     paymentId: input.razorpayPaymentId,
   });
+
+  if (
+    !ACTIVE_SUBSCRIPTION_STATUSES.includes(
+      subscription.status as (typeof ACTIVE_SUBSCRIPTION_STATUSES)[number],
+    )
+  ) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `Subscription is not active yet. Current status: ${subscription.status}`,
+    });
+  }
 
   return {
     success: true as const,
@@ -579,7 +680,6 @@ export const processRazorpayWebhook = async (rawBody: string, signature: string)
       provider: "razorpay",
       eventType: payload.event,
       payloadHash,
-      providerEventId: null,
       providerSubscriptionId,
       payloadJson: rawBody,
     })

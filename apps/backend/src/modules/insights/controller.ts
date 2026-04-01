@@ -7,12 +7,18 @@ import { comments, insightArtifacts, videos, youtubeAccounts } from "../../db/sc
 import { generateStructuredJson } from "../ai/controller";
 import { buildDashboardOverviewStats } from "../overviewstats/controller";
 import { dashboardOverviewStatSchema } from "../overviewstats/dto";
+import { syncStoredVideoCommentsForAnalysis } from "../youtube-sync/controller";
+import {
+  COMMENTS_PER_VIDEO,
+  VIDEO_COMMENTS_SYNC_COOLDOWN_MS,
+} from "../youtube-sync/constants";
+import { YoutubeRouteError } from "../youtube-errors/controller";
 
 export const insightPlatform = "youtube" as const;
 export const insightModel = "gpt-5-mini" as const;
 const PROMPT_VERSION = "2026-03-29.v36";
-export const AGGREGATE_ANALYSIS_REGEN_THRESHOLD = 50;
-export const VIDEO_ANALYSIS_REGEN_THRESHOLD = 25;
+export const AGGREGATE_ANALYSIS_REGEN_THRESHOLD = 150;
+export const VIDEO_ANALYSIS_REGEN_THRESHOLD = 150;
 const AGGREGATE_ANALYSIS_VIDEO_LIMIT = 1;
 
 export const dashboardScope = "dashboard" as const;
@@ -731,6 +737,11 @@ const loadRecentStoredVideos = async (userId: string) =>
     limit: AGGREGATE_ANALYSIS_VIDEO_LIMIT,
   });
 
+export const getDashboardAnalysisVideoIds = async (userId: string) =>
+  (
+    await loadRecentStoredVideos(userId)
+  ).map((video) => video.id);
+
 const loadAllStoredVideos = async (userId: string) =>
   db.query.videos.findMany({
     where: eq(videos.userId, userId),
@@ -775,14 +786,6 @@ const loadAggregateInsightContext = async (userId: string) => {
       favoriteCount: video.favoriteCount,
       commentCount: video.commentCount,
       duration: video.duration,
-      analyticsViews: video.analyticsViews,
-      analyticsLikes: video.analyticsLikes,
-      analyticsComments: video.analyticsComments,
-      analyticsShares: video.analyticsShares,
-      estimatedMinutesWatched: video.estimatedMinutesWatched,
-      averageViewDuration: video.averageViewDuration,
-      subscribersGained: video.subscribersGained,
-      subscribersLost: video.subscribersLost,
     })),
     comments: storedComments.map((comment) => ({
       id: comment.id,
@@ -798,9 +801,7 @@ const loadAggregateInsightContext = async (userId: string) => {
 const buildDeterministicDashboardOverviewStats = async (userId: string) => {
   const allStoredVideos = await loadAllStoredVideos(userId);
 
-  return overviewStatsSchema.parse(
-    buildDashboardOverviewStats(allStoredVideos, AGGREGATE_ANALYSIS_VIDEO_LIMIT),
-  );
+  return overviewStatsSchema.parse(buildDashboardOverviewStats(allStoredVideos));
 };
 
 const normalizeStrategyPayload = (payload: unknown) =>
@@ -868,14 +869,6 @@ const loadVideoInsightContext = async (userId: string, videoId: string) => {
       favoriteCount: selectedVideo.favoriteCount,
       commentCount: selectedVideo.commentCount,
       duration: selectedVideo.duration,
-      analyticsViews: selectedVideo.analyticsViews,
-      analyticsLikes: selectedVideo.analyticsLikes,
-      analyticsComments: selectedVideo.analyticsComments,
-      analyticsShares: selectedVideo.analyticsShares,
-      estimatedMinutesWatched: selectedVideo.estimatedMinutesWatched,
-      averageViewDuration: selectedVideo.averageViewDuration,
-      subscribersGained: selectedVideo.subscribersGained,
-      subscribersLost: selectedVideo.subscribersLost,
     },
     comments: videoComments.map((comment) => ({
       id: comment.id,
@@ -1124,7 +1117,7 @@ const getVideoAnalysisState = async (userId: string, videoId: string) => {
       !existing ||
       requiresVersionRefresh ||
       requiresModelRefresh ||
-      newCommentsSinceLastAnalysis > VIDEO_ANALYSIS_REGEN_THRESHOLD,
+      newCommentsSinceLastAnalysis >= VIDEO_ANALYSIS_REGEN_THRESHOLD,
   };
 };
 
@@ -1284,6 +1277,23 @@ export const generateVideoInsightOnDemand = async (input: {
   userId: string;
   videoId: string;
 }) => {
+  const dashboardAnalysisVideoIds = await getDashboardAnalysisVideoIds(
+    input.userId,
+  );
+  if (dashboardAnalysisVideoIds.includes(input.videoId)) {
+    throw new YoutubeRouteError(
+      "Current dashboard is already showing this video's analysis",
+      400,
+    );
+  }
+
+  await syncStoredVideoCommentsForAnalysis({
+    userId: input.userId,
+    videoId: input.videoId,
+    commentsPerVideo: COMMENTS_PER_VIDEO,
+    cooldownMs: VIDEO_COMMENTS_SYNC_COOLDOWN_MS,
+  });
+
   const state = await getVideoAnalysisState(input.userId, input.videoId);
 
   if (state.existing && !state.canRegenerate) {

@@ -1,5 +1,5 @@
 {
-  "id": "76c518d3-b076-4c3a-b269-de98d1eedda7",
+  "id": "7026d5d8-ee69-4ab8-a09c-384d0961ecb8",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1281,12 +1281,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "provider_event_id": {
-          "name": "provider_event_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
         "provider_subscription_id": {
           "name": "provider_subscription_id",
           "type": "text",
@@ -1319,21 +1313,6 @@
             }
           ],
           "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "billing_webhook_events_provider_event_id_idx": {
-          "name": "billing_webhook_events_provider_event_id_idx",
-          "columns": [
-            {
-              "expression": "provider_event_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
           "concurrently": false,
           "method": "btree",
           "with": {}
@@ -1847,51 +1826,15 @@
           "primaryKey": false,
           "notNull": false
         },
-        "analytics_views": {
-          "name": "analytics_views",
-          "type": "integer",
+        "last_comments_synced_at": {
+          "name": "last_comments_synced_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
-        "analytics_likes": {
-          "name": "analytics_likes",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "analytics_comments": {
-          "name": "analytics_comments",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "analytics_shares": {
-          "name": "analytics_shares",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "estimated_minutes_watched": {
-          "name": "estimated_minutes_watched",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "average_view_duration": {
-          "name": "average_view_duration",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "subscribers_gained": {
-          "name": "subscribers_gained",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "subscribers_lost": {
-          "name": "subscribers_lost",
-          "type": "integer",
+        "last_manual_comments_sync_at": {
+          "name": "last_manual_comments_sync_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },

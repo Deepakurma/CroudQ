@@ -13,15 +13,17 @@ import {
 } from "../../modules/youtube-oauth/controller";
 import { createOAuthState, consumeOAuthState } from "../../modules/oauth-state/controller";
 import {
+  disconnectYoutubeAccount,
   ensureSyncCooldown,
   getStoredYoutubeData,
   syncYoutubeAccount,
   ensureUserExists,
 } from "../../modules/youtube-sync/controller";
 import {
+  COMMENTS_SYNC_VIDEO_LIMIT,
   COMMENTS_PER_VIDEO,
   SYNC_COOLDOWN_MS,
-  SYNC_VIDEO_FETCH_LIMIT,
+  SYNC_VIDEO_METRICS_FETCH_LIMIT,
 } from "../../modules/youtube-sync/constants";
 import { refreshYoutubeInsightsForUser } from "../../modules/insights/controller";
 import {
@@ -31,6 +33,7 @@ import {
 import {
   youtubeAuthUrlQuerySchema,
   youtubeCallbackQuerySchema,
+  youtubeDisconnectResponseSchema,
   youtubeDataParamsSchema,
   youtubeSyncParamsSchema,
 } from "./dto";
@@ -128,9 +131,9 @@ export const youtubeRouter = createTRPCRouter({
         });
         const payload = await syncYoutubeAccount({
           userId: ctx.user.id,
-          maxVideoResults: SYNC_VIDEO_FETCH_LIMIT,
+          maxVideoResults: SYNC_VIDEO_METRICS_FETCH_LIMIT,
+          commentSyncVideoLimit: COMMENTS_SYNC_VIDEO_LIMIT,
           commentsPerVideo: COMMENTS_PER_VIDEO,
-          fetchAuthorizedJson,
           fetchYoutubeJson,
         });
 
@@ -145,6 +148,18 @@ export const youtubeRouter = createTRPCRouter({
         throw toYoutubeTRPCError(error);
       }
     }),
+  disconnect: protectedProcedure.mutation(async ({ ctx }) => {
+    try {
+      await disconnectYoutubeAccount(ctx.user.id);
+
+      return youtubeDisconnectResponseSchema.parse({
+        success: true,
+        message: "YouTube account disconnected.",
+      });
+    } catch (error) {
+      throw toYoutubeTRPCError(error);
+    }
+  }),
 });
 
 export async function registerYoutubeCallbackRoute(server: FastifyInstance) {
@@ -236,9 +251,9 @@ export async function registerYoutubeCallbackRoute(server: FastifyInstance) {
 
         const payload = await syncYoutubeAccount({
           userId: oauthState.userId,
-          maxVideoResults: SYNC_VIDEO_FETCH_LIMIT,
+          maxVideoResults: SYNC_VIDEO_METRICS_FETCH_LIMIT,
+          commentSyncVideoLimit: COMMENTS_SYNC_VIDEO_LIMIT,
           commentsPerVideo: COMMENTS_PER_VIDEO,
-          fetchAuthorizedJson,
           fetchYoutubeJson,
         });
 

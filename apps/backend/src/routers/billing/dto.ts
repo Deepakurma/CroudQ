@@ -22,7 +22,6 @@ export const currentSubscriptionSchema = z.object({
 });
 
 export const billingOverviewSchema = z.object({
-  environment: z.enum(["test", "live"]),
   plans: z.array(billingPlanSchema),
   currentSubscription: currentSubscriptionSchema.nullable(),
 });

@@ -14,7 +14,10 @@ import {
   users,
   webLoginTokens,
 } from "../../db/schema";
-import { getCurrentUserTier } from "../billing/controller";
+import {
+  getCurrentUserSubscriptionState,
+  getCurrentUserTier,
+} from "../billing/controller";
 import { sendEmail } from "../email/controller";
 import { signJwt, verifyJwt } from "../../utils/jwt";
 
@@ -24,6 +27,7 @@ type AuthUser = {
   email: string;
   handle: string | null;
   tier: string | null;
+  subscriptionState: "active" | "ended" | "none";
   deletionRequestedAt: string | null;
   scheduledDeletionAt: string | null;
 };
@@ -48,6 +52,7 @@ const toAuthUser = async (user: {
   email: user.email,
   handle: null,
   tier: await getCurrentUserTier(user.id),
+  subscriptionState: await getCurrentUserSubscriptionState(user.id),
   deletionRequestedAt: user.deletionRequestedAt?.toISOString() ?? null,
   scheduledDeletionAt: user.scheduledDeletionAt?.toISOString() ?? null,
 });
@@ -695,6 +700,32 @@ export const refreshAuthSession = async (
 
   return db.transaction(async (tx) => {
     const seed = buildSessionSeed(metadata);
+    const existingSession = await tx.query.authSessions.findFirst({
+      where: and(
+        eq(authSessions.tokenHash, tokenHash),
+        isNull(authSessions.revokedAt),
+        gt(authSessions.expiresAt, seed.now),
+      ),
+    });
+
+    if (!existingSession) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "Refresh session is invalid or expired",
+      });
+    }
+
+    const user = await tx.query.users.findFirst({
+      where: eq(users.id, existingSession.userId),
+    });
+
+    if (!user) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "Refresh session is invalid or expired",
+      });
+    }
+
     const [consumedSession] = await tx
       .update(authSessions)
       .set({
@@ -704,14 +735,13 @@ export const refreshAuthSession = async (
       })
       .where(
         and(
-          eq(authSessions.tokenHash, tokenHash),
+          eq(authSessions.id, existingSession.id),
           isNull(authSessions.revokedAt),
           gt(authSessions.expiresAt, seed.now),
         ),
       )
       .returning({
         id: authSessions.id,
-        userId: authSessions.userId,
       });
 
     if (!consumedSession) {
@@ -721,11 +751,94 @@ export const refreshAuthSession = async (
       });
     }
 
+    await tx.insert(authSessions).values({
+      id: seed.sessionId,
+      userId: user.id,
+      tokenHash: hashRefreshToken(seed.refreshToken),
+      expiresAt: new Date(seed.now.getTime() + getRefreshTokenTtlMs()),
+      ipAddress: seed.ipAddress,
+      userAgent: seed.userAgent,
+      lastUsedAt: seed.now,
+    });
+
+    return {
+      accessToken: signJwt({ userId: user.id, sessionId: seed.sessionId }),
+      refreshToken: seed.refreshToken,
+      user: await toAuthUser(user),
+    };
+  });
+};
+
+export const refreshAdminAuthSession = async (
+  input: { refreshToken: string },
+  metadata?: {
+    ipAddress?: string | null;
+    userAgent?: string | null;
+  },
+) => {
+  const tokenHash = hashRefreshToken(input.refreshToken);
+
+  return db.transaction(async (tx) => {
+    const seed = buildSessionSeed(metadata);
+    const existingSession = await tx.query.authSessions.findFirst({
+      where: and(
+        eq(authSessions.tokenHash, tokenHash),
+        isNull(authSessions.revokedAt),
+        gt(authSessions.expiresAt, seed.now),
+      ),
+    });
+
+    if (!existingSession) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "Refresh session is invalid or expired",
+      });
+    }
+
+    const activeAdmin = await tx.query.admins.findFirst({
+      where: and(
+        eq(admins.userId, existingSession.userId),
+        eq(admins.isActive, true),
+      ),
+    });
+
+    if (!activeAdmin) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "Refresh session is invalid or expired",
+      });
+    }
+
     const user = await tx.query.users.findFirst({
-      where: eq(users.id, consumedSession.userId),
+      where: eq(users.id, existingSession.userId),
     });
 
     if (!user) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "Refresh session is invalid or expired",
+      });
+    }
+
+    const [consumedSession] = await tx
+      .update(authSessions)
+      .set({
+        revokedAt: seed.now,
+        replacedBySessionId: seed.sessionId,
+        lastUsedAt: seed.now,
+      })
+      .where(
+        and(
+          eq(authSessions.id, existingSession.id),
+          isNull(authSessions.revokedAt),
+          gt(authSessions.expiresAt, seed.now),
+        ),
+      )
+      .returning({
+        id: authSessions.id,
+      });
+
+    if (!consumedSession) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
         message: "Refresh session is invalid or expired",

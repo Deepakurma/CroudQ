@@ -11,6 +11,7 @@ export const authUserSchema = z.object({
   email: z.string().email(),
   handle: z.string().nullable(),
   tier: z.string().nullable(),
+  subscriptionState: z.enum(["active", "ended", "none"]),
   deletionRequestedAt: z.string().datetime().nullable(),
   scheduledDeletionAt: z.string().datetime().nullable(),
 });

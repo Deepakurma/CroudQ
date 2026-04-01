@@ -106,7 +106,6 @@ export const billingWebhookEvents = pgTable(
     provider: text("provider").notNull().default("razorpay"),
     eventType: text("event_type").notNull(),
     payloadHash: text("payload_hash").notNull(),
-    providerEventId: text("provider_event_id"),
     providerSubscriptionId: text("provider_subscription_id"),
     processedAt: timestamp("processed_at", { withTimezone: true })
       .defaultNow()
@@ -116,9 +115,6 @@ export const billingWebhookEvents = pgTable(
   (table) => ({
     payloadHashIdx: uniqueIndex("billing_webhook_events_payload_hash_idx").on(
       table.payloadHash,
-    ),
-    providerEventIdIdx: index("billing_webhook_events_provider_event_id_idx").on(
-      table.providerEventId,
     ),
     providerSubscriptionIdIdx: index(
       "billing_webhook_events_provider_subscription_id_idx",

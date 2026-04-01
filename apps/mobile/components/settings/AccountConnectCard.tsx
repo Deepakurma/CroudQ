@@ -7,10 +7,19 @@ import { Instagram, Youtube } from "lucide-react-native";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+type BadgeVariant =
+  | "active"
+  | "pending"
+  | "default"
+  | "positive"
+  | "negative"
+  | "neutral";
+
 interface AccountConnectCardProps {
   platform: "YouTube" | "Instagram";
   handle: string;
   status: string;
+  statusVariant?: BadgeVariant;
   onPress?: () => void;
   disabled?: boolean;
 }
@@ -19,18 +28,20 @@ export function AccountConnectCard({
   platform,
   handle,
   status,
+  statusVariant,
   onPress,
   disabled = false,
 }: AccountConnectCardProps) {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const Icon = platform === "YouTube" ? Youtube : Instagram;
-  const variant =
+  const fallbackVariant: BadgeVariant =
     disabled && status !== "Connected"
       ? "default"
       : status === "Connected"
         ? "positive"
         : "pending";
+  const variant = statusVariant ?? fallbackVariant;
 
   return (
     <Pressable onPress={onPress} disabled={disabled}>

@@ -8,6 +8,7 @@ import {
   refreshYoutubeInsightsForUser,
   strategyScope,
 } from "../../modules/insights/controller";
+import { toYoutubeTRPCError } from "../../modules/youtube-errors/controller";
 import {
   commentsInsightResponseSchema,
   dashboardInsightResponseSchema,
@@ -64,12 +65,16 @@ export const insightsRouter = createTRPCRouter({
   ),
   refreshVideo: protectedProcedure
     .input(videoInsightParamsSchema)
-    .mutation(async ({ ctx, input }) =>
-      generateVideoInsightResponseSchema.parse(
-        await generateVideoInsightOnDemand({
-          userId: ctx.user.id,
-          videoId: input.videoId,
-        }),
-      ),
-    ),
+    .mutation(async ({ ctx, input }) => {
+      try {
+        return generateVideoInsightResponseSchema.parse(
+          await generateVideoInsightOnDemand({
+            userId: ctx.user.id,
+            videoId: input.videoId,
+          }),
+        );
+      } catch (error) {
+        throw toYoutubeTRPCError(error);
+      }
+    }),
 });

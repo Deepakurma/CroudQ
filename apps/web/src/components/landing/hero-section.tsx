@@ -25,13 +25,13 @@ export function HeroSection({ chips }: HeroSectionProps) {
             BUILT FOR CREATORS WITH AI ASSISTANCE
           </Badge>
           <h1 className="text-foreground text-[clamp(2.4rem,10vw,8rem)] leading-[0.88] font-black tracking-tight uppercase">
-            CREATORS GROW WITH
+            MAKE CONTENT WITH
             <br />
-            CLARITY AND CONFIDENCE
+            MORE CLARITY
           </h1>
           <p className="text-foreground/80 mt-6 max-w-[540px] text-[1.05rem] leading-relaxed font-semibold md:text-[1.15rem]">
             CroudQ combines performance analytics, comment insights, and AI-assisted suggestions to
-            help you choose what to create next.
+            help you choose your next move.
           </p>
         </motion.div>
 

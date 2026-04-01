@@ -69,24 +69,42 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'CroudQ',
+  title: {
+    default: 'CroudQ | Creator Analytics, Comment Insights, and AI Content Suggestions',
+    template: '%s | CroudQ'
+  },
   icons: {
     icon: '/favicon.ico'
   },
-  description: 'CroudQ web platform.',
-  keywords: ['croudq', 'analytics', 'creator tools'],
+  description:
+    'CroudQ helps creators understand video performance, audience comment signals, and AI-powered next-step suggestions so they can plan better content with more clarity.',
+  keywords: [
+    'CroudQ',
+    'creator analytics',
+    'YouTube analytics',
+    'comment insights',
+    'audience feedback analysis',
+    'AI content suggestions',
+    'content strategy tools',
+    'creator growth tools'
+  ],
   authors: [{ name: 'CroudQ' }],
   creator: 'CroudQ',
   publisher: 'CroudQ',
+  applicationName: 'CroudQ',
+  category: 'Creator Analytics',
   openGraph: {
-    title: 'CroudQ',
-    description: 'CroudQ web platform.',
-    type: 'website'
+    title: 'CroudQ | Creator Analytics, Comment Insights, and AI Content Suggestions',
+    description:
+      'Track performance, understand audience feedback, and get AI-assisted content suggestions built for creators and connected channels.',
+    type: 'website',
+    siteName: 'CroudQ'
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'CroudQ',
-    description: 'CroudQ web platform.'
+    title: 'CroudQ | Creator Analytics and AI Insight Tools',
+    description:
+      'Performance analytics, comment intelligence, and AI-assisted suggestions to help creators decide what to make next.'
   },
   robots: {
     index: true,

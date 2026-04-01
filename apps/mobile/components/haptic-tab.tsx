@@ -5,11 +5,13 @@ import Toast from "react-native-toast-message";
 
 type HapticTabProps = BottomTabBarButtonProps & {
   disabled?: boolean | null;
+  disabledTitle?: string;
   disabledMessage?: string;
 };
 
 export function HapticTab({
   disabled = false,
+  disabledTitle,
   disabledMessage,
   style,
   onPress,
@@ -31,7 +33,7 @@ export function HapticTab({
         if (disabled) {
           Toast.show({
             type: "info",
-            text1: "YouTube required",
+            text1: disabledTitle ?? "Unavailable",
             text2: disabledMessage ?? "Connect YouTube account to view.",
           });
           return;

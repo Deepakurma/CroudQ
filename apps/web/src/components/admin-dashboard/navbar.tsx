@@ -1,13 +1,13 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 import { LogOut, Moon, Sun, UserRound } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
 
+import { cn } from '~/lib/utils';
 import { Button } from '~/shared/shadcn/button';
 import {
   DropdownMenu,
@@ -18,8 +18,22 @@ import {
 
 import { trpcClient } from '~/utils/trpc';
 
+const navItems = [
+  {
+    href: '/admin',
+    label: 'Dashboard',
+    isActive: (pathname: string) => pathname === '/admin'
+  },
+  {
+    href: '/admin/subscriptions',
+    label: 'Subscriptions',
+    isActive: (pathname: string) => pathname.startsWith('/admin/subscriptions')
+  }
+];
+
 export default function AdminNavbar() {
   const { setTheme } = useTheme();
+  const pathname = usePathname();
   const router = useRouter();
 
   const handleLogout = async () => {
@@ -38,19 +52,36 @@ export default function AdminNavbar() {
   return (
     <header className="bg-card sticky top-0 z-30 flex h-16 items-center justify-center border-b px-6 backdrop-blur-md">
       <div className="flex w-full max-w-7xl items-center justify-between gap-4">
-        <Link href="/" className="flex items-center gap-1 transition-opacity hover:opacity-90">
-          <div className="relative ml-[-5px] flex size-10 items-center justify-center overflow-hidden rounded-xl transition-all hover:opacity-90 sm:size-12">
-            <Image src="/assets/Logo.png" alt="CroudQ Logo" fill className="object-cover" />
-          </div>
-          <div>
-            <p className="text-foreground text-md font-bold tracking-tight sm:text-lg">CroudQ</p>
-            <p className="text-muted-foreground text-[8px] font-medium tracking-wider whitespace-nowrap uppercase sm:text-[11px]">
-              Admin Control
-            </p>
-          </div>
+        <Link href="/" className="flex shrink-0 flex-col transition-opacity hover:opacity-90">
+          <p className="text-foreground text-lg font-bold tracking-tight sm:text-xl">
+            Croud<span className="text-primary">Q</span>
+          </p>
+          <p className="text-muted-foreground text-[8px] font-medium tracking-wider whitespace-nowrap uppercase sm:text-[11px]">
+            Admin Control
+          </p>
         </Link>
 
-        <div className="flex items-center gap-8">
+        <nav className="hidden flex-1 items-center justify-center md:flex">
+          <div className="flex items-center gap-6">
+            {navItems.map((item) => {
+              const active = item.isActive(pathname);
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    'hover:bg-muted/80 rounded-xl px-4 py-2 text-sm font-semibold transition-colors',
+                    active ? 'text-primary' : 'text-foreground'
+                  )}>
+                  {item.label}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+
+        <div className="flex shrink-0 items-center gap-8">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant={'ghost'} className="p-5">

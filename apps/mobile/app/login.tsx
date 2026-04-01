@@ -7,6 +7,7 @@ import { Spacing } from "@/constants/Spacing";
 import { Typography } from "@/constants/Typography";
 import { useAuth } from "@/context/AuthContext";
 import { useAppTheme } from "@/context/ThemeContext";
+import { openPrivacyPolicy, openTermsOfService } from "@/utils/external-links";
 import { validateSchema } from "@/utils/validation";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
@@ -138,9 +139,18 @@ export default function LoginScreen() {
         </Pressable>
       </View>
 
-      <Text style={styles.footnote}>
-        By continuing you agree to CroudQ&apos;s creator data policies.
-      </Text>
+      <View style={styles.footnoteWrap}>
+        <Text style={styles.footnoteText}>By continuing you agree to our</Text>
+        <View style={styles.footnoteLinksRow}>
+          <Pressable onPress={() => void openPrivacyPolicy()}>
+            <Text style={styles.footnoteLink}>Privacy Policy</Text>
+          </Pressable>
+          <Text style={styles.footnoteSeparator}>•</Text>
+          <Pressable onPress={() => void openTermsOfService()}>
+            <Text style={styles.footnoteLink}>Terms of Service</Text>
+          </Pressable>
+        </View>
+      </View>
     </AppScreen>
   );
 }
@@ -203,11 +213,32 @@ const getStyles = (colors: AppColors) =>
       fontSize: Typography.size.m,
       fontFamily: Typography.font.semibold,
     },
-    footnote: {
+    footnoteWrap: {
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: Spacing.m,
+    },
+    footnoteLinksRow: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      justifyContent: "center",
+      alignItems: "center",
+      gap: 6,
+    },
+    footnoteText: {
       color: colors.textMuted,
       textAlign: "center",
       fontSize: Typography.size.s,
       fontFamily: Typography.font.regular,
-      paddingHorizontal: Spacing.m,
+    },
+    footnoteSeparator: {
+      color: colors.textMuted,
+      fontSize: Typography.size.s,
+      fontFamily: Typography.font.regular,
+    },
+    footnoteLink: {
+      color: colors.primary,
+      fontSize: Typography.size.s,
+      fontFamily: Typography.font.medium,
     },
   });

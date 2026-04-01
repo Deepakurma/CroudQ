@@ -3,6 +3,7 @@ import { LoadingState } from "@/components/LoadingState";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { SCREEN_CONTENT_GAP } from "@/components/ui/AppScreen";
+import { AccessGateState } from "@/components/ui/AccessGateState";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { TabScreen } from "@/components/ui/TabScreen";
 import { AppColors } from "@/constants/Colors";
@@ -16,6 +17,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import {
   Lightbulb,
   MessageSquareMore,
+  Sparkles,
   TriangleAlert,
   Youtube,
 } from "lucide-react-native";
@@ -24,12 +26,21 @@ import { StyleSheet, Text, View } from "react-native";
 import Toast from "react-native-toast-message";
 
 export default function CommentsScreen() {
-  const { user, youtubeConnection } = useAuth();
+  const {
+    connectYouTube,
+    hasActiveSubscription,
+    openUpgradePage,
+    user,
+    youtubeConnection,
+  } = useAuth();
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
+  const isEndedSubscription = user?.subscriptionState === "ended";
   const commentsQuery = useQuery(
     trpc.insights.comments.queryOptions(undefined, {
-      enabled: Boolean(user?.id && youtubeConnection.isConnected),
+      enabled: Boolean(
+        user?.id && hasActiveSubscription && youtubeConnection.isConnected,
+      ),
       retry: false,
     }),
   );
@@ -51,7 +62,7 @@ export default function CommentsScreen() {
   return (
     <TabScreen
       contentContainerStyle={
-        !youtubeConnection.isConnected || commentsQuery.isLoading
+        !hasActiveSubscription || !youtubeConnection.isConnected || commentsQuery.isLoading
           ? styles.fullHeightContent
           : undefined
       }
@@ -62,11 +73,29 @@ export default function CommentsScreen() {
           subtitle="Hear your audience clearly and spot what matters"
         />
 
-        {!youtubeConnection.isConnected ? (
-          <EmptyState
+        {!hasActiveSubscription ? (
+          <AccessGateState
+            icon={Sparkles}
+            title={
+              isEndedSubscription
+                ? "Your Subscription has ended"
+                : "Subscribe to CroudQ Pro"
+            }
+            description={
+              isEndedSubscription
+                ? "Renew your plan and you're good to go again."
+                : "Subscribe to get access to your dashboard and performance insights."
+            }
+            buttonText={isEndedSubscription ? "Renew plan" : "Subscribe now"}
+            onPress={() => void openUpgradePage()}
+          />
+        ) : !youtubeConnection.isConnected ? (
+          <AccessGateState
             icon={Youtube}
             title="Connect YouTube"
             description="Connect and sync to generate comment insights."
+            buttonText="Connect YouTube"
+            onPress={() => void connectYouTube()}
           />
         ) : commentsQuery.isLoading ? null : insights ? (
           <Card style={styles.pulseCard}>
@@ -93,7 +122,9 @@ export default function CommentsScreen() {
         )}
       </View>
 
-      {youtubeConnection.isConnected && commentsQuery.isLoading ? (
+      {hasActiveSubscription &&
+      youtubeConnection.isConnected &&
+      commentsQuery.isLoading ? (
         <View style={styles.loadingState}>
           <LoadingState
             title="Analyzing comments"
@@ -106,7 +137,9 @@ export default function CommentsScreen() {
         </View>
       ) : null}
 
-      {!commentsQuery.isLoading ? (
+      {hasActiveSubscription &&
+      youtubeConnection.isConnected &&
+      !commentsQuery.isLoading ? (
         <>
           <View style={styles.section}>
             <SectionHeader

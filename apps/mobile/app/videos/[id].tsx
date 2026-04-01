@@ -15,6 +15,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ChevronLeft,
+  LayoutDashboard,
   PlayCircle,
   RefreshCw,
   Youtube,
@@ -64,6 +65,7 @@ export default function VideoDetailScreen() {
     thumbnailUrl?: string;
     sentiment?: "positive" | "negative" | "active";
     sentimentLabel?: string;
+    isUsedInDashboardAnalysis?: string;
   }>();
   const rawVideoId = params.id;
   const videoId =
@@ -72,6 +74,8 @@ export default function VideoDetailScreen() {
       : Array.isArray(rawVideoId)
         ? (rawVideoId[0] ?? "")
         : "";
+  const isUsedInDashboardAnalysis =
+    params.isUsedInDashboardAnalysis === "true";
   const router = useRouter();
   const { user, youtubeConnection } = useAuth();
   const { colors } = useAppTheme();
@@ -102,11 +106,12 @@ export default function VideoDetailScreen() {
           queryKey: trpc.insights.video.queryOptions({ videoId }).queryKey,
         });
       },
-      onError: () => {
+      onError: (error) => {
         Toast.show({
           type: "error",
           text1: "Video Insight",
-          text2: "Could not generate this video's AI breakdown.",
+          text2:
+            error.message || "Could not generate this video's AI breakdown.",
         });
       },
     }),
@@ -129,6 +134,7 @@ export default function VideoDetailScreen() {
   const videoInsight = videoQuery.data?.artifact?.payload;
   const hasAnalysis = videoQuery.data?.hasAnalysis ?? false;
   const isGenerating = generateVideoInsight.isPending;
+  const generateDisabled = isGenerating || !videoId || isUsedInDashboardAnalysis;
   const dominantVideoSentiment =
     videoInsight?.sentimentSummary.dominantTone ??
     videoInsight?.sentimentSummary.split.reduce((highest, current) =>
@@ -180,21 +186,21 @@ export default function VideoDetailScreen() {
               <Pressable
                 style={[
                   styles.regenerateInlineButton,
-                  isGenerating ? styles.generateButtonDisabled : null,
+                  generateDisabled ? styles.generateButtonDisabled : null,
                 ]}
                 onPress={() => {
                   void generateVideoInsight.mutateAsync({ videoId });
                 }}
-                disabled={isGenerating || !videoId}
+                disabled={generateDisabled}
               >
                 <RefreshCw
                   size={14}
-                  color={isGenerating ? colors.textSecondary : colors.white}
+                  color={generateDisabled ? colors.textSecondary : colors.white}
                 />
                 <Text
                   style={[
                     styles.regenerateInlineText,
-                    isGenerating ? styles.generateTextDisabled : null,
+                    generateDisabled ? styles.generateTextDisabled : null,
                   ]}
                 >
                   {isGenerating ? "Generating..." : "Regenerate"}
@@ -318,30 +324,40 @@ export default function VideoDetailScreen() {
         </>
       ) : (
         <View style={styles.emptyStateWrap}>
-          <EmptyState
-            icon={PlayCircle}
-            title="No video insight yet"
-            description="Tap Generate to create analysis for this video."
-          />
-          <Pressable
-            style={[
-              styles.generateButton,
-              isGenerating ? styles.generateButtonDisabled : null,
-            ]}
-            onPress={() => {
-              void generateVideoInsight.mutateAsync({ videoId });
-            }}
-            disabled={isGenerating || !videoId}
-          >
-            <Text
-              style={[
-                styles.generateText,
-                isGenerating ? styles.generateTextDisabled : null,
-              ]}
-            >
-              {isGenerating ? "Generating..." : "Generate"}
-            </Text>
-          </Pressable>
+          {isUsedInDashboardAnalysis ? (
+            <EmptyState
+              icon={LayoutDashboard}
+              title="Analysis already in use"
+              description="This video is currently powering your dashboard analysis, so there&apos;s nothing new to generate here."
+            />
+          ) : (
+            <>
+              <EmptyState
+                icon={PlayCircle}
+                title="No video insight yet"
+                description="Tap Generate to create analysis for this video."
+              />
+              <Pressable
+                style={[
+                  styles.generateButton,
+                  generateDisabled ? styles.generateButtonDisabled : null,
+                ]}
+                onPress={() => {
+                  void generateVideoInsight.mutateAsync({ videoId });
+                }}
+                disabled={generateDisabled}
+              >
+                <Text
+                  style={[
+                    styles.generateText,
+                    generateDisabled ? styles.generateTextDisabled : null,
+                  ]}
+                >
+                  {isGenerating ? "Generating..." : "Generate"}
+                </Text>
+              </Pressable>
+            </>
+          )}
         </View>
       )}
     </AppScreen>
@@ -467,6 +483,7 @@ const getStyles = (colors: AppColors, bottomInset: number) =>
     },
     emptyStateWrap: {
       alignItems: "center",
+      width: "100%",
     },
     generateButton: {
       paddingHorizontal: Spacing.xl,

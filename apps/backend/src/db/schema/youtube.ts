@@ -58,14 +58,12 @@ export const videos = pgTable(
     favoriteCount: integer("favorite_count"),
     commentCount: integer("comment_count"),
     duration: text("duration"),
-    analyticsViews: integer("analytics_views"),
-    analyticsLikes: integer("analytics_likes"),
-    analyticsComments: integer("analytics_comments"),
-    analyticsShares: integer("analytics_shares"),
-    estimatedMinutesWatched: integer("estimated_minutes_watched"),
-    averageViewDuration: integer("average_view_duration"),
-    subscribersGained: integer("subscribers_gained"),
-    subscribersLost: integer("subscribers_lost"),
+    lastCommentsSyncedAt: timestamp("last_comments_synced_at", {
+      withTimezone: true,
+    }),
+    lastManualCommentsSyncAt: timestamp("last_manual_comments_sync_at", {
+      withTimezone: true,
+    }),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),

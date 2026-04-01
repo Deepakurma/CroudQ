@@ -1,6 +1,7 @@
 import { AccountConnectCard } from "@/components/settings/AccountConnectCard";
 import { AppScreen } from "@/components/ui/AppScreen";
 import { Card } from "@/components/ui/Card";
+import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { AppColors } from "@/constants/Colors";
 import { Typography } from "@/constants/Typography";
@@ -11,13 +12,32 @@ import { ChevronLeft } from "lucide-react-native";
 import React from "react";
 import { Pressable, StyleSheet, Text } from "react-native";
 
+type AccountRow = {
+  id: string;
+  platform: "YouTube" | "Instagram";
+  handle: string;
+  status: string;
+  statusVariant?: "active" | "pending" | "default" | "positive" | "negative" | "neutral";
+  onPress?: () => void;
+  disabled?: boolean;
+};
+
 export default function ConnectAccountScreen() {
   const router = useRouter();
-  const { connectYouTube, isYouTubeConnecting, youtubeConnection, user } = useAuth();
+  const {
+    connectYouTube,
+    disconnectYouTube,
+    isYouTubeConnecting,
+    youtubeConnection,
+    user,
+  } = useAuth();
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
+  const [isDisconnectDialogVisible, setIsDisconnectDialogVisible] =
+    React.useState(false);
+  const [isDisconnecting, setIsDisconnecting] = React.useState(false);
 
-  const accounts = [
+  const accounts: AccountRow[] = [
     {
       id: "yt",
       platform: "YouTube" as const,
@@ -27,10 +47,13 @@ export default function ConnectAccountScreen() {
       status: isYouTubeConnecting
         ? "Connecting"
         : youtubeConnection.isConnected
-          ? "Connected"
+          ? "Disconnect"
           : "Not connected",
-      onPress: youtubeConnection.isConnected ? undefined : connectYouTube,
-      disabled: isYouTubeConnecting || youtubeConnection.isConnected,
+      statusVariant: youtubeConnection.isConnected ? "negative" : undefined,
+      onPress: youtubeConnection.isConnected
+        ? () => setIsDisconnectDialogVisible(true)
+        : connectYouTube,
+      disabled: isYouTubeConnecting,
     },
     {
       id: "ig",
@@ -40,6 +63,17 @@ export default function ConnectAccountScreen() {
       disabled: true,
     },
   ];
+
+  const handleDisconnect = async () => {
+    setIsDisconnecting(true);
+
+    try {
+      await disconnectYouTube();
+      setIsDisconnectDialogVisible(false);
+    } finally {
+      setIsDisconnecting(false);
+    }
+  };
 
   return (
     <AppScreen>
@@ -59,6 +93,7 @@ export default function ConnectAccountScreen() {
           platform={account.platform}
           handle={account.handle}
           status={account.status}
+          statusVariant={account.statusVariant}
           onPress={account.onPress}
           disabled={account.disabled}
         />
@@ -69,6 +104,27 @@ export default function ConnectAccountScreen() {
           Recent uploads, comment sentiment, retention signals, and audience patterns used to generate CroudQ insights.
         </Text>
       </Card>
+
+      <ConfirmationDialog
+        visible={isDisconnectDialogVisible}
+        title="Disconnect YouTube?"
+        description="This will remove your connected YouTube account and clear synced YouTube data from CroudQ."
+        confirmLabel={isDisconnecting ? "Disconnecting..." : "Disconnect"}
+        cancelLabel="Cancel"
+        variant="danger"
+        onCancel={() => {
+          if (isDisconnecting) {
+            return;
+          }
+          setIsDisconnectDialogVisible(false);
+        }}
+        onConfirm={() => {
+          if (isDisconnecting) {
+            return;
+          }
+          void handleDisconnect();
+        }}
+      />
     </AppScreen>
   );
 }

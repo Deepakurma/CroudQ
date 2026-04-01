@@ -8,7 +8,7 @@ import { StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 const heroPoints = [
-  { icon: Sparkles, text: "Quickly understand what your comments really mean" },
+  { icon: Sparkles, text: "Quickly understand what your audience really mean" },
   { icon: TrendingUp, text: "See why a video is taking off or falling flat" },
   { icon: BrainCircuit, text: "Get clear ideas for what to do next" },
 ];

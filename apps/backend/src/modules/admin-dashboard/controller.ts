@@ -2,29 +2,32 @@ import { and, eq, gte, isNull, lt, sql } from "drizzle-orm";
 
 import { db } from "../../db";
 import { admins, feedback, users, youtubeAccounts } from "../../db/schema";
+import { getPendingRenewalsCount } from "../admin-billing/controller";
 
 export const getAdminDashboardOverview = async () => {
-  const [creatorsRow] = await db
-    .select({
-      count: sql<number>`count(*)::int`,
-    })
-    .from(users)
-    .leftJoin(admins, eq(admins.userId, users.id))
-    .where(isNull(admins.userId));
-
-  const [connectedCreatorsRow] = await db
-    .select({
-      count: sql<number>`count(distinct ${youtubeAccounts.userId})::int`,
-    })
-    .from(youtubeAccounts)
-    .leftJoin(admins, eq(admins.userId, youtubeAccounts.userId))
-    .where(isNull(admins.userId));
-
-  const [feedbackRow] = await db
-    .select({
-      count: sql<number>`count(*)::int`,
-    })
-    .from(feedback);
+  const [[creatorsRow], [connectedCreatorsRow], [feedbackRow], pendingRenewals] =
+    await Promise.all([
+      db
+        .select({
+          count: sql<number>`count(*)::int`,
+        })
+        .from(users)
+        .leftJoin(admins, eq(admins.userId, users.id))
+        .where(isNull(admins.userId)),
+      db
+        .select({
+          count: sql<number>`count(distinct ${youtubeAccounts.userId})::int`,
+        })
+        .from(youtubeAccounts)
+        .leftJoin(admins, eq(admins.userId, youtubeAccounts.userId))
+        .where(isNull(admins.userId)),
+      db
+        .select({
+          count: sql<number>`count(*)::int`,
+        })
+        .from(feedback),
+      getPendingRenewalsCount(),
+    ]);
 
   const totalCreators = creatorsRow?.count ?? 0;
   const connectedCreators = connectedCreatorsRow?.count ?? 0;
@@ -36,6 +39,7 @@ export const getAdminDashboardOverview = async () => {
     totalCreators,
     connectedCreators,
     conversionRate,
+    pendingRenewals,
     totalFeedbacks,
   };
 };

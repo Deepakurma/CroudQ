@@ -7,7 +7,7 @@
       "policy": "appVersion"
     },
     "orientation": "portrait",
-    "icon": "./assets/images/Logo.jpeg",
+    "icon": "./assets/images/Logo.png",
     "scheme": "croudq",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -26,7 +26,7 @@
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/Logo.png",
-        "backgroundImage": "./assets/images/Logo.jpeg",
+        "backgroundImage": "./assets/images/Logo.png",
         "monochromeImage": "./assets/images/Logo.png"
       },
       "edgeToEdgeEnabled": true,

@@ -5,7 +5,7 @@ export const metadata: Metadata = {
   description: 'How CroudQ collects, uses, and protects your data.'
 };
 
-const lastUpdated = 'March 27, 2026';
+const lastUpdated = 'April 1, 2026';
 
 export default function PrivacyPolicyPage() {
   return (
@@ -30,7 +30,7 @@ export default function PrivacyPolicyPage() {
               'Account details such as your name, email, and authentication identifiers.',
               'Connected channel data you authorize us to access (including YouTube channel and content performance metrics).',
               'Audience feedback signals, such as comment text and engagement-related metadata, when available through connected platforms.',
-              'Product usage and device data (for example, pages viewed, feature usage, browser type, IP address, and timestamps).',
+              'Limited technical and service data needed to operate the product, such as browser type, request timestamps, and basic usage events.',
               'Support and communication data when you contact us.'
             ]}
           />
@@ -70,7 +70,7 @@ export default function PrivacyPolicyPage() {
             body={[
               'We retain data while your account is active and as needed to provide the service.',
               'We may keep limited records for security, legal, or compliance reasons.',
-              'When deletion is requested, we remove or anonymize data unless retention is legally required.'
+              'When deletion is requested, or when access to a connected platform is revoked, we delete or anonymize data unless retention is legally required.'
             ]}
           />
 
@@ -78,8 +78,10 @@ export default function PrivacyPolicyPage() {
             title="6. Your Choices"
             body={[
               'You can disconnect linked channels from your account settings.',
+              'If you connected YouTube, you can also revoke CroudQ access at any time from Google security settings: https://security.google.com/settings/security/permissions',
+              'If YouTube or Google access is revoked, CroudQ will stop accessing that connected data and will remove stored YouTube-authorized data in line with our operational and legal obligations.',
               'You can request access, correction, or deletion of your data by contacting us.',
-              'You can opt out of non-essential product messages when those controls are available.'
+              'You can manage or stop using connected services at any time from the product flows available to you.'
             ]}
           />
 
@@ -94,7 +96,7 @@ export default function PrivacyPolicyPage() {
           <PolicySection
             title="8. Children’s Privacy"
             body={[
-              'CroudQ is not intended for children under 13. If we learn that data from a child under 13 was collected, we will take steps to delete it.'
+              'CroudQ is not intended for individuals under 16. If we learn that data from a person under 16 was collected, we will take steps to delete it.'
             ]}
           />
 

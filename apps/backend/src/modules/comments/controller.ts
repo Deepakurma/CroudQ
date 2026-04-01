@@ -3,7 +3,6 @@ import { asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "../../db";
 import { comments } from "../../db/schema";
 import type {
-  FetchYoutubeJson,
   SyncCommentsForVideoInput,
   YoutubeCommentThreadsResponse,
 } from "./dto";
@@ -109,7 +108,7 @@ export const syncCommentsForVideo = async ({
     });
   } catch (error) {
     if (isCommentsDisabledError(error)) {
-      return;
+      return false;
     }
 
     throw error;
@@ -143,7 +142,7 @@ export const syncCommentsForVideo = async ({
     );
 
   if (commentValues.length === 0) {
-    return;
+    return false;
   }
 
   await db.insert(comments).values(commentValues).onConflictDoNothing({
@@ -151,4 +150,5 @@ export const syncCommentsForVideo = async ({
   });
 
   await trimCommentsForVideo(videoId, commentsPerVideo);
+  return true;
 };

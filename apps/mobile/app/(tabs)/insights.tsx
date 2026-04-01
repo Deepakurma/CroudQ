@@ -4,6 +4,7 @@ import { NextContentMoveCard } from "@/components/insights/NextContentMoveCard";
 import { StrategicInsightCard } from "@/components/insights/StrategicInsightCard";
 import { LoadingState } from "@/components/LoadingState";
 import { SCREEN_CONTENT_GAP } from "@/components/ui/AppScreen";
+import { AccessGateState } from "@/components/ui/AccessGateState";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { TabScreen } from "@/components/ui/TabScreen";
 import { AppColors } from "@/constants/Colors";
@@ -12,18 +13,33 @@ import { useAuth } from "@/context/AuthContext";
 import { useAppTheme } from "@/context/ThemeContext";
 import { trpc } from "@/utils/api";
 import { useQuery } from "@tanstack/react-query";
-import { Rocket, TrendingUp, Wrench, Youtube } from "lucide-react-native";
+import {
+  Rocket,
+  Sparkles,
+  TrendingUp,
+  Wrench,
+  Youtube,
+} from "lucide-react-native";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import Toast from "react-native-toast-message";
 
 export default function InsightsScreen() {
-  const { user, youtubeConnection } = useAuth();
+  const {
+    connectYouTube,
+    hasActiveSubscription,
+    openUpgradePage,
+    user,
+    youtubeConnection,
+  } = useAuth();
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
+  const isEndedSubscription = user?.subscriptionState === "ended";
   const strategyQuery = useQuery(
     trpc.insights.strategy.queryOptions(undefined, {
-      enabled: Boolean(user?.id && youtubeConnection.isConnected),
+      enabled: Boolean(
+        user?.id && hasActiveSubscription && youtubeConnection.isConnected,
+      ),
       retry: false,
     }),
   );
@@ -43,7 +59,7 @@ export default function InsightsScreen() {
   return (
     <TabScreen
       contentContainerStyle={
-        !youtubeConnection.isConnected || strategyQuery.isLoading
+        !hasActiveSubscription || !youtubeConnection.isConnected || strategyQuery.isLoading
           ? styles.fullHeightContent
           : undefined
       }
@@ -53,11 +69,29 @@ export default function InsightsScreen() {
           title="Insights"
           subtitle="See what is working, what is not, and what to do next"
         />
-        {!youtubeConnection.isConnected ? (
-          <EmptyState
+        {!hasActiveSubscription ? (
+          <AccessGateState
+            icon={Sparkles}
+            title={
+              isEndedSubscription
+                ? "Your Subscription has ended"
+                : "Subscribe to CroudQ Pro"
+            }
+            description={
+              isEndedSubscription
+                ? "Renew your plan and you're good to go again."
+                : "Subscribe to get access to your dashboard and performance insights."
+            }
+            buttonText={isEndedSubscription ? "Renew plan" : "Subscribe now"}
+            onPress={() => void openUpgradePage()}
+          />
+        ) : !youtubeConnection.isConnected ? (
+          <AccessGateState
             icon={Youtube}
             title="Connect YouTube"
             description="Connect and sync to generate strategy insights."
+            buttonText="Connect YouTube"
+            onPress={() => void connectYouTube()}
           />
         ) : strategyQuery.isLoading ? null : strategyQuery.data ? (
           <InsightHeroCard
@@ -76,7 +110,9 @@ export default function InsightsScreen() {
         )}
       </View>
 
-      {youtubeConnection.isConnected && strategyQuery.isLoading ? (
+      {hasActiveSubscription &&
+      youtubeConnection.isConnected &&
+      strategyQuery.isLoading ? (
         <View style={styles.loadingState}>
           <LoadingState
             title="Generating strategy"
@@ -89,7 +125,9 @@ export default function InsightsScreen() {
         </View>
       ) : null}
 
-      {!strategyQuery.isLoading ? (
+      {hasActiveSubscription &&
+      youtubeConnection.isConnected &&
+      !strategyQuery.isLoading ? (
         <>
           <View style={styles.section}>
             <SectionHeader

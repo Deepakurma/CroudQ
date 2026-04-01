@@ -7,7 +7,7 @@ import { StepsSection } from '~/components/landing/steps-section';
 const chips = [
   'BUILT FOR REAL CREATOR WORKFLOWS',
   'AI-ASSISTED INSIGHTS FROM YOUR CONTENT DATA',
-  'SPOT WHAT YOUR AUDIENCE RESPONDS TO'
+  'UNDERSTAND AND LISTEN YOUR AUDIENCE'
 ] as const;
 
 const fanCards = [

@@ -138,7 +138,6 @@ CREATE TABLE "billing_webhook_events" (
 	"provider" text DEFAULT 'razorpay' NOT NULL,
 	"event_type" text NOT NULL,
 	"payload_hash" text NOT NULL,
-	"provider_event_id" text,
 	"provider_subscription_id" text,
 	"processed_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"payload_json" text NOT NULL
@@ -194,14 +193,8 @@ CREATE TABLE "videos" (
 	"favorite_count" integer,
 	"comment_count" integer,
 	"duration" text,
-	"analytics_views" integer,
-	"analytics_likes" integer,
-	"analytics_comments" integer,
-	"analytics_shares" integer,
-	"estimated_minutes_watched" integer,
-	"average_view_duration" integer,
-	"subscribers_gained" integer,
-	"subscribers_lost" integer,
+	"last_comments_synced_at" timestamp with time zone,
+	"last_manual_comments_sync_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -256,7 +249,6 @@ CREATE INDEX "billing_subscriptions_user_id_idx" ON "billing_subscriptions" USIN
 CREATE INDEX "billing_subscriptions_status_idx" ON "billing_subscriptions" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "billing_subscriptions_plan_id_idx" ON "billing_subscriptions" USING btree ("plan_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "billing_webhook_events_payload_hash_idx" ON "billing_webhook_events" USING btree ("payload_hash");--> statement-breakpoint
-CREATE INDEX "billing_webhook_events_provider_event_id_idx" ON "billing_webhook_events" USING btree ("provider_event_id");--> statement-breakpoint
 CREATE INDEX "billing_webhook_events_provider_subscription_id_idx" ON "billing_webhook_events" USING btree ("provider_subscription_id");--> statement-breakpoint
 CREATE INDEX "feedback_user_id_idx" ON "feedback" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "feedback_created_at_idx" ON "feedback" USING btree ("created_at");--> statement-breakpoint

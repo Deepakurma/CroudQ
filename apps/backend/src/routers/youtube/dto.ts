@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-import { youtubePerformanceComparisonSchema } from "../../modules/overviewstats/dto";
-
 export const youtubeAuthUrlQuerySchema = z.object({
   redirectTo: z.url().optional(),
 });
@@ -15,6 +13,10 @@ export const youtubeCallbackQuerySchema = z.object({
 export const youtubeDataParamsSchema = z.object({});
 
 export const youtubeSyncParamsSchema = z.object({});
+export const youtubeDisconnectResponseSchema = z.object({
+  success: z.literal(true),
+  message: z.string(),
+});
 
 export const youtubeVideoSummarySchema = z.object({
   id: z.string(),
@@ -27,14 +29,7 @@ export const youtubeVideoSummarySchema = z.object({
   favoriteCount: z.number().int().nonnegative().nullable(),
   commentCount: z.number().int().nonnegative().nullable(),
   duration: z.string().nullable(),
-  analyticsViews: z.number().int().nonnegative().nullable(),
-  analyticsLikes: z.number().int().nonnegative().nullable(),
-  analyticsComments: z.number().int().nonnegative().nullable(),
-  analyticsShares: z.number().int().nonnegative().nullable(),
-  estimatedMinutesWatched: z.number().int().nonnegative().nullable(),
-  averageViewDuration: z.number().int().nonnegative().nullable(),
-  subscribersGained: z.number().int().nonnegative().nullable(),
-  subscribersLost: z.number().int().nonnegative().nullable(),
+  isUsedInDashboardAnalysis: z.boolean(),
 });
 
 export const youtubeDataResponseSchema = z.object({
@@ -45,7 +40,6 @@ export const youtubeDataResponseSchema = z.object({
   videos: z.array(youtubeVideoSummarySchema),
   commentsCount: z.number().int().nonnegative(),
   lastSyncedAt: z.date().nullable(),
-  performanceComparison: youtubePerformanceComparisonSchema.nullable(),
 });
 
 export type YoutubeAuthUrlQuery = z.infer<typeof youtubeAuthUrlQuerySchema>;

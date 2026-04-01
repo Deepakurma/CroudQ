@@ -18,14 +18,16 @@ const parseDurationToSeconds = (value: string) => {
 const getCookieOptions = () => ({
   path: "/",
   httpOnly: true,
-  sameSite: "lax" as const,
-  secure: process.env.NODE_ENV === "production",
+  // sameSite: "lax" as const,
+  // secure: process.env.NODE_ENV === "production",
+  sameSite: "none" as const,
+  secure: true,
 });
 
 export const getWebRefreshTokenFromCookies = (req: unknown) =>
-  (
-    (req as { cookies?: Record<string, string | undefined> }).cookies ?? {}
-  )[REFRESH_TOKEN_COOKIE]?.trim() || null;
+  ((req as { cookies?: Record<string, string | undefined> }).cookies ?? {})[
+    REFRESH_TOKEN_COOKIE
+  ]?.trim() || null;
 
 export const setWebAuthCookies = (
   reply: unknown,
@@ -35,7 +37,11 @@ export const setWebAuthCookies = (
   },
 ) => {
   const fastifyReply = reply as {
-    setCookie?: (name: string, value: string, options: Record<string, unknown>) => void;
+    setCookie?: (
+      name: string,
+      value: string,
+      options: Record<string, unknown>,
+    ) => void;
   };
   if (!fastifyReply.setCookie) return;
 

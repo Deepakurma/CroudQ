@@ -14,9 +14,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function TabsLayout() {
   const { colors } = useAppTheme();
-  const { youtubeConnection } = useAuth();
+  const { hasActiveSubscription, youtubeConnection } = useAuth();
   const insets = useSafeAreaInsets();
   const youtubeLocked = !youtubeConnection.isConnected;
+  const subscriptionLocked = !hasActiveSubscription;
 
   return (
     <Tabs
@@ -53,8 +54,15 @@ export default function TabsLayout() {
           tabBarButton: (props) => (
             <HapticTab
               {...props}
-              disabled={youtubeLocked}
-              disabledMessage="Connect YouTube account to view."
+              disabled={subscriptionLocked || youtubeLocked}
+              disabledTitle={
+                subscriptionLocked ? "Subscription required" : "YouTube required"
+              }
+              disabledMessage={
+                subscriptionLocked
+                  ? "Subscribe to CroudQ Pro to view."
+                  : "Connect YouTube account to view."
+              }
             />
           ),
           tabBarIcon: ({ color, size }) => <Video color={color} size={size} />,
@@ -67,8 +75,15 @@ export default function TabsLayout() {
           tabBarButton: (props) => (
             <HapticTab
               {...props}
-              disabled={youtubeLocked}
-              disabledMessage="Connect YouTube account to view."
+              disabled={subscriptionLocked || youtubeLocked}
+              disabledTitle={
+                subscriptionLocked ? "Subscription required" : "YouTube required"
+              }
+              disabledMessage={
+                subscriptionLocked
+                  ? "Subscribe to CroudQ Pro to view."
+                  : "Connect YouTube account to view."
+              }
             />
           ),
           tabBarIcon: ({ color, size }) => (
@@ -83,8 +98,15 @@ export default function TabsLayout() {
           tabBarButton: (props) => (
             <HapticTab
               {...props}
-              disabled={youtubeLocked}
-              disabledMessage="Connect YouTube account to view."
+              disabled={subscriptionLocked || youtubeLocked}
+              disabledTitle={
+                subscriptionLocked ? "Subscription required" : "YouTube required"
+              }
+              disabledMessage={
+                subscriptionLocked
+                  ? "Subscribe to CroudQ Pro to view."
+                  : "Connect YouTube account to view."
+              }
             />
           ),
           tabBarIcon: ({ color, size }) => (

@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { TRPCError } from "@trpc/server";
 
 import { processRazorpayWebhook } from "../../modules/billing/controller";
 
@@ -31,7 +32,11 @@ export async function registerRazorpayWebhookRoute(server: FastifyInstance) {
           return reply.code(200).send({ ok: true });
         } catch (error) {
           request.log.error({ error }, "Failed to process Razorpay webhook");
-          return reply.code(401).send({ ok: false });
+          if (error instanceof TRPCError && error.code === "UNAUTHORIZED") {
+            return reply.code(401).send({ ok: false, message: error.message });
+          }
+
+          return reply.code(500).send({ ok: false, message: "Webhook processing failed" });
         }
       },
     );

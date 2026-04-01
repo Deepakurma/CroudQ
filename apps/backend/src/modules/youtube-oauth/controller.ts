@@ -1,8 +1,8 @@
 const GOOGLE_OAUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
+const GOOGLE_TOKEN_REVOCATION_URL = "https://oauth2.googleapis.com/revoke";
 const YOUTUBE_SCOPES = [
   "https://www.googleapis.com/auth/youtube.force-ssl",
-  "https://www.googleapis.com/auth/yt-analytics.readonly",
 ].join(" ");
 
 type GoogleTokenResponse = {
@@ -65,6 +65,38 @@ export const exchangeCodeForTokens = async (code: string) => {
   }
 
   return payload;
+};
+
+export const isYoutubeAuthorizationRevokedError = (error: unknown) => {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message.toLowerCase();
+
+  return (
+    message.includes("invalid_grant") ||
+    message.includes("token has been expired or revoked") ||
+    message.includes("revoked") ||
+    message.includes("invalid_token")
+  );
+};
+
+export const revokeYoutubeToken = async (token: string) => {
+  const body = new URLSearchParams({ token });
+
+  const response = await fetch(GOOGLE_TOKEN_REVOCATION_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body,
+  });
+
+  if (!response.ok) {
+    const message = await response.text();
+    throw new Error(message || "Failed to revoke YouTube token");
+  }
 };
 
 export const refreshYoutubeAccessToken = async (refreshToken: string) => {

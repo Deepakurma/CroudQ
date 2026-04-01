@@ -21,7 +21,12 @@ interface OverviewGridProps {
 export function OverviewGrid({ stats }: OverviewGridProps) {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
-  const statOrder = ["total_views", "total_likes", "avg_watch_time", "total_comments"];
+  const statOrder = [
+    "total_views",
+    "engagement_rate",
+    "total_likes",
+    "total_comments",
+  ];
   const resolvedStats = [...(stats ?? [])].sort((left, right) => {
     const leftIndex = statOrder.indexOf(left.id);
     const rightIndex = statOrder.indexOf(right.id);

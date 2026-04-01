@@ -1,11 +1,22 @@
-import { notInArray } from "drizzle-orm";
-
 import { db, conn } from "../src/db";
 import {
   admins,
   authRateLimits,
+  authSessions,
+  billingPlans,
+  billingSubscriptions,
+  billingWebhookEvents,
+  comments,
+  feedback,
+  insightArtifacts,
+  oauthStates,
+  passwordResetTokens,
   revokedTokens,
+  userCredentials,
   users,
+  videos,
+  webLoginTokens,
+  youtubeAccounts,
 } from "../src/db/schema";
 
 const hasYesFlag = Bun.argv.includes("--yes");
@@ -17,29 +28,27 @@ const main = async () => {
     );
   }
 
-  const adminRows = await db.select({ userId: admins.userId }).from(admins);
-  const adminUserIds = Array.from(
-    new Set(adminRows.map((row) => row.userId).filter(Boolean)),
-  );
-
   await db.transaction(async (tx) => {
-    // Global auth tables; safe to clear in reset workflows.
+    await tx.delete(billingWebhookEvents);
+    await tx.delete(comments);
+    await tx.delete(videos);
+    await tx.delete(youtubeAccounts);
+    await tx.delete(feedback);
+    await tx.delete(insightArtifacts);
+    await tx.delete(webLoginTokens);
+    await tx.delete(oauthStates);
+    await tx.delete(passwordResetTokens);
+    await tx.delete(authSessions);
+    await tx.delete(userCredentials);
+    await tx.delete(billingSubscriptions);
+    await tx.delete(admins);
+    await tx.delete(users);
+    await tx.delete(billingPlans);
     await tx.delete(authRateLimits);
     await tx.delete(revokedTokens);
-
-    // Keep admin users (and their cascaded auth/admin records), drop all others.
-    if (adminUserIds.length > 0) {
-      await tx.delete(users).where(notInArray(users.id, adminUserIds));
-      return;
-    }
-
-    // If no admins exist, reset all users too.
-    await tx.delete(users);
   });
 
-  console.log(
-    `Reset complete. Preserved admin users: ${adminUserIds.length}. Removed non-admin data.`,
-  );
+  console.log("Reset complete. Cleared all app data tables.");
 };
 
 main()

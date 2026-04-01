@@ -18,6 +18,7 @@ export default function page() {
     totalCreators: number;
     connectedCreators: number;
     conversionRate: number;
+    pendingRenewals: number;
     totalFeedbacks: number;
   } | null>(null);
 
@@ -62,8 +63,8 @@ export default function page() {
       },
       {
         label: 'Pending Renewals',
-        value: 0,
-        sub: 'Pending creator renewals',
+        value: summary?.pendingRenewals ?? 0,
+        sub: 'Ended subscriptions without renewal',
         color: 'red',
         icon: History
       },

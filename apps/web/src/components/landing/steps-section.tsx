@@ -19,6 +19,12 @@ export function StepsSection({ steps }: StepsSectionProps) {
     PLANNING: 'planning',
     ITERATION: 'iteration'
   } as const;
+  const labelByStepId = {
+    FOUNDATION: 'CONNECT',
+    ANALYSIS: 'ANALYZE',
+    PLANNING: 'PLAN',
+    ITERATION: 'GROW'
+  } as const;
 
   return (
     <div id="workflow">
@@ -36,7 +42,7 @@ export function StepsSection({ steps }: StepsSectionProps) {
               <Badge
                 variant="outline"
                 className="border-foreground/20 bg-card/40 text-foreground mb-8 inline-block rounded-sm px-3 py-1 text-xs font-black tracking-widest uppercase md:text-sm [@media(max-height:760px)]:mb-6">
-                {step.id}
+                {labelByStepId[step.id as keyof typeof labelByStepId] ?? step.id}
               </Badge>
               <h2 className="text-foreground m-0 text-[clamp(1.8rem,8.5vw,6.5rem)] leading-[0.9] font-black tracking-tighter uppercase [@media(max-height:760px)]:text-[clamp(1.7rem,6.5vw,4.5rem)]">
                 {step.title}
