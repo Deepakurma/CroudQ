@@ -17,8 +17,6 @@
       "buildNumber": "1",
       "icon": "./assets/images/Logo.png",
       "infoPlist": {
-        "NSCameraUsageDescription": "This app uses camera to upload property images.",
-        "NSPhotoLibraryUsageDescription": "This app needs access to photos to upload property images.",
         "ITSAppUsesNonExemptEncryption": false
       }
     },
@@ -35,7 +33,7 @@
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/Logo.png"
     },
     "plugins": [
       "expo-router",
@@ -58,10 +56,11 @@
       "typedRoutes": true,
       "reactCompiler": true
     },
+    "owner": "deepakurma",
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "5506e01e-8937-4f62-a02e-724f22ef1562"
+        "projectId": "017bc8ab-abea-42c6-8665-268714aa1224"
       }
     }
   }
