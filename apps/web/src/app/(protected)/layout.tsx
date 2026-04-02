@@ -19,7 +19,7 @@ export default async function RootLayout({
   try {
     await getServerAdminUser();
   } catch {
-    redirect('/auth/admin/login?redirect=/admin');
+    redirect('/api/admin-auth/refresh?redirect=/admin');
   }
 
   return (

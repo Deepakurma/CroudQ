@@ -63,10 +63,7 @@ interface AuthContextType {
     email: string;
     password: string;
   }) => Promise<void>;
-  verifySignupOtp: (input: {
-    email: string;
-    code: string;
-  }) => Promise<void>;
+  verifySignupOtp: (input: { email: string; code: string }) => Promise<void>;
   signup: (input: {
     name?: string;
     email: string;
@@ -240,8 +237,7 @@ const getFriendlyYoutubeMessage = (message: string) => {
 };
 
 const shouldClearSessionOnRefreshFailure = (message: string) =>
-  message.includes("Refresh session is invalid or expired") ||
-  message.includes("UNAUTHORIZED");
+  message.includes("Refresh session is invalid or expired");
 
 const isLegacySession = (
   session: AuthSession | LegacyAuthSession,
@@ -518,15 +514,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const currentUser = await queryClient.fetchQuery(
             trpc.auth.me.queryOptions(),
           );
-          setUser(currentUser);
-          await SecureStore.setItemAsync(
-            STORAGE_KEY,
-            JSON.stringify({
-              accessToken: session.accessToken,
-              refreshToken: session.refreshToken,
-              user: currentUser,
-            } satisfies AuthSession),
-          );
+          await persistCurrentUser(currentUser);
 
           await refreshYoutubeConnection({ silent: true });
         } catch (error) {
@@ -583,7 +571,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       showAuthToast("success", "Check your email", result.message);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Could not send verification code";
+        error instanceof Error
+          ? error.message
+          : "Could not send verification code";
       showAuthToast("error", "Sign up failed", getFriendlyAuthMessage(message));
       throw error;
     }
@@ -597,7 +587,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Could not verify your email";
-      showAuthToast("error", "Verification failed", getFriendlyAuthMessage(message));
+      showAuthToast(
+        "error",
+        "Verification failed",
+        getFriendlyAuthMessage(message),
+      );
       throw error;
     }
   };
