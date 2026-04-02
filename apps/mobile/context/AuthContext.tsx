@@ -78,7 +78,6 @@ interface AuthContextType {
     currentPassword: string;
   }) => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
-  resetPassword: (token: string, password: string) => Promise<void>;
   requestAccountDeletion: () => Promise<void>;
   cancelAccountDeletion: () => Promise<void>;
   openUpgradePage: () => Promise<void>;
@@ -271,7 +270,6 @@ const AuthContext = createContext<AuthContextType>({
   signup: async () => {},
   updateProfile: async () => {},
   requestPasswordReset: async () => {},
-  resetPassword: async () => {},
   requestAccountDeletion: async () => {},
   cancelAccountDeletion: async () => {},
   openUpgradePage: async () => {},
@@ -316,9 +314,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
   const requestPasswordResetMutation = useMutation(
     trpc.auth.requestPasswordReset.mutationOptions(),
-  );
-  const resetPasswordMutation = useMutation(
-    trpc.auth.resetPassword.mutationOptions(),
   );
   const requestAccountDeletionMutation = useMutation(
     trpc.auth.requestAccountDeletion.mutationOptions(),
@@ -627,21 +622,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const resetPassword = async (token: string, password: string) => {
-    try {
-      const result = await resetPasswordMutation.mutateAsync({
-        token,
-        password,
-      });
-      showAuthToast("success", "Password updated", result.message);
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Could not reset password";
-      showAuthToast("error", "Reset failed", getFriendlyAuthMessage(message));
-      throw error;
-    }
-  };
-
   const requestAccountDeletion = async () => {
     try {
       const nextUser = await requestAccountDeletionMutation.mutateAsync();
@@ -890,7 +870,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signup,
         updateProfile,
         requestPasswordReset,
-        resetPassword,
         requestAccountDeletion,
         cancelAccountDeletion,
         openUpgradePage,

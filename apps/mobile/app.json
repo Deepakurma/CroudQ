@@ -30,21 +30,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.croudq.app",
-      "intentFilters": [
-        {
-          "action": "VIEW",
-          "autoVerify": true,
-          "category": ["BROWSABLE", "DEFAULT"],
-          "data": [
-            {
-              "scheme": "https",
-              "host": "croudq.com",
-              "pathPrefix": "/reset-password"
-            }
-          ]
-        }
-      ]
+      "package": "com.croudq.app"
     },
     "web": {
       "output": "static",

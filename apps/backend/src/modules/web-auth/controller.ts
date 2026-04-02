@@ -3,6 +3,9 @@ const REFRESH_TOKEN_COOKIE = "web_refresh_token";
 const DEFAULT_ACCESS_TOKEN_TTL = "15m";
 const DEFAULT_REFRESH_TOKEN_TTL = "30d";
 
+const getWebCookieDomain = () =>
+  process.env.WEB_COOKIE_DOMAIN?.trim() || undefined;
+
 const parseDurationToSeconds = (value: string) => {
   const match = value.trim().match(/^(\d+)([mhd])$/i);
   if (!match) {
@@ -19,7 +22,8 @@ const getCookieOptions = () => ({
   path: "/",
   httpOnly: true,
   sameSite: "lax" as const,
-  secure: true,
+  secure: process.env.NODE_ENV === "production",
+  domain: getWebCookieDomain(),
 });
 
 export const getWebRefreshTokenFromCookies = (req: unknown) =>
@@ -66,6 +70,11 @@ export const clearWebAuthCookies = (reply: unknown) => {
   };
   if (!fastifyReply.clearCookie) return;
 
-  fastifyReply.clearCookie(ACCESS_TOKEN_COOKIE, { path: "/" });
-  fastifyReply.clearCookie(REFRESH_TOKEN_COOKIE, { path: "/" });
+  const cookieOptions = {
+    path: "/",
+    domain: getWebCookieDomain(),
+  };
+
+  fastifyReply.clearCookie(ACCESS_TOKEN_COOKIE, cookieOptions);
+  fastifyReply.clearCookie(REFRESH_TOKEN_COOKIE, cookieOptions);
 };

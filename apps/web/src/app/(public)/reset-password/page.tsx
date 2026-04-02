@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import { toast } from 'sonner';
@@ -13,7 +13,7 @@ import { trpcClient } from '~/utils/trpc';
 
 import type { FormEvent, ReactNode } from 'react';
 
-const APP_SCHEME = 'croudq://reset-password';
+const LOGIN_APP_SCHEME = 'croudq://login';
 
 function ResetPageShell({ children }: { children: ReactNode }) {
   return (
@@ -29,51 +29,14 @@ function PasswordResetPageContent() {
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
   const isResetFlow = Boolean(token);
-  const deepLink = useMemo(() => {
-    if (!token) {
-      return null;
-    }
-
-    return `${APP_SCHEME}?token=${encodeURIComponent(token)}`;
-  }, [token]);
-
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    if (!deepLink || typeof window === 'undefined') {
-      return;
-    }
-
-    const userAgent = window.navigator.userAgent.toLowerCase();
-    const isMobileBrowser = /android|iphone|ipad|ipod/.test(userAgent);
-    if (!isMobileBrowser) {
-      return;
-    }
-
-    const sessionKey = `password-reset-app-open:${token}`;
-    if (window.sessionStorage.getItem(sessionKey) === '1') {
-      return;
-    }
-
-    window.sessionStorage.setItem(sessionKey, '1');
-    const timeoutId = window.setTimeout(() => {
-      window.location.assign(deepLink);
-    }, 250);
-
-    return () => {
-      window.clearTimeout(timeoutId);
-    };
-  }, [deepLink, token]);
+  const [isResetComplete, setIsResetComplete] = useState(false);
 
   const handleOpenInApp = () => {
-    if (!deepLink) {
-      return;
-    }
-
-    window.location.assign(deepLink);
+    window.location.assign(LOGIN_APP_SCHEME);
   };
 
   const handleRequestReset = async (event: FormEvent<HTMLFormElement>) => {
@@ -115,7 +78,8 @@ function PasswordResetPageContent() {
         token,
         password
       });
-      toast.success('Password updated successfully. You can now sign in.');
+      toast.success('Password updated successfully.');
+      setIsResetComplete(true);
       setPassword('');
       setConfirmPassword('');
     } catch (err) {
@@ -134,17 +98,22 @@ function PasswordResetPageContent() {
         </h1>
         <p className="text-muted-foreground text-sm">
           {isResetFlow
-            ? 'Open the app or set a new password here in the browser.'
+            ? 'Set a new password here in the browser.'
             : 'Enter your email to receive a reset link.'}
         </p>
       </div>
 
       {isResetFlow ? (
-        <>
-          <Button type="button" className="w-full" variant="outline" onClick={handleOpenInApp}>
-            Open In App
-          </Button>
-
+        isResetComplete ? (
+          <div className="space-y-4">
+            <p className="text-muted-foreground text-sm">
+              Your password has been reset. You can go back to the app and log in.
+            </p>
+            <Button type="button" className="w-full" onClick={handleOpenInApp}>
+              Open App
+            </Button>
+          </div>
+        ) : (
           <form onSubmit={handleResetPassword} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="password">New Password</Label>
@@ -171,10 +140,10 @@ function PasswordResetPageContent() {
             </div>
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Updating...' : 'Update Password In Browser'}
+              {isSubmitting ? 'Updating...' : 'Update Password'}
             </Button>
           </form>
-        </>
+        )
       ) : (
         <form onSubmit={handleRequestReset} className="space-y-4">
           <div className="space-y-2">

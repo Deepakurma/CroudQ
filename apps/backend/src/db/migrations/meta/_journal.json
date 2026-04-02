@@ -5,29 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1775069642049,
-      "tag": "0000_stormy_junta",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1775126660385,
-      "tag": "0001_mysterious_scarlet_witch",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1775131504886,
-      "tag": "0002_perpetual_kylun",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1775134406305,
-      "tag": "0003_noisy_human_fly",
+      "when": 1775137669938,
+      "tag": "0000_typical_wolf_cub",
       "breakpoints": true
     }
   ]

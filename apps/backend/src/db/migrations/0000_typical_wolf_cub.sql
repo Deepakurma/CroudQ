@@ -21,7 +21,9 @@ CREATE TABLE "auth_sessions" (
 	"id" text PRIMARY KEY NOT NULL,
 	"user_id" text NOT NULL,
 	"token_hash" text NOT NULL,
+	"access_expires_at" timestamp with time zone,
 	"expires_at" timestamp with time zone NOT NULL,
+	"refresh_revoked_at" timestamp with time zone,
 	"revoked_at" timestamp with time zone,
 	"user_agent" text,
 	"ip_address" text,
@@ -54,6 +56,17 @@ CREATE TABLE "revoked_tokens" (
 	"expires_at" timestamp with time zone NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "signup_email_otps" (
+	"id" text PRIMARY KEY NOT NULL,
+	"email" text NOT NULL,
+	"name" text,
+	"password_hash" text NOT NULL,
+	"code_hash" text NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
+	"used_at" timestamp with time zone,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "user_credentials" (
 	"user_id" text PRIMARY KEY NOT NULL,
 	"password_hash" text NOT NULL,
@@ -65,6 +78,7 @@ CREATE TABLE "users" (
 	"id" text PRIMARY KEY NOT NULL,
 	"name" text,
 	"email" text NOT NULL,
+	"email_verified_at" timestamp with time zone,
 	"deletion_requested_at" timestamp with time zone,
 	"scheduled_deletion_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
@@ -237,6 +251,9 @@ CREATE INDEX "oauth_states_expires_at_idx" ON "oauth_states" USING btree ("expir
 CREATE UNIQUE INDEX "password_reset_tokens_token_hash_idx" ON "password_reset_tokens" USING btree ("token_hash");--> statement-breakpoint
 CREATE INDEX "password_reset_tokens_user_id_idx" ON "password_reset_tokens" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "password_reset_tokens_expires_at_idx" ON "password_reset_tokens" USING btree ("expires_at");--> statement-breakpoint
+CREATE INDEX "signup_email_otps_email_idx" ON "signup_email_otps" USING btree ("email");--> statement-breakpoint
+CREATE INDEX "signup_email_otps_code_hash_idx" ON "signup_email_otps" USING btree ("code_hash");--> statement-breakpoint
+CREATE INDEX "signup_email_otps_expires_at_idx" ON "signup_email_otps" USING btree ("expires_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "users_email_lower_unique_idx" ON "users" USING btree (lower("email"));--> statement-breakpoint
 CREATE UNIQUE INDEX "web_login_tokens_token_hash_idx" ON "web_login_tokens" USING btree ("token_hash");--> statement-breakpoint
 CREATE INDEX "web_login_tokens_user_id_idx" ON "web_login_tokens" USING btree ("user_id");--> statement-breakpoint
