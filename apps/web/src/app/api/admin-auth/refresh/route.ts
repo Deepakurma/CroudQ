@@ -22,6 +22,8 @@ const getSafeRedirect = (value: string | null) => {
   return value;
 };
 
+const createPublicUrl = (path: string) => new URL(path, env.NEXT_PUBLIC_SITE_URL);
+
 const responseHasTrpcError = async (response: Response) => {
   try {
     const payload = (await response.clone().json()) as
@@ -57,10 +59,10 @@ export async function GET(request: NextRequest) {
     });
 
     if (!response.ok || (await responseHasTrpcError(response))) {
-      return NextResponse.redirect(new URL(LOGIN_REDIRECT, request.url));
+      return NextResponse.redirect(createPublicUrl(LOGIN_REDIRECT));
     }
 
-    const nextResponse = NextResponse.redirect(new URL(redirectTo, request.url));
+    const nextResponse = NextResponse.redirect(createPublicUrl(redirectTo));
     const setCookieHeaders =
       typeof response.headers.getSetCookie === 'function'
         ? response.headers.getSetCookie()
@@ -74,6 +76,6 @@ export async function GET(request: NextRequest) {
 
     return nextResponse;
   } catch {
-    return NextResponse.redirect(new URL(LOGIN_REDIRECT, request.url));
+    return NextResponse.redirect(createPublicUrl(LOGIN_REDIRECT));
   }
 }
