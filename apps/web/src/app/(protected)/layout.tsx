@@ -24,7 +24,7 @@ export default async function RootLayout({
 
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
-      <div className="relative box-border min-h-dvh w-full bg-[rgb(245,245,245)] pb-20 font-sans lg:pb-5">
+      <div className="bg-custom-background relative box-border min-h-dvh w-full pb-20 font-sans lg:pb-5">
         <AdminNavbar />
         <AdminMobileNavigation />
         <main className="relative p-4">{children}</main>

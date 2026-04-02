@@ -17,7 +17,7 @@ const LOGIN_APP_SCHEME = 'croudq://login';
 
 function ResetPageShell({ children }: { children: ReactNode }) {
   return (
-    <main className="bg-background text-foreground flex min-h-dvh items-center justify-center px-4 py-8">
+    <main className="bg-custom-background text-foreground flex min-h-dvh items-center justify-center px-4 py-8">
       <section className="border-border bg-card w-full max-w-md space-y-6 rounded-2xl border p-6 sm:p-8">
         {children}
       </section>

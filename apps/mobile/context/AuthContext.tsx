@@ -83,7 +83,7 @@ interface AuthContextType {
   disconnectYouTube: () => Promise<void>;
   syncYouTube: () => Promise<void>;
   setSelectedHomePlatform: (platform: HomePlatform) => Promise<void>;
-  handleYoutubeRedirect: (url: string) => Promise<boolean>;
+  handleIncomingRedirect: (url: string) => Promise<boolean>;
   refreshYoutubeConnection: () => Promise<boolean>;
 }
 
@@ -274,7 +274,7 @@ const AuthContext = createContext<AuthContextType>({
   disconnectYouTube: async () => {},
   syncYouTube: async () => {},
   setSelectedHomePlatform: async () => {},
-  handleYoutubeRedirect: async () => false,
+  handleIncomingRedirect: async () => false,
   refreshYoutubeConnection: async () => false,
 });
 
@@ -426,6 +426,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user: nextUser,
       } satisfies AuthSession),
     );
+  };
+
+  const refreshCurrentUserFromServer = async () => {
+    const nextUser = await queryClient.fetchQuery(trpc.auth.me.queryOptions());
+    await persistCurrentUser(nextUser);
+    return nextUser;
   };
 
   const clearSession = async () => {
@@ -811,18 +817,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const handleYoutubeRedirect = async (url: string) => {
+  const handleIncomingRedirect = async (url: string) => {
     const parsed = ExpoLinking.parse(url);
     const path = parsed.path?.replace(/^\/+/, "") ?? "";
+    const queryParams = parsed.queryParams as Record<string, string | undefined>;
+
+    if (path === "billing/success") {
+      try {
+        const nextUser = await refreshCurrentUserFromServer();
+        Toast.show({
+          type: "success",
+          text1: "Subscription updated",
+          text2:
+            nextUser.subscriptionState === "active"
+              ? "Your Pro access is ready to use."
+              : "Your subscription is updating. Check again in a moment.",
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Could not refresh your subscription";
+        showAuthToast("error", "Upgrade sync failed", message);
+      }
+      return true;
+    }
 
     if (path !== "auth/youtube") {
       return false;
     }
 
-    const queryParams = parsed.queryParams as Record<
-      string,
-      string | undefined
-    >;
     const status = queryParams.status;
     const message = queryParams.message;
 
@@ -872,7 +896,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         disconnectYouTube,
         syncYouTube,
         setSelectedHomePlatform,
-        handleYoutubeRedirect,
+        handleIncomingRedirect,
         refreshYoutubeConnection,
       }}
     >

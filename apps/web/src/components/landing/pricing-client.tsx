@@ -49,6 +49,8 @@ declare global {
   }
 }
 
+const MOBILE_SUBSCRIPTION_SUCCESS_URL = 'croudq://billing/success?subscription=success';
+
 const loadRazorpayCheckout = async () => {
   if (window.Razorpay) {
     return;
@@ -165,8 +167,8 @@ export default function PricingClient({ user }: { user: AuthUser }) {
           });
 
           await refreshOverview();
-          toast.success('Subscription authenticated. Your access is updating now.');
           setActivePlanCode(null);
+          window.location.assign(MOBILE_SUBSCRIPTION_SUCCESS_URL);
         }
       });
 

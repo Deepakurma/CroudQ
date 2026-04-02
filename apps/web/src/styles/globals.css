@@ -6,6 +6,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-custom-background: var(--custom-background);
   --font-sans: var(
     --font-outfit,
     'Outfit',
@@ -54,6 +55,7 @@
 
 :root {
   --radius: 0.625rem;
+  --custom-background: rgb(245, 245, 245);
   --background: oklch(100% 0.00011 271.152);
   --foreground: oklch(0.2077 0.0398 265.75);
   --card: oklch(1 0 0);
@@ -89,6 +91,7 @@
 
 .dark {
   --background: oklch(0.145 0 0);
+  --custom-background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);

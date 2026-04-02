@@ -11,7 +11,7 @@ export default async function AdminSignupPage() {
   }
 
   return (
-    <main className="bg-background text-foreground flex min-h-dvh items-center justify-center px-4 py-8">
+    <main className="bg-custom-background text-foreground flex min-h-dvh items-center justify-center px-4 py-8">
       <section className="border-border bg-card w-full max-w-lg space-y-6 rounded-2xl border p-6 sm:p-8">
         <div className="space-y-1">
           <h1 className="text-2xl font-bold tracking-tight">Create Admin</h1>

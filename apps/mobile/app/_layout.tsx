@@ -61,26 +61,26 @@ export default function RootLayout() {
 
 function AppShell() {
   const { isDark, colors } = useAppTheme();
-  const { handleYoutubeRedirect, isLoading, isAuthenticated } = useAuth();
+  const { handleIncomingRedirect, isLoading, isAuthenticated } = useAuth();
 
   useEffect(() => {
     const handleInitialUrl = async () => {
       const initialUrl = await ExpoLinking.getInitialURL();
       if (initialUrl) {
-        await handleYoutubeRedirect(initialUrl);
+        await handleIncomingRedirect(initialUrl);
       }
     };
 
     void handleInitialUrl();
 
     const subscription = ExpoLinking.addEventListener("url", ({ url }) => {
-      void handleYoutubeRedirect(url);
+      void handleIncomingRedirect(url);
     });
 
     return () => {
       subscription.remove();
     };
-  }, [handleYoutubeRedirect]);
+  }, [handleIncomingRedirect]);
 
   useEffect(() => {
     if (!isLoading) {
