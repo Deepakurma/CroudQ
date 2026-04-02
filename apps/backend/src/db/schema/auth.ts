@@ -16,6 +16,9 @@ export const users = pgTable(
     id: text("id").primaryKey(),
     name: text("name"),
     email: text("email").notNull(),
+    emailVerifiedAt: timestamp("email_verified_at", {
+      withTimezone: true,
+    }),
     deletionRequestedAt: timestamp("deletion_requested_at", {
       withTimezone: true,
     }),
@@ -76,6 +79,29 @@ export const passwordResetTokens = pgTable(
   }),
 );
 
+export const signupEmailOtps = pgTable(
+  "signup_email_otps",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    email: text("email").notNull(),
+    name: text("name"),
+    passwordHash: text("password_hash").notNull(),
+    codeHash: text("code_hash").notNull(),
+    expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    usedAt: timestamp("used_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => ({
+    emailIdx: index("signup_email_otps_email_idx").on(table.email),
+    codeHashIdx: index("signup_email_otps_code_hash_idx").on(table.codeHash),
+    expiresAtIdx: index("signup_email_otps_expires_at_idx").on(table.expiresAt),
+  }),
+);
+
 export const revokedTokens = pgTable("revoked_tokens", {
   jti: text("jti").primaryKey(),
   expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
@@ -91,9 +117,12 @@ export const authSessions = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     tokenHash: text("token_hash").notNull(),
+    accessExpiresAt: timestamp("access_expires_at", {
+      withTimezone: true,
+    }),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+    refreshRevokedAt: timestamp("refresh_revoked_at", { withTimezone: true }),
     revokedAt: timestamp("revoked_at", { withTimezone: true }),
-    replacedBySessionId: text("replaced_by_session_id"),
     userAgent: text("user_agent"),
     ipAddress: text("ip_address"),
     lastUsedAt: timestamp("last_used_at", { withTimezone: true })

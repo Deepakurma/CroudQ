@@ -8,9 +8,10 @@ import {
   logoutSession,
   requestAccountDeletion,
   requestPasswordReset,
+  requestSignupOtp,
   resetPassword,
-  signupWithEmail,
   updateProfileWithPassword,
+  verifySignupOtp,
 } from "../../modules/auth/controller";
 import { enforceRateLimit } from "../../modules/rate-limit/controller";
 import { createTRPCRouter, protectedProcedure, publicProcedure } from "../../server/trpc";
@@ -26,6 +27,7 @@ import {
   resetPasswordInputSchema,
   signupInputSchema,
   updateProfileInputSchema,
+  verifySignupOtpInputSchema,
 } from "./dto";
 import { refreshAuthSession } from "../../modules/auth/controller";
 import {
@@ -39,30 +41,57 @@ const getRequestIp = (req: { ip?: string }) => req.ip?.trim() || "unknown";
 export const authRouter = createTRPCRouter({
   signup: publicProcedure.input(signupInputSchema).mutation(async ({ ctx, input }) => {
     await enforceRateLimit({
-      scope: "auth.signup.ip",
+      scope: "auth.signup.request.ip",
       identifier: getRequestIp(ctx.req),
       maxAttempts: 5,
       windowMs: 60 * 60 * 1000,
       message: "Too many sign-up attempts. Please try again later.",
     });
     await enforceRateLimit({
-      scope: "auth.signup.email",
+      scope: "auth.signup.request.email",
       identifier: input.email,
-      maxAttempts: 3,
+      maxAttempts: 5,
       windowMs: 60 * 60 * 1000,
       message: "Too many sign-up attempts. Please try again later.",
     });
+    await enforceRateLimit({
+      scope: "auth.signup.request.email.cooldown",
+      identifier: input.email,
+      maxAttempts: 1,
+      windowMs: 30 * 1000,
+      message: "Please wait before requesting another code.",
+    });
 
-    return authSessionSchema.parse(
-      await signupWithEmail(input, {
-        ipAddress: getRequestIp(ctx.req),
-        userAgent:
-          typeof ctx.req.headers["user-agent"] === "string"
-            ? ctx.req.headers["user-agent"]
-            : null,
-      }),
-    );
+    return authMessageSchema.parse(await requestSignupOtp(input));
   }),
+  verifySignupOtp: publicProcedure
+    .input(verifySignupOtpInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      await enforceRateLimit({
+        scope: "auth.signup.verify.ip",
+        identifier: getRequestIp(ctx.req),
+        maxAttempts: 10,
+        windowMs: 15 * 60 * 1000,
+        message: "Too many verification attempts. Please try again later.",
+      });
+      await enforceRateLimit({
+        scope: "auth.signup.verify.email",
+        identifier: input.email,
+        maxAttempts: 5,
+        windowMs: 15 * 60 * 1000,
+        message: "Too many verification attempts. Please try again later.",
+      });
+
+      return authSessionSchema.parse(
+        await verifySignupOtp(input, {
+          ipAddress: getRequestIp(ctx.req),
+          userAgent:
+            typeof ctx.req.headers["user-agent"] === "string"
+              ? ctx.req.headers["user-agent"]
+              : null,
+        }),
+      );
+    }),
   login: publicProcedure.input(loginInputSchema).mutation(async ({ ctx, input }) => {
     await enforceRateLimit({
       scope: "auth.login.ip",

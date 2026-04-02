@@ -18,9 +18,7 @@ const parseDurationToSeconds = (value: string) => {
 const getCookieOptions = () => ({
   path: "/",
   httpOnly: true,
-  // sameSite: "lax" as const,
-  // secure: process.env.NODE_ENV === "production",
-  sameSite: "none" as const,
+  sameSite: "lax" as const,
   secure: true,
 });
 

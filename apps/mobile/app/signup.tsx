@@ -11,12 +11,13 @@ import { useAppTheme } from "@/context/ThemeContext";
 import { openPrivacyPolicy, openTermsOfService } from "@/utils/external-links";
 import { validateSchema } from "@/utils/validation";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { z } from "zod";
@@ -33,19 +34,58 @@ const signupSchema = z
     path: ["confirmPassword"],
   });
 
+const otpSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "Enter the 6-digit code"),
+});
+
+const OTP_RESEND_SECONDS = 30;
+const OTP_LENGTH = 6;
+
 export default function SignupScreen() {
-  const { signup } = useAuth();
+  const { requestSignupOtp, verifySignupOtp } = useAuth();
   const { colors } = useAppTheme();
   const router = useRouter();
   const styles = getStyles(colors);
+  const [step, setStep] = useState<"details" | "otp">("details");
+  const inputRefs = useRef<(TextInput | null)[]>([]);
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
     confirmPassword: "",
   });
+  const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      setResendCooldown((current) => Math.max(0, current - 1));
+    }, 1000);
+
+    return () => clearTimeout(timeout);
+  }, [resendCooldown]);
+
+  useEffect(() => {
+    if (step !== "otp") {
+      return;
+    }
+
+    const timeout = setTimeout(() => {
+      inputRefs.current[0]?.focus();
+    }, 150);
+
+    return () => clearTimeout(timeout);
+  }, [step]);
 
   const updateField = (
     field: "name" | "email" | "password" | "confirmPassword",
@@ -64,7 +104,7 @@ export default function SignupScreen() {
     });
   };
 
-  const handleSignup = async () => {
+  const handleRequestOtp = async () => {
     const result = validateSchema(signupSchema, form);
     if (!result.success) {
       setErrors(result.errors || {});
@@ -79,13 +119,140 @@ export default function SignupScreen() {
         return;
       }
 
-      await signup({
+      await requestSignupOtp({
         name: result.data.name,
         email: result.data.email,
         password: result.data.password,
       });
+      setOtp(Array(OTP_LENGTH).fill(""));
+      setFocusedIndex(0);
+      setResendCooldown(OTP_RESEND_SECONDS);
+      setStep("otp");
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleVerifyOtp = async () => {
+    const code = otp.join("");
+    const result = validateSchema(otpSchema, { code });
+    if (!result.success) {
+      setErrors(result.errors || {});
+      return;
+    }
+
+    setErrors({});
+    setIsSubmitting(true);
+
+    try {
+      if (!result.data) {
+        return;
+      }
+
+      await verifySignupOtp({
+        email: form.email,
+        code: result.data.code,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      await requestSignupOtp({
+        name: form.name,
+        email: form.email,
+        password: form.password,
+      });
+      setOtp(Array(OTP_LENGTH).fill(""));
+      setFocusedIndex(0);
+      inputRefs.current[0]?.focus();
+      setResendCooldown(OTP_RESEND_SECONDS);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleEditDetails = () => {
+    setStep("details");
+    setErrors({});
+    setOtp(Array(OTP_LENGTH).fill(""));
+    setFocusedIndex(null);
+  };
+
+  const handleOtpChange = (text: string, index: number) => {
+    const sanitized = text.replace(/\D/g, "");
+
+    setErrors((current) => ({ ...current, code: "" }));
+
+    if (!sanitized) {
+      setOtp((current) => {
+        const next = [...current];
+        next[index] = "";
+        return next;
+      });
+      return;
+    }
+
+    if (sanitized.length > 1) {
+      setOtp((current) => {
+        const next = [...current];
+        sanitized
+          .slice(0, OTP_LENGTH)
+          .split("")
+          .forEach((digit, offset) => {
+            const targetIndex = index + offset;
+            if (targetIndex < OTP_LENGTH) {
+              next[targetIndex] = digit;
+            }
+          });
+        return next;
+      });
+
+      const nextFocusIndex = Math.min(index + sanitized.length, OTP_LENGTH - 1);
+      inputRefs.current[nextFocusIndex]?.focus();
+      return;
+    }
+
+    setOtp((current) => {
+      const next = [...current];
+      next[index] = sanitized;
+      return next;
+    });
+
+    if (index < OTP_LENGTH - 1) {
+      inputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyPress = (key: string, index: number) => {
+    if (key !== "Backspace") {
+      return;
+    }
+
+    if (otp[index]) {
+      setOtp((current) => {
+        const next = [...current];
+        next[index] = "";
+        return next;
+      });
+      return;
+    }
+
+    if (index > 0) {
+      inputRefs.current[index - 1]?.focus();
+      setOtp((current) => {
+        const next = [...current];
+        next[index - 1] = "";
+        return next;
+      });
     }
   };
 
@@ -103,72 +270,171 @@ export default function SignupScreen() {
           <Badge text="14-day free trial" variant="active" />
         </View>
 
-        <Text style={styles.title}>Let’s get you started</Text>
+        {step === "details" ? (
+          <>
+            <Text style={styles.title}>Let’s get you started</Text>
 
-        <AppTextInput
-          label="Name"
-          value={form.name}
-          onChangeText={(name) => updateField("name", name)}
-          autoCapitalize="words"
-          textContentType="name"
-          error={errors.name}
-          placeholder="Your name"
-        />
+            <AppTextInput
+              label="Name"
+              value={form.name}
+              onChangeText={(name) => updateField("name", name)}
+              autoCapitalize="words"
+              textContentType="name"
+              error={errors.name}
+              placeholder="Your name"
+            />
 
-        <AppTextInput
-          label="Email"
-          value={form.email}
-          onChangeText={(email) => updateField("email", email)}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          textContentType="emailAddress"
-          error={errors.email}
-          placeholder="you@example.com"
-        />
+            <AppTextInput
+              label="Email"
+              value={form.email}
+              onChangeText={(email) => updateField("email", email)}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="emailAddress"
+              error={errors.email}
+              placeholder="you@example.com"
+            />
 
-        <AppTextInput
-          label="Password"
-          value={form.password}
-          onChangeText={(password) => updateField("password", password)}
-          secureTextEntry
-          autoCapitalize="none"
-          autoCorrect={false}
-          textContentType="newPassword"
-          error={errors.password}
-          placeholder="Create a password"
-        />
+            <AppTextInput
+              label="Password"
+              value={form.password}
+              onChangeText={(password) => updateField("password", password)}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="newPassword"
+              error={errors.password}
+              placeholder="Create a password"
+            />
 
-        <AppTextInput
-          label="Confirm password"
-          value={form.confirmPassword}
-          onChangeText={(confirmPassword) =>
-            updateField("confirmPassword", confirmPassword)
-          }
-          secureTextEntry
-          autoCapitalize="none"
-          autoCorrect={false}
-          textContentType="newPassword"
-          error={errors.confirmPassword}
-          placeholder="Confirm your password"
-        />
+            <AppTextInput
+              label="Confirm password"
+              value={form.confirmPassword}
+              onChangeText={(confirmPassword) =>
+                updateField("confirmPassword", confirmPassword)
+              }
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              textContentType="newPassword"
+              error={errors.confirmPassword}
+              placeholder="Confirm your password"
+            />
 
-        <Pressable
-          style={[
-            styles.primaryButton,
-            isSubmitting ? styles.primaryButtonDisabled : null,
-          ]}
-          onPress={() => {
-            void handleSignup();
-          }}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <ActivityIndicator color={colors.white} />
-          ) : (
-            <Text style={styles.primaryButtonText}>Create account</Text>
-          )}
-        </Pressable>
+            <Pressable
+              style={[
+                styles.primaryButton,
+                isSubmitting ? styles.primaryButtonDisabled : null,
+              ]}
+              onPress={() => {
+                void handleRequestOtp();
+              }}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator color={colors.white} />
+              ) : (
+                <Text style={styles.primaryButtonText}>Continue</Text>
+              )}
+            </Pressable>
+          </>
+        ) : (
+          <>
+            <View style={styles.headerCopy}>
+              <Text style={styles.title}>Verify your email</Text>
+              <Text style={styles.subtitle}>
+                Enter the 6-digit code we sent to {form.email}.
+              </Text>
+            </View>
+
+            <View
+              style={[
+                styles.otpContainer,
+                errors.code ? styles.otpContainerError : null,
+              ]}
+            >
+              <Text style={styles.otpLabel}>Verification code</Text>
+              <View style={styles.otpGrid}>
+                {otp.map((digit, index) => {
+                  return (
+                    <TextInput
+                      key={index}
+                      ref={(ref) => {
+                        inputRefs.current[index] = ref;
+                      }}
+                      style={[
+                        styles.otpSlot,
+                        focusedIndex === index ? styles.otpSlotFocused : null,
+                        digit ? styles.otpSlotFilled : null,
+                        errors.code ? styles.otpSlotError : null,
+                      ]}
+                      keyboardType="number-pad"
+                      maxLength={1}
+                      value={digit}
+                      onChangeText={(text) => handleOtpChange(text, index)}
+                      onKeyPress={({ nativeEvent }) =>
+                        handleOtpKeyPress(nativeEvent.key, index)
+                      }
+                      onFocus={() => setFocusedIndex(index)}
+                      onBlur={() => setFocusedIndex(null)}
+                      autoFocus={index === 0}
+                      editable={!isSubmitting}
+                      textAlign="center"
+                      textContentType={index === 0 ? "oneTimeCode" : "none"}
+                    />
+                  );
+                })}
+              </View>
+            </View>
+            {errors.code ? (
+              <Text style={styles.otpErrorText}>{errors.code}</Text>
+            ) : null}
+
+            <Pressable
+              style={[
+                styles.primaryButton,
+                isSubmitting ? styles.primaryButtonDisabled : null,
+              ]}
+              onPress={() => {
+                void handleVerifyOtp();
+              }}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <ActivityIndicator color={colors.white} />
+              ) : (
+                <Text style={styles.primaryButtonText}>
+                  Verify and create account
+                </Text>
+              )}
+            </Pressable>
+
+            <Pressable
+              onPress={() => {
+                void handleResendOtp();
+              }}
+              disabled={isSubmitting || resendCooldown > 0}
+            >
+              <Text
+                style={[
+                  styles.secondaryAction,
+                  isSubmitting || resendCooldown > 0
+                    ? styles.secondaryActionDisabled
+                    : null,
+                ]}
+              >
+                {resendCooldown > 0
+                  ? `Resend code in ${resendCooldown}s`
+                  : "Resend code"}
+              </Text>
+            </Pressable>
+
+            <Pressable onPress={handleEditDetails} disabled={isSubmitting}>
+              <Text style={styles.secondaryAction}>Edit email or password</Text>
+            </Pressable>
+          </>
+        )}
       </Card>
 
       <View style={styles.authSwitchRow}>
@@ -217,6 +483,55 @@ const getStyles = (colors: AppColors) =>
       fontSize: Typography.size["3xl"],
       fontFamily: Typography.font.bold,
     },
+    headerCopy: {
+      gap: 8,
+    },
+    subtitle: {
+      color: colors.textSecondary,
+      fontSize: Typography.size.m,
+      fontFamily: Typography.font.regular,
+    },
+    otpContainer: {
+      gap: 12,
+    },
+    otpContainerError: {},
+    otpLabel: {
+      fontSize: Typography.size.s,
+      fontFamily: Typography.font.medium,
+      color: colors.textSecondary,
+    },
+    otpGrid: {
+      flexDirection: "row",
+      gap: 8,
+    },
+    otpSlot: {
+      flex: 1,
+      minHeight: 60,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.cardSecondary,
+      alignItems: "center",
+      justifyContent: "center",
+      color: colors.text,
+      fontSize: Typography.size.xl,
+      fontFamily: Typography.font.bold,
+    },
+    otpSlotFocused: {
+      borderColor: colors.primary,
+    },
+    otpSlotError: {
+      borderColor: colors.error,
+    },
+    otpSlotFilled: {
+      borderColor: colors.cardBorder,
+    },
+    otpErrorText: {
+      marginTop: -4,
+      color: colors.error,
+      fontSize: Typography.size.xs,
+      fontFamily: Typography.font.medium,
+    },
     primaryButton: {
       padding: Spacing.m,
       borderRadius: 18,
@@ -231,6 +546,15 @@ const getStyles = (colors: AppColors) =>
       color: colors.white,
       fontSize: Typography.size.m,
       fontFamily: Typography.font.semibold,
+    },
+    secondaryAction: {
+      color: colors.primary,
+      textAlign: "center",
+      fontSize: Typography.size.s,
+      fontFamily: Typography.font.semibold,
+    },
+    secondaryActionDisabled: {
+      opacity: 0.5,
     },
     authSwitchRow: {
       flexDirection: "row",

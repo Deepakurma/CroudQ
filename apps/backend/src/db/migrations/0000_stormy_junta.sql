@@ -23,7 +23,6 @@ CREATE TABLE "auth_sessions" (
 	"token_hash" text NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL,
 	"revoked_at" timestamp with time zone,
-	"replaced_by_session_id" text,
 	"user_agent" text,
 	"ip_address" text,
 	"last_used_at" timestamp with time zone DEFAULT now() NOT NULL,

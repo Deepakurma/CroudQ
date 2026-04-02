@@ -1,14 +1,15 @@
-import { createHash, randomBytes } from "crypto";
+import { createHash, randomBytes, randomInt } from "crypto";
 
 import { TRPCError } from "@trpc/server";
 import bcrypt from "bcrypt";
-import { and, eq, gt, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull, or } from "drizzle-orm";
 
 import { db } from "../../db";
 import {
   admins,
   authSessions,
   passwordResetTokens,
+  signupEmailOtps,
   revokedTokens,
   userCredentials,
   users,
@@ -32,8 +33,10 @@ type AuthUser = {
   scheduledDeletionAt: string | null;
 };
 
-const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
+const RESET_TOKEN_TTL_MS = 10 * 60 * 1000;
+const SIGNUP_OTP_TTL_MS = 10 * 60 * 1000;
 const PASSWORD_SALT_ROUNDS = 12;
+const DEFAULT_ACCESS_TOKEN_TTL = "15m";
 const DEFAULT_REFRESH_TOKEN_TTL = "30d";
 const ACCOUNT_DELETION_GRACE_PERIOD_MS = 3 * 24 * 60 * 60 * 1000;
 const WEB_LOGIN_TOKEN_TTL_MS = 10 * 60 * 1000;
@@ -57,11 +60,55 @@ const toAuthUser = async (user: {
   scheduledDeletionAt: user.scheduledDeletionAt?.toISOString() ?? null,
 });
 
+const getBrowserResetBaseUrl = () => {
+  const frontendUrl = process.env.FRONTEND_URL?.trim();
+
+  if (!frontendUrl) {
+    return null;
+  }
+
+  try {
+    const parsedUrl = new URL("/reset-password", frontendUrl);
+
+    if (parsedUrl.protocol === "http:" || parsedUrl.protocol === "https:") {
+      return parsedUrl.toString();
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+};
+
+const getAllowedResetRedirect = (redirectTo?: string) => {
+  const frontendUrl = process.env.FRONTEND_URL?.trim();
+  const trimmedRedirectTo = redirectTo?.trim();
+
+  if (!frontendUrl || !trimmedRedirectTo) {
+    return null;
+  }
+
+  try {
+    const frontendOrigin = new URL(frontendUrl).origin;
+    const parsedRedirect = new URL(trimmedRedirectTo);
+
+    if (
+      (parsedRedirect.protocol === "http:" ||
+        parsedRedirect.protocol === "https:") &&
+      parsedRedirect.origin === frontendOrigin
+    ) {
+      return parsedRedirect.toString();
+    }
+  } catch {
+    return null;
+  }
+
+  return null;
+};
+
 const buildResetLink = (token: string, redirectTo?: string) => {
   const baseUrl =
-    redirectTo?.trim() ||
-    process.env.APP_RESET_PASSWORD_URL?.trim() ||
-    process.env.FRONTEND_URL?.trim();
+    getAllowedResetRedirect(redirectTo) || getBrowserResetBaseUrl();
 
   if (!baseUrl) {
     throw new TRPCError({
@@ -78,11 +125,35 @@ const buildResetLink = (token: string, redirectTo?: string) => {
 const hashResetToken = (token: string) =>
   createHash("sha256").update(token).digest("hex");
 
+const hashSignupOtp = (email: string, code: string) =>
+  createHash("sha256")
+    .update(`${normalizeEmail(email)}:${code}`)
+    .digest("hex");
+
 const hashRefreshToken = (token: string) =>
   createHash("sha256").update(token).digest("hex");
 
 const hashWebLoginToken = (token: string) =>
   createHash("sha256").update(token).digest("hex");
+
+const isUsersEmailUniqueConstraintError = (error: unknown) => {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const code =
+    "code" in error && typeof error.code === "string" ? error.code : null;
+  const message =
+    "message" in error && typeof error.message === "string"
+      ? error.message
+      : null;
+
+  return (
+    code === "23505" ||
+    message?.includes("users_email_lower_unique_idx") ||
+    message?.includes("duplicate key value violates unique constraint")
+  );
+};
 
 const parseDurationToMs = (value: string) => {
   const match = value.trim().match(/^(\d+)([mhd])$/i);
@@ -93,15 +164,35 @@ const parseDurationToMs = (value: string) => {
   const amount = Number(match[1]);
   const unit = match[2].toLowerCase();
   const unitMs =
-    unit === "m" ? 60 * 1000 : unit === "h" ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
+    unit === "m"
+      ? 60 * 1000
+      : unit === "h"
+        ? 60 * 60 * 1000
+        : 24 * 60 * 60 * 1000;
   return amount * unitMs;
 };
 
 const getRefreshTokenTtlMs = () =>
-  parseDurationToMs(process.env.REFRESH_TOKEN_TTL?.trim() || DEFAULT_REFRESH_TOKEN_TTL);
+  parseDurationToMs(
+    process.env.REFRESH_TOKEN_TTL?.trim() || DEFAULT_REFRESH_TOKEN_TTL,
+  );
+
+const getAccessTokenTtlMs = () =>
+  parseDurationToMs(
+    process.env.ACCESS_TOKEN_TTL?.trim() || DEFAULT_ACCESS_TOKEN_TTL,
+  );
 
 const getPasswordHash = async (password: string) =>
   bcrypt.hash(password, PASSWORD_SALT_ROUNDS);
+
+const generateSignupOtp = () => `${randomInt(0, 1000000)}`.padStart(6, "0");
+
+const sendSignupOtpEmail = async (email: string, code: string) => {
+  await sendEmail(email, "Verify your CroudQ email", "signup-otp", {
+    email,
+    code,
+  });
+};
 
 const verifyPassword = async (password: string, passwordHash: string) =>
   bcrypt.compare(password, passwordHash);
@@ -187,6 +278,7 @@ const buildAuthSessionArtifacts = (
       id: seed.sessionId,
       userId: user.id,
       tokenHash: hashRefreshToken(seed.refreshToken),
+      accessExpiresAt: new Date(seed.now.getTime() + getAccessTokenTtlMs()),
       expiresAt: new Date(seed.now.getTime() + getRefreshTokenTtlMs()),
       ipAddress: seed.ipAddress,
       userAgent: seed.userAgent,
@@ -195,13 +287,10 @@ const buildAuthSessionArtifacts = (
   };
 };
 
-export const signupWithEmail = async (input: {
+export const requestSignupOtp = async (input: {
   email: string;
   password: string;
   name?: string | null;
-}, metadata?: {
-  ipAddress?: string | null;
-  userAgent?: string | null;
 }) => {
   const email = normalizeEmail(input.email);
 
@@ -217,34 +306,127 @@ export const signupWithEmail = async (input: {
   }
 
   const passwordHash = await getPasswordHash(input.password);
+  const code = generateSignupOtp();
+  const codeHash = hashSignupOtp(email, code);
   const now = new Date();
 
-  return db.transaction(async (tx) => {
-    const [createdUser] = await tx
-      .insert(users)
-      .values({
-        id: crypto.randomUUID(),
-        email,
-        name: input.name?.trim() || null,
-        updatedAt: now,
+  await db.transaction(async (tx) => {
+    await tx
+      .update(signupEmailOtps)
+      .set({
+        usedAt: now,
       })
-      .returning();
+      .where(
+        and(eq(signupEmailOtps.email, email), isNull(signupEmailOtps.usedAt)),
+      );
 
-    await tx.insert(userCredentials).values({
-      userId: createdUser.id,
+    await tx.insert(signupEmailOtps).values({
+      email,
+      name: input.name?.trim() || null,
       passwordHash,
-      updatedAt: now,
+      codeHash,
+      expiresAt: new Date(now.getTime() + SIGNUP_OTP_TTL_MS),
     });
-
-    const nextSession = buildAuthSessionArtifacts(createdUser, metadata);
-    await tx.insert(authSessions).values(nextSession.sessionInsert);
-
-    return {
-      accessToken: nextSession.accessToken,
-      refreshToken: nextSession.refreshToken,
-      user: await toAuthUser(createdUser),
-    };
   });
+
+  await sendSignupOtpEmail(email, code);
+
+  return {
+    success: true as const,
+    message: "We sent a 6-digit verification code to your email.",
+  };
+};
+
+export const verifySignupOtp = async (
+  input: {
+    email: string;
+    code: string;
+  },
+  metadata?: {
+    ipAddress?: string | null;
+    userAgent?: string | null;
+  },
+) => {
+  const email = normalizeEmail(input.email);
+  const code = input.code.trim();
+
+  const signupOtp = await db.query.signupEmailOtps.findFirst({
+    where: and(
+      eq(signupEmailOtps.email, email),
+      eq(signupEmailOtps.codeHash, hashSignupOtp(email, code)),
+      isNull(signupEmailOtps.usedAt),
+      gt(signupEmailOtps.expiresAt, new Date()),
+    ),
+    orderBy: [desc(signupEmailOtps.createdAt)],
+  });
+
+  if (!signupOtp) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "This verification code is invalid or expired",
+    });
+  }
+
+  const existingUser = await db.query.users.findFirst({
+    where: eq(users.email, email),
+  });
+
+  if (existingUser) {
+    throw new TRPCError({
+      code: "CONFLICT",
+      message: "An account with this email already exists",
+    });
+  }
+
+  const now = new Date();
+
+  try {
+    return await db.transaction(async (tx) => {
+      await tx
+        .update(signupEmailOtps)
+        .set({
+          usedAt: now,
+        })
+        .where(
+          and(eq(signupEmailOtps.email, email), isNull(signupEmailOtps.usedAt)),
+        );
+
+      const [createdUser] = await tx
+        .insert(users)
+        .values({
+          id: crypto.randomUUID(),
+          email,
+          emailVerifiedAt: now,
+          name: signupOtp.name?.trim() || null,
+          updatedAt: now,
+        })
+        .returning();
+
+      await tx.insert(userCredentials).values({
+        userId: createdUser.id,
+        passwordHash: signupOtp.passwordHash,
+        updatedAt: now,
+      });
+
+      const nextSession = buildAuthSessionArtifacts(createdUser, metadata);
+      await tx.insert(authSessions).values(nextSession.sessionInsert);
+
+      return {
+        accessToken: nextSession.accessToken,
+        refreshToken: nextSession.refreshToken,
+        user: await toAuthUser(createdUser),
+      };
+    });
+  } catch (error) {
+    if (isUsersEmailUniqueConstraintError(error)) {
+      throw new TRPCError({
+        code: "CONFLICT",
+        message: "An account with this email already exists",
+      });
+    }
+
+    throw error;
+  }
 };
 
 const findActiveAdminRecordByUserId = async (userId: string) => {
@@ -253,13 +435,16 @@ const findActiveAdminRecordByUserId = async (userId: string) => {
   });
 };
 
-export const loginWithEmail = async (input: {
-  email: string;
-  password: string;
-}, metadata?: {
-  ipAddress?: string | null;
-  userAgent?: string | null;
-}) => {
+export const loginWithEmail = async (
+  input: {
+    email: string;
+    password: string;
+  },
+  metadata?: {
+    ipAddress?: string | null;
+    userAgent?: string | null;
+  },
+) => {
   const email = normalizeEmail(input.email);
   const user = await db.query.users.findFirst({
     where: eq(users.email, email),
@@ -676,17 +861,28 @@ export const updateProfileWithPassword = async (
     });
   }
 
-  const [updatedUser] = await db
-    .update(users)
-    .set({
-      name: input.name.trim(),
-      email: nextEmail,
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, user.id))
-    .returning();
+  try {
+    const [updatedUser] = await db
+      .update(users)
+      .set({
+        name: input.name.trim(),
+        email: nextEmail,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, user.id))
+      .returning();
 
-  return toAuthUser(updatedUser);
+    return toAuthUser(updatedUser);
+  } catch (error) {
+    if (isUsersEmailUniqueConstraintError(error)) {
+      throw new TRPCError({
+        code: "CONFLICT",
+        message: "An account with this email already exists",
+      });
+    }
+
+    throw error;
+  }
 };
 
 export const refreshAuthSession = async (
@@ -703,12 +899,19 @@ export const refreshAuthSession = async (
     const existingSession = await tx.query.authSessions.findFirst({
       where: and(
         eq(authSessions.tokenHash, tokenHash),
-        isNull(authSessions.revokedAt),
         gt(authSessions.expiresAt, seed.now),
+        isNull(authSessions.revokedAt),
       ),
     });
 
     if (!existingSession) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "Refresh session is invalid or expired",
+      });
+    }
+
+    if (existingSession.refreshRevokedAt) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
         message: "Refresh session is invalid or expired",
@@ -726,35 +929,38 @@ export const refreshAuthSession = async (
       });
     }
 
-    const [consumedSession] = await tx
-      .update(authSessions)
-      .set({
-        revokedAt: seed.now,
-        replacedBySessionId: seed.sessionId,
-        lastUsedAt: seed.now,
-      })
-      .where(
-        and(
-          eq(authSessions.id, existingSession.id),
-          isNull(authSessions.revokedAt),
-          gt(authSessions.expiresAt, seed.now),
-        ),
-      )
-      .returning({
-        id: authSessions.id,
-      });
+    if (!existingSession.refreshRevokedAt) {
+      const [consumedSession] = await tx
+        .update(authSessions)
+        .set({
+          refreshRevokedAt: seed.now,
+          lastUsedAt: seed.now,
+        })
+        .where(
+          and(
+            eq(authSessions.id, existingSession.id),
+            isNull(authSessions.revokedAt),
+            isNull(authSessions.refreshRevokedAt),
+            gt(authSessions.expiresAt, seed.now),
+          ),
+        )
+        .returning({
+          id: authSessions.id,
+        });
 
-    if (!consumedSession) {
-      throw new TRPCError({
-        code: "UNAUTHORIZED",
-        message: "Refresh session is invalid or expired",
-      });
+      if (!consumedSession) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Refresh session is invalid or expired",
+        });
+      }
     }
 
     await tx.insert(authSessions).values({
       id: seed.sessionId,
       userId: user.id,
       tokenHash: hashRefreshToken(seed.refreshToken),
+      accessExpiresAt: new Date(seed.now.getTime() + getAccessTokenTtlMs()),
       expiresAt: new Date(seed.now.getTime() + getRefreshTokenTtlMs()),
       ipAddress: seed.ipAddress,
       userAgent: seed.userAgent,
@@ -783,12 +989,19 @@ export const refreshAdminAuthSession = async (
     const existingSession = await tx.query.authSessions.findFirst({
       where: and(
         eq(authSessions.tokenHash, tokenHash),
-        isNull(authSessions.revokedAt),
         gt(authSessions.expiresAt, seed.now),
+        isNull(authSessions.revokedAt),
       ),
     });
 
     if (!existingSession) {
+      throw new TRPCError({
+        code: "UNAUTHORIZED",
+        message: "Refresh session is invalid or expired",
+      });
+    }
+
+    if (existingSession.refreshRevokedAt) {
       throw new TRPCError({
         code: "UNAUTHORIZED",
         message: "Refresh session is invalid or expired",
@@ -820,35 +1033,38 @@ export const refreshAdminAuthSession = async (
       });
     }
 
-    const [consumedSession] = await tx
-      .update(authSessions)
-      .set({
-        revokedAt: seed.now,
-        replacedBySessionId: seed.sessionId,
-        lastUsedAt: seed.now,
-      })
-      .where(
-        and(
-          eq(authSessions.id, existingSession.id),
-          isNull(authSessions.revokedAt),
-          gt(authSessions.expiresAt, seed.now),
-        ),
-      )
-      .returning({
-        id: authSessions.id,
-      });
+    if (!existingSession.refreshRevokedAt) {
+      const [consumedSession] = await tx
+        .update(authSessions)
+        .set({
+          refreshRevokedAt: seed.now,
+          lastUsedAt: seed.now,
+        })
+        .where(
+          and(
+            eq(authSessions.id, existingSession.id),
+            isNull(authSessions.revokedAt),
+            isNull(authSessions.refreshRevokedAt),
+            gt(authSessions.expiresAt, seed.now),
+          ),
+        )
+        .returning({
+          id: authSessions.id,
+        });
 
-    if (!consumedSession) {
-      throw new TRPCError({
-        code: "UNAUTHORIZED",
-        message: "Refresh session is invalid or expired",
-      });
+      if (!consumedSession) {
+        throw new TRPCError({
+          code: "UNAUTHORIZED",
+          message: "Refresh session is invalid or expired",
+        });
+      }
     }
 
     await tx.insert(authSessions).values({
       id: seed.sessionId,
       userId: user.id,
       tokenHash: hashRefreshToken(seed.refreshToken),
+      accessExpiresAt: new Date(seed.now.getTime() + getAccessTokenTtlMs()),
       expiresAt: new Date(seed.now.getTime() + getRefreshTokenTtlMs()),
       ipAddress: seed.ipAddress,
       userAgent: seed.userAgent,
@@ -981,15 +1197,10 @@ export const requestPasswordReset = async (input: {
     expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
   });
 
-  await sendEmail(
-    user.email,
-    "Reset your CroudQ password",
-    "reset-password",
-    {
-      resetLink,
-      email: user.email,
-    },
-  );
+  await sendEmail(user.email, "Reset your CroudQ password", "reset-password", {
+    resetLink,
+    email: user.email,
+  });
 
   return {
     success: true as const,

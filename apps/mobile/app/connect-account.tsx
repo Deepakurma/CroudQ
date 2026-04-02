@@ -17,7 +17,13 @@ type AccountRow = {
   platform: "YouTube" | "Instagram";
   handle: string;
   status: string;
-  statusVariant?: "active" | "pending" | "default" | "positive" | "negative" | "neutral";
+  statusVariant?:
+    | "active"
+    | "pending"
+    | "default"
+    | "positive"
+    | "negative"
+    | "neutral";
   onPress?: () => void;
   disabled?: boolean;
 };
@@ -43,7 +49,9 @@ export default function ConnectAccountScreen() {
       platform: "YouTube" as const,
       handle:
         youtubeConnection.channelName ||
-        (youtubeConnection.isConnected ? user?.handle || "@connected" : "Tap to connect"),
+        (youtubeConnection.isConnected
+          ? user?.handle || "@connected"
+          : "Tap to connect"),
       status: isYouTubeConnecting
         ? "Connecting"
         : youtubeConnection.isConnected
@@ -101,7 +109,7 @@ export default function ConnectAccountScreen() {
       <Card>
         <Text style={styles.noteTitle}>What gets synced</Text>
         <Text style={styles.noteText}>
-          Recent uploads, comment sentiment, retention signals, and audience patterns used to generate CroudQ insights.
+          Recent uploads, comments, and stats used to generate CroudQ insights.
         </Text>
       </Card>
 
@@ -131,25 +139,25 @@ export default function ConnectAccountScreen() {
 
 const getStyles = (colors: AppColors) =>
   StyleSheet.create({
-  back: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  backText: {
-    color: colors.textSecondary,
-    fontSize: Typography.size["2xl"],
-    fontFamily: Typography.font.semibold,
-  },
-  noteTitle: {
-    color: colors.text,
-    fontSize: Typography.size.xl,
-    fontFamily: Typography.font.bold,
-    marginBottom: 10,
-  },
-  noteText: {
-    color: colors.textSecondary,
-    fontSize: Typography.size.m,
-    fontFamily: Typography.font.regular,
-  },
+    back: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    backText: {
+      color: colors.textSecondary,
+      fontSize: Typography.size["2xl"],
+      fontFamily: Typography.font.semibold,
+    },
+    noteTitle: {
+      color: colors.text,
+      fontSize: Typography.size.xl,
+      fontFamily: Typography.font.bold,
+      marginBottom: 10,
+    },
+    noteText: {
+      color: colors.textSecondary,
+      fontSize: Typography.size.m,
+      fontFamily: Typography.font.regular,
+    },
   });

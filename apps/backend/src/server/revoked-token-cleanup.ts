@@ -1,4 +1,4 @@
-import { and, isNotNull, lt, lte, or } from "drizzle-orm";
+import { and, inArray, isNotNull, lt, lte, or } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 
 import { db } from "../db";
@@ -7,9 +7,11 @@ import {
   authSessions,
   passwordResetTokens,
   revokedTokens,
+  signupEmailOtps,
   users,
   webLoginTokens,
 } from "../db/schema";
+import { disconnectYoutubeAccount } from "../modules/youtube-sync/controller";
 
 const getCleanupIntervalMs = () => {
   const rawMinutes = Number(
@@ -47,22 +49,52 @@ export const registerRevokedTokenCleanup = (server: FastifyInstance) => {
         ),
       )
       .returning({ id: passwordResetTokens.id });
-    const deletedUsers = await db
-      .delete(users)
+    const deletedSignupEmailOtps = await db
+      .delete(signupEmailOtps)
       .where(
-        and(
-          isNotNull(users.scheduledDeletionAt),
-          lte(users.scheduledDeletionAt, now),
+        or(
+          lt(signupEmailOtps.expiresAt, now),
+          isNotNull(signupEmailOtps.usedAt),
         ),
       )
-      .returning({ id: users.id });
+      .returning({ id: signupEmailOtps.id });
+    const usersPendingDeletion = await db.query.users.findMany({
+      where: and(
+        isNotNull(users.scheduledDeletionAt),
+        lte(users.scheduledDeletionAt, now),
+      ),
+      columns: {
+        id: true,
+      },
+    });
+
+    for (const user of usersPendingDeletion) {
+      try {
+        await disconnectYoutubeAccount(user.id);
+      } catch (error) {
+        server.log.warn(
+          { error, userId: user.id },
+          "Failed to disconnect YouTube during scheduled account deletion",
+        );
+      }
+    }
+
+    const deletedUsers =
+      usersPendingDeletion.length > 0
+        ? await db
+            .delete(users)
+            .where(
+              inArray(
+                users.id,
+                usersPendingDeletion.map((user) => user.id),
+              ),
+            )
+            .returning({ id: users.id })
+        : [];
     const deletedWebLoginTokens = await db
       .delete(webLoginTokens)
       .where(
-        or(
-          lt(webLoginTokens.expiresAt, now),
-          isNotNull(webLoginTokens.usedAt),
-        ),
+        or(lt(webLoginTokens.expiresAt, now), isNotNull(webLoginTokens.usedAt)),
       )
       .returning({ id: webLoginTokens.id });
 
@@ -91,6 +123,13 @@ export const registerRevokedTokenCleanup = (server: FastifyInstance) => {
       server.log.info(
         { deletedCount: deletedPasswordResetTokens.length },
         "Expired or used password reset tokens cleaned up",
+      );
+    }
+
+    if (deletedSignupEmailOtps.length > 0) {
+      server.log.info(
+        { deletedCount: deletedSignupEmailOtps.length },
+        "Expired or used signup email OTPs cleaned up",
       );
     }
 

@@ -28,6 +28,14 @@ export const signupInputSchema = z.object({
   password: passwordSchema,
 });
 
+export const verifySignupOtpInputSchema = z.object({
+  email: z.string().email(),
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{6}$/, "Enter the 6-digit verification code"),
+});
+
 export const loginInputSchema = z.object({
   email: z.string().email(),
   password: passwordSchema,

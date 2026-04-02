@@ -58,6 +58,15 @@ interface AuthContextType {
   isYouTubeSyncAvailable: boolean;
   youtubeLastSyncedLabel: string;
   login: (input: { email: string; password: string }) => Promise<void>;
+  requestSignupOtp: (input: {
+    name?: string;
+    email: string;
+    password: string;
+  }) => Promise<void>;
+  verifySignupOtp: (input: {
+    email: string;
+    code: string;
+  }) => Promise<void>;
   signup: (input: {
     name?: string;
     email: string;
@@ -171,8 +180,12 @@ const getFriendlyAuthMessage = (message: string) => {
     return "Password reset is not available right now.";
   }
 
+  if (message.includes("verification code is invalid or expired")) {
+    return "This verification code is invalid or has expired.";
+  }
+
   if (
-    message.includes("invalid or expired") ||
+    message.includes("password reset link is invalid or expired") ||
     message.includes("Reset token")
   ) {
     return "This reset link is invalid or has expired.";
@@ -253,6 +266,8 @@ const AuthContext = createContext<AuthContextType>({
   isYouTubeSyncAvailable: false,
   youtubeLastSyncedLabel: "Not synced yet",
   login: async () => {},
+  requestSignupOtp: async () => {},
+  verifySignupOtp: async () => {},
   signup: async () => {},
   updateProfile: async () => {},
   requestPasswordReset: async () => {},
@@ -289,6 +304,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const lastRefreshFailureWasInvalidRef = useRef(false);
   const loginMutation = useMutation(trpc.auth.login.mutationOptions());
   const signupMutation = useMutation(trpc.auth.signup.mutationOptions());
+  const verifySignupOtpMutation = useMutation(
+    trpc.auth.verifySignupOtp.mutationOptions(),
+  );
   const updateProfileMutation = useMutation(
     trpc.auth.updateProfile.mutationOptions(),
   );
@@ -560,26 +578,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const signup = async (input: {
+  const requestSignupOtp = async (input: {
     name?: string;
     email: string;
     password: string;
   }) => {
     try {
-      const session = await signupMutation.mutateAsync(input);
-      await persistSession(session);
-      await refreshYoutubeConnection({ silent: true });
+      const result = await signupMutation.mutateAsync(input);
+      showAuthToast("success", "Check your email", result.message);
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Could not create account";
+        error instanceof Error ? error.message : "Could not send verification code";
       showAuthToast("error", "Sign up failed", getFriendlyAuthMessage(message));
       throw error;
     }
   };
 
+  const verifySignupOtp = async (input: { email: string; code: string }) => {
+    try {
+      const session = await verifySignupOtpMutation.mutateAsync(input);
+      await persistSession(session);
+      await refreshYoutubeConnection({ silent: true });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not verify your email";
+      showAuthToast("error", "Verification failed", getFriendlyAuthMessage(message));
+      throw error;
+    }
+  };
+
+  const signup = requestSignupOtp;
+
   const requestPasswordReset = async (email: string) => {
     try {
-      const redirectTo = "croudq://reset-password";
+      const redirectTo = "https://croudq.com/reset-password";
       const result = await requestPasswordResetMutation.mutateAsync({
         email,
         redirectTo,
@@ -853,6 +885,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isYouTubeSyncAvailable,
         youtubeLastSyncedLabel,
         login,
+        requestSignupOtp,
+        verifySignupOtp,
         signup,
         updateProfile,
         requestPasswordReset,

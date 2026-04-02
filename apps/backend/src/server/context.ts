@@ -1,6 +1,6 @@
 import { inferAsyncReturnType } from "@trpc/server";
 import { CreateFastifyContextOptions } from "@trpc/server/adapters/fastify";
-import { and, eq, gt, isNull } from "drizzle-orm";
+import { and, eq, gt, isNull, or } from "drizzle-orm";
 
 import { db } from "../db";
 import { authSessions, users } from "../db/schema";
@@ -51,7 +51,10 @@ export async function createContext({ req, res }: CreateFastifyContextOptions) {
           where: and(
             eq(authSessions.id, payload.sessionId),
             isNull(authSessions.revokedAt),
-            gt(authSessions.expiresAt, new Date()),
+            or(
+              gt(authSessions.accessExpiresAt, new Date()),
+              isNull(authSessions.accessExpiresAt),
+            ),
           ),
         });
 
