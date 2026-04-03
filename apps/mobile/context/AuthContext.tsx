@@ -822,7 +822,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const path = parsed.path?.replace(/^\/+/, "") ?? "";
     const queryParams = parsed.queryParams as Record<string, string | undefined>;
 
-    if (path === "billing/success") {
+    if (
+      queryParams.subscription === "success" &&
+      (path === "" || path === "index")
+    ) {
       try {
         const nextUser = await refreshCurrentUserFromServer();
         Toast.show({

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
-import { CheckCircle2, Loader2 } from 'lucide-react';
+import { Check, CheckCircle2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '~/shared/shadcn/button';
@@ -49,7 +49,7 @@ declare global {
   }
 }
 
-const MOBILE_SUBSCRIPTION_SUCCESS_URL = 'croudq://billing/success?subscription=success';
+const MOBILE_SUBSCRIPTION_SUCCESS_URL = 'croudq://?subscription=success';
 
 const loadRazorpayCheckout = async () => {
   if (window.Razorpay) {
@@ -212,7 +212,7 @@ export default function PricingClient({ user }: { user: AuthUser }) {
           {overview?.currentSubscription ? (
             <>
               <h1 className="text-foreground text-4xl leading-tight font-black tracking-tight sm:text-5xl">
-                You are subscribed already.
+                You are subscribed.
               </h1>
               <p className="text-muted-foreground text-base leading-7 sm:text-lg">
                 <span className="text-foreground font-semibold">{user.email}</span>. Your
@@ -226,8 +226,8 @@ export default function PricingClient({ user }: { user: AuthUser }) {
               </h1>
               <p className="text-muted-foreground text-base leading-7 sm:text-lg">
                 Signed in as <span className="text-foreground font-semibold">{user.email}</span>.
-                Checkout stays on web, and your app will reflect Pro as soon as the subscription
-                state syncs back.
+                Unlock the creator workspace inside CroudQ that helps you spot what is working,
+                understand audience response, and make sharper content decisions faster.
               </p>
             </>
           )}
@@ -260,29 +260,86 @@ export default function PricingClient({ user }: { user: AuthUser }) {
           const isBusy = activePlanCode === plan.code;
 
           return (
-            <Card key={plan.code} className="border-border bg-card rounded-3xl border">
-              <CardHeader className="space-y-3">
+            <Card
+              key={plan.code}
+              className="border-border/70 bg-card/95 relative overflow-hidden rounded-[2rem] border shadow-[0_18px_50px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(15,23,42,0.12)]">
+              <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-rose-500/10 via-orange-400/6 to-transparent" />
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.8),transparent_35%)]" />
+              <CardHeader className="relative space-y-4 pb-4">
+                <div className="border-border/60 bg-background/80 text-muted-foreground inline-flex w-fit items-center rounded-full border px-3 py-1 text-[11px] font-bold tracking-[0.18em] uppercase backdrop-blur-sm">
+                  Creator Pro
+                </div>
                 <CardTitle className="text-2xl font-black tracking-tight">{plan.name}</CardTitle>
-                <CardDescription className="text-muted-foreground text-base leading-7">
+                <CardDescription className="text-muted-foreground max-w-sm text-base leading-7">
                   {plan.description}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-end gap-2">
-                  <span className="text-foreground text-4xl font-black">{plan.amountLabel}</span>
-                  <span className="text-muted-foreground pb-1 text-sm font-semibold">
-                    /{plan.period === 'monthly' ? 'month' : 'year'}
-                  </span>
+              <CardContent className="relative space-y-6">
+                <div className="border-border/60 bg-background/85 flex items-end justify-between rounded-[1.5rem] border px-4 py-4 backdrop-blur-sm">
+                  <div className="flex items-end gap-2">
+                    <span className="text-foreground text-4xl font-black">{plan.amountLabel}</span>
+                    <span className="text-muted-foreground pb-1 text-sm font-semibold">
+                      /{plan.period === 'monthly' ? 'month' : 'year'}
+                    </span>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-foreground text-sm font-semibold">Full access</p>
+                    <p className="text-muted-foreground text-xs">For serious creators</p>
+                  </div>
                 </div>
 
-                <ul className="text-muted-foreground space-y-2 text-sm leading-6">
-                  <li>Priority creator insights</li>
-                  <li>Advanced comment analysis</li>
-                  <li>Secure Razorpay subscription checkout</li>
+                <ul className="space-y-3 text-sm leading-6">
+                  <li className="flex items-start gap-3">
+                    <span className="bg-foreground/5 text-foreground mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full">
+                      <Check className="size-3.5" />
+                    </span>
+                    <span className="text-muted-foreground">
+                      See what is working in your content at a glance.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="bg-foreground/5 text-foreground mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full">
+                      <Check className="size-3.5" />
+                    </span>
+                    <span className="text-muted-foreground">
+                      Understand how viewers feel through comment insights.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="bg-foreground/5 text-foreground mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full">
+                      <Check className="size-3.5" />
+                    </span>
+                    <span className="text-muted-foreground">
+                      Find patterns in your videos without manual digging.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="bg-foreground/5 text-foreground mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full">
+                      <Check className="size-3.5" />
+                    </span>
+                    <span className="text-muted-foreground">
+                      Know what to repeat and what to improve next.
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-3">
+                    <span className="bg-foreground/5 text-foreground mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full">
+                      <Check className="size-3.5" />
+                    </span>
+                    <span className="text-muted-foreground">
+                      Make content decisions with more clarity and confidence.
+                    </span>
+                  </li>
                 </ul>
 
+                <div className="border-border/60 bg-background/70 rounded-[1.25rem] border px-4 py-3">
+                  <p className="text-foreground text-sm font-semibold">Built for CroudQ creators</p>
+                  <p className="text-muted-foreground mt-1 text-sm">
+                    Your dashboard, comment insights, and analysis unlock together in one plan.
+                  </p>
+                </div>
+
                 <Button
-                  className="w-full"
+                  className="h-12 w-full rounded-2xl text-sm font-semibold shadow-[0_10px_30px_rgba(239,68,68,0.18)]"
                   disabled={isBusy || isCurrentPlan}
                   onClick={() => void handleUpgrade(plan.code)}>
                   {isBusy ? (
