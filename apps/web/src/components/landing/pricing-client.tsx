@@ -264,9 +264,9 @@ export default function PricingClient({ user }: { user: AuthUser }) {
               key={plan.code}
               className="border-border/70 bg-card/95 relative overflow-hidden rounded-[2rem] border shadow-[0_18px_50px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(15,23,42,0.12)]">
               <div className="from-primary/14 via-primary/7 pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b to-transparent" />
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(73,168,255,0.14),transparent_36%)]" />
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.16),transparent_36%)]" />
               <CardHeader className="relative space-y-4">
-                <div className="border-border/60 bg-background/80 text-secondary inline-flex w-fit items-center rounded-full border px-3 py-1 text-[11px] font-bold tracking-[0.18em] uppercase backdrop-blur-sm">
+                <div className="border-border/60 bg-background/80 inline-flex w-fit items-center rounded-full border px-3 py-1 text-[11px] font-bold tracking-[0.18em] text-[#49A8FF] uppercase backdrop-blur-sm">
                   CroudQ Pro
                 </div>
                 <CardTitle className="text-2xl font-black tracking-tight">{plan.name}</CardTitle>
@@ -285,7 +285,7 @@ export default function PricingClient({ user }: { user: AuthUser }) {
                 <ul className="space-y-3 text-sm leading-6">
                   <li className="flex items-start gap-3">
                     <span className="bg-foreground/5 text-foreground mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full">
-                      <Check className="size-3.5" />
+                      <Check className="text-primary size-3.5" />
                     </span>
                     <span className="text-muted-foreground">
                       See what is working in your content at a glance.
@@ -293,7 +293,7 @@ export default function PricingClient({ user }: { user: AuthUser }) {
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="bg-foreground/5 text-foreground mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full">
-                      <Check className="size-3.5" />
+                      <Check className="text-primary size-3.5" />
                     </span>
                     <span className="text-muted-foreground">
                       Understand how viewers feel through comment insights.
@@ -301,7 +301,7 @@ export default function PricingClient({ user }: { user: AuthUser }) {
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="bg-foreground/5 text-foreground mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full">
-                      <Check className="size-3.5" />
+                      <Check className="text-primary size-3.5" />
                     </span>
                     <span className="text-muted-foreground">
                       Find patterns in your videos without manual digging.
@@ -309,7 +309,7 @@ export default function PricingClient({ user }: { user: AuthUser }) {
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="bg-foreground/5 text-foreground mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full">
-                      <Check className="size-3.5" />
+                      <Check className="text-primary size-3.5" />
                     </span>
                     <span className="text-muted-foreground">
                       Know what to repeat and what to improve next.
@@ -317,7 +317,7 @@ export default function PricingClient({ user }: { user: AuthUser }) {
                   </li>
                   <li className="flex items-start gap-3">
                     <span className="bg-foreground/5 text-foreground mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full">
-                      <Check className="size-3.5" />
+                      <Check className="text-primary size-3.5" />
                     </span>
                     <span className="text-muted-foreground">
                       Make content decisions with more clarity and confidence.
@@ -326,7 +326,7 @@ export default function PricingClient({ user }: { user: AuthUser }) {
                 </ul>
 
                 <Button
-                  className="h-12 w-full rounded-2xl text-sm font-semibold shadow-[0_10px_30px_rgba(73,168,255,0.22)]"
+                  className="h-12 w-full rounded-3xl text-sm font-semibold shadow-[0_10px_30px_hsl(var(--primary)/0.24)]"
                   disabled={isBusy || isCurrentPlan}
                   onClick={() => void handleUpgrade(plan.code)}>
                   {isBusy ? (
