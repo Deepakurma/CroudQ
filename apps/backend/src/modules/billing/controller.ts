@@ -76,9 +76,9 @@ type RazorpayWebhookPayload = {
 
 const DEFAULT_BILLING_PLANS: BillingPlanSeed[] = [
   {
-    code: "creator-pro-monthly",
-    name: "Creator Pro Monthly",
-    description: "Monthly recurring plan for active creators",
+    code: "croudq-pro-monthly",
+    name: "CroudQ Pro Monthly",
+    description: "Monthly recurring plan for creators",
     amount: 99900,
     currency: "INR",
     interval: 1,
@@ -180,7 +180,9 @@ const razorpayRequest = async <TResponse>(
 
 const ensureBillingPlansSeeded = async () => {
   const existingPlans = await db.query.billingPlans.findMany();
-  const defaultPlanCodes = new Set(DEFAULT_BILLING_PLANS.map((plan) => plan.code));
+  const defaultPlanCodes = new Set(
+    DEFAULT_BILLING_PLANS.map((plan) => plan.code),
+  );
   const existingPlanCodes = new Set(existingPlans.map((plan) => plan.code));
   const now = new Date();
 
@@ -199,7 +201,9 @@ const ensureBillingPlansSeeded = async () => {
   }
 
   for (const plan of DEFAULT_BILLING_PLANS) {
-    const existingPlan = existingPlans.find((entry) => entry.code === plan.code);
+    const existingPlan = existingPlans.find(
+      (entry) => entry.code === plan.code,
+    );
 
     if (!existingPlan) {
       continue;
@@ -465,7 +469,8 @@ export const getBillingPlansOverview = async (userId: string) => {
           planName: activePlan?.name ?? null,
           status: currentSubscription.status,
           tier: activePlan?.tier ?? null,
-          currentPeriodEndsAt: currentSubscription.currentEnd?.toISOString() ?? null,
+          currentPeriodEndsAt:
+            currentSubscription.currentEnd?.toISOString() ?? null,
           cancelAtCycleEnd: currentSubscription.cancelAtCycleEnd,
         }
       : null,
@@ -659,7 +664,10 @@ export const verifyCheckoutSignature = async (input: {
   };
 };
 
-export const processRazorpayWebhook = async (rawBody: string, signature: string) => {
+export const processRazorpayWebhook = async (
+  rawBody: string,
+  signature: string,
+) => {
   const expectedSignature = createDigest(rawBody, getRazorpayWebhookSecret());
 
   if (!secureCompare(expectedSignature, signature)) {
@@ -718,10 +726,7 @@ export const processRazorpayWebhook = async (rawBody: string, signature: string)
       updatedAt: new Date(),
     })
     .where(
-      eq(
-        billingSubscriptions.providerSubscriptionId,
-        subscriptionEntity.id,
-      ),
+      eq(billingSubscriptions.providerSubscriptionId, subscriptionEntity.id),
     );
 
   return {

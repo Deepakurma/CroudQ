@@ -269,10 +269,12 @@ export default function PricingClient({ user }: { user: AuthUser }) {
                 <div className="border-border/60 bg-background/80 inline-flex w-fit items-center rounded-full border px-3 py-1 text-[11px] font-bold tracking-[0.18em] text-[#49A8FF] uppercase backdrop-blur-sm">
                   CroudQ Pro
                 </div>
-                <CardTitle className="text-2xl font-black tracking-tight">{plan.name}</CardTitle>
-                <CardDescription className="text-muted-foreground max-w-sm text-base leading-7">
-                  {plan.description}
-                </CardDescription>
+                <div className="flex flex-col gap-2">
+                  <CardTitle className="text-2xl font-black tracking-tight">{plan.name}</CardTitle>
+                  <CardDescription className="text-muted-foreground max-w-sm text-base leading-7">
+                    {plan.description}
+                  </CardDescription>
+                </div>
               </CardHeader>
               <CardContent className="relative space-y-6">
                 <div className="flex items-end gap-2">

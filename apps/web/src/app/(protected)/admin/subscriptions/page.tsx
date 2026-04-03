@@ -52,6 +52,8 @@ const EMPTY_OVERVIEW = {
 
 type AdminBillingOverview = Awaited<ReturnType<typeof trpcClient.adminBilling.overview.query>>;
 
+const toMajorCurrencyAmount = (amount: number) => amount / 100;
+
 function calculateGrowth(previous: number, current: number) {
   if (previous === 0) return current > 0 ? '100%' : '0%';
 
@@ -98,13 +100,39 @@ export default function SubscriptionsPage() {
   }, []);
 
   const data = overview ?? EMPTY_OVERVIEW;
+  const revenueData = useMemo(
+    () => ({
+      summary: {
+        totalRevenue: toMajorCurrencyAmount(data.summary.totalRevenue)
+      },
+      revenueStats: {
+        today: {
+          previous: toMajorCurrencyAmount(data.revenueStats.today.previous),
+          current: toMajorCurrencyAmount(data.revenueStats.today.current)
+        },
+        week: {
+          previous: toMajorCurrencyAmount(data.revenueStats.week.previous),
+          current: toMajorCurrencyAmount(data.revenueStats.week.current)
+        },
+        month: {
+          previous: toMajorCurrencyAmount(data.revenueStats.month.previous),
+          current: toMajorCurrencyAmount(data.revenueStats.month.current)
+        }
+      },
+      monthlyRevenue: data.monthlyRevenue.map((entry) => ({
+        ...entry,
+        stat: toMajorCurrencyAmount(entry.stat)
+      }))
+    }),
+    [data]
+  );
   const hasMonthlyRevenue = data.monthlyRevenue.length > 0;
 
   const pulseData: PulseCardProps[] = useMemo(
     () => [
       {
         label: 'Total Revenue',
-        value: data.summary.totalRevenue,
+        value: revenueData.summary.totalRevenue,
         sub: 'All paid subscription revenue',
         color: 'green',
         icon: IndianRupee,
@@ -125,7 +153,11 @@ export default function SubscriptionsPage() {
         icon: Clock3
       }
     ],
-    [data.summary]
+    [
+      revenueData.summary.totalRevenue,
+      data.summary.pendingSubscriptions,
+      data.summary.totalSubscriptions
+    ]
   );
 
   const monthlyChartStats = useMemo(() => {
@@ -136,12 +168,15 @@ export default function SubscriptionsPage() {
       key: 'Revenue',
       title: 'Monthly Revenue Overview',
       growth: hasMonthlyRevenue
-        ? calculateGrowth(data.revenueStats.month.previous, data.revenueStats.month.current)
+        ? calculateGrowth(
+            revenueData.revenueStats.month.previous,
+            revenueData.revenueStats.month.current
+          )
         : undefined,
       description: firstMonth && lastMonth ? `${firstMonth} - ${lastMonth}` : 'No revenue data yet',
       note: 'Based on successful subscription charge events'
     };
-  }, [data.monthlyRevenue, data.revenueStats.month, hasMonthlyRevenue]);
+  }, [revenueData.revenueStats.month, data.monthlyRevenue, hasMonthlyRevenue]);
 
   return (
     <div className="mx-auto flex max-w-7xl flex-1 flex-col gap-6 overflow-hidden">
@@ -158,16 +193,16 @@ export default function SubscriptionsPage() {
         <h1 className="text-sm font-semibold tracking-widest uppercase">Revenue statistics</h1>
         <div className="no-scrollbar flex w-full gap-3 overflow-x-auto sm:grid sm:grid-cols-3 sm:gap-4 lg:gap-6">
           {revenueStats.map((stat) => {
-            const statData = data.revenueStats[stat.key];
+            const revenueStatData = revenueData.revenueStats[stat.key];
             return (
               <AnalyticsCard
                 label="Revenue"
                 key={stat.key}
                 stat={{
                   ...stat,
-                  growth: calculateGrowth(statData.previous, statData.current)
+                  growth: calculateGrowth(revenueStatData.previous, revenueStatData.current)
                 }}
-                data={statData}
+                data={revenueStatData}
                 colors={{
                   current: '#6D28D9',
                   previous: '#DDD6FE'
@@ -186,7 +221,7 @@ export default function SubscriptionsPage() {
               <AnalyticsBarChart
                 key={`${monthlyChartStats.key}-bar`}
                 stats={monthlyChartStats}
-                data={data.monthlyRevenue}
+                data={revenueData.monthlyRevenue}
                 label="Revenue"
               />
             </div>
@@ -194,7 +229,7 @@ export default function SubscriptionsPage() {
               <AnalyticsLineChart
                 key={`${monthlyChartStats.key}-line`}
                 stats={monthlyChartStats}
-                data={data.monthlyRevenue}
+                data={revenueData.monthlyRevenue}
                 label="Revenue"
               />
             </div>
