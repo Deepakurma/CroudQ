@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 export default function InvalidUpgradeLinkPage() {
   return (
-    <main className="bg-background text-foreground flex min-h-[calc(100dvh-4rem)] items-center justify-center px-4 py-10 sm:px-6">
+    <main className="bg-custom-background text-foreground flex min-h-[calc(100dvh-4rem)] items-center justify-center px-4 py-10 sm:px-6">
       <section className="bg-card border-border w-full max-w-2xl rounded-[2rem] border px-6 py-10 text-center shadow-sm sm:px-10">
         <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-100 text-amber-700">
           <span className="text-2xl font-black">!</span>

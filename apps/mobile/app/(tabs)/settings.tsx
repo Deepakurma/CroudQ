@@ -33,13 +33,12 @@ import {
   Youtube,
 } from "lucide-react-native";
 import React from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
 import Toast from "react-native-toast-message";
 import { z } from "zod";
 
 const editProfileSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters"),
-  email: z.string().email("Enter a valid email"),
   currentPassword: z.string().min(1, "Current password is required"),
 });
 
@@ -90,7 +89,6 @@ export default function SettingsScreen() {
   );
   const [editForm, setEditForm] = React.useState({
     name: user?.name ?? "",
-    email: user?.email ?? "",
     currentPassword: "",
   });
   const [editErrors, setEditErrors] = React.useState<Record<string, string>>(
@@ -100,7 +98,6 @@ export default function SettingsScreen() {
   const openEditDialog = () => {
     setEditForm({
       name: user?.name ?? "",
-      email: user?.email ?? "",
       currentPassword: "",
     });
     setEditErrors({});
@@ -108,7 +105,7 @@ export default function SettingsScreen() {
   };
 
   const updateEditField = (
-    field: "name" | "email" | "currentPassword",
+    field: "name" | "currentPassword",
     value: string,
   ) => {
     setEditForm((current) => ({ ...current, [field]: value }));
@@ -151,12 +148,6 @@ export default function SettingsScreen() {
         }));
       }
 
-      if (message.includes("already exists")) {
-        setEditErrors((current) => ({
-          ...current,
-          email: "This email is already in use",
-        }));
-      }
     } finally {
       setIsSavingProfile(false);
     }
@@ -166,6 +157,18 @@ export default function SettingsScreen() {
     setFeedbackMessage("");
     setFeedbackError("");
     setIsFeedbackDialogVisible(true);
+  };
+
+  const handleContactUs = async () => {
+    try {
+      await Linking.openURL("mailto:support@croudq.com");
+    } catch {
+      Toast.show({
+        type: "error",
+        text1: "Contact us",
+        text2: "Could not open your mail app right now.",
+      });
+    }
   };
 
   const handleSubmitFeedback = async () => {
@@ -432,6 +435,14 @@ export default function SettingsScreen() {
           onPress={openFeedbackDialog}
         />
         <SettingsRow
+          icon={MessageSquare}
+          title="Contact us"
+          subtitle="Reach us at support@croudq.com"
+          onPress={() => {
+            void handleContactUs();
+          }}
+        />
+        <SettingsRow
           icon={isDeletionPending ? AlertTriangle : Trash2}
           title={
             isDeletionPending ? "Account deletion pending" : "Delete account"
@@ -553,7 +564,7 @@ export default function SettingsScreen() {
       <DialogBox
         visible={isEditDialogVisible}
         title="Edit profile"
-        description="Update your name or email"
+        description="Update your name"
         confirmLabel={isSavingProfile ? "Saving..." : "Save changes"}
         cancelLabel="Cancel"
         confirmDisabled={isSavingProfile}
@@ -577,17 +588,6 @@ export default function SettingsScreen() {
           autoCapitalize="words"
           textContentType="name"
           placeholder="Your name"
-        />
-        <AppTextInput
-          label="Email"
-          value={editForm.email}
-          onChangeText={(value) => updateEditField("email", value)}
-          error={editErrors.email}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          autoCorrect={false}
-          textContentType="emailAddress"
-          placeholder="you@example.com"
         />
         <AppTextInput
           label="Current password"

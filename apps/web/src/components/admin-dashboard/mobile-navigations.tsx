@@ -20,7 +20,7 @@ export default function AdminMobileNavigation() {
     {
       icon: LayoutDashboard,
       label: 'Dashboard',
-      active: pathname.startsWith('/admin'),
+      active: pathname === '/admin',
       onClick: () => router.push('/admin')
     },
     {

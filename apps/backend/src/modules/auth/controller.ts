@@ -810,7 +810,6 @@ export const updateProfileWithPassword = async (
   userId: string,
   input: {
     name: string;
-    email: string;
     currentPassword: string;
   },
 ) => {
@@ -848,25 +847,11 @@ export const updateProfileWithPassword = async (
     });
   }
 
-  const nextEmail = normalizeEmail(input.email);
-
-  const existingUserWithEmail = await db.query.users.findFirst({
-    where: eq(users.email, nextEmail),
-  });
-
-  if (existingUserWithEmail && existingUserWithEmail.id !== user.id) {
-    throw new TRPCError({
-      code: "CONFLICT",
-      message: "An account with this email already exists",
-    });
-  }
-
   try {
     const [updatedUser] = await db
       .update(users)
       .set({
         name: input.name.trim(),
-        email: nextEmail,
         updatedAt: new Date(),
       })
       .where(eq(users.id, user.id))

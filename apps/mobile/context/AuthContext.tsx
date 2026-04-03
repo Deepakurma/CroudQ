@@ -71,7 +71,6 @@ interface AuthContextType {
   }) => Promise<void>;
   updateProfile: (input: {
     name: string;
-    email: string;
     currentPassword: string;
   }) => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
@@ -674,7 +673,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const updateProfile = async (input: {
     name: string;
-    email: string;
     currentPassword: string;
   }) => {
     try {

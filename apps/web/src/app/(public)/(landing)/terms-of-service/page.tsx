@@ -10,7 +10,7 @@ const lastUpdated = 'March 27, 2026';
 
 export default function TermsOfServicePage() {
   return (
-    <section className="bg-background text-foreground px-4 py-4 sm:px-6 sm:py-8">
+    <section className="bg-custom-background text-foreground px-4 py-4 sm:px-6 sm:py-8">
       <div className="mx-auto w-full max-w-4xl space-y-8">
         <div className="space-y-2">
           <h1 className="text-4xl leading-tight font-black tracking-tight sm:text-5xl">

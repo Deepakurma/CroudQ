@@ -53,7 +53,6 @@ export const resetPasswordInputSchema = z.object({
 
 export const updateProfileInputSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(80),
-  email: z.string().email(),
   currentPassword: z.string().min(1, "Current password is required").max(128),
 });
 
