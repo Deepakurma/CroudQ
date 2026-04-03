@@ -222,7 +222,7 @@ export default function PricingClient({ user }: { user: AuthUser }) {
           ) : (
             <>
               <h1 className="text-foreground text-4xl leading-tight font-black tracking-tight sm:text-5xl">
-                Upgrade on web with Razorpay
+                Let’s get you started.
               </h1>
               <p className="text-muted-foreground text-base leading-7 sm:text-lg">
                 Signed in as <span className="text-foreground font-semibold">{user.email}</span>.
@@ -263,11 +263,11 @@ export default function PricingClient({ user }: { user: AuthUser }) {
             <Card
               key={plan.code}
               className="border-border/70 bg-card/95 relative overflow-hidden rounded-[2rem] border shadow-[0_18px_50px_rgba(15,23,42,0.08)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_24px_70px_rgba(15,23,42,0.12)]">
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-rose-500/10 via-orange-400/6 to-transparent" />
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.8),transparent_35%)]" />
-              <CardHeader className="relative space-y-4 pb-4">
-                <div className="border-border/60 bg-background/80 text-muted-foreground inline-flex w-fit items-center rounded-full border px-3 py-1 text-[11px] font-bold tracking-[0.18em] uppercase backdrop-blur-sm">
-                  Creator Pro
+              <div className="from-primary/14 via-primary/7 pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b to-transparent" />
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(73,168,255,0.14),transparent_36%)]" />
+              <CardHeader className="relative space-y-4">
+                <div className="border-border/60 bg-background/80 text-secondary inline-flex w-fit items-center rounded-full border px-3 py-1 text-[11px] font-bold tracking-[0.18em] uppercase backdrop-blur-sm">
+                  CroudQ Pro
                 </div>
                 <CardTitle className="text-2xl font-black tracking-tight">{plan.name}</CardTitle>
                 <CardDescription className="text-muted-foreground max-w-sm text-base leading-7">
@@ -275,17 +275,11 @@ export default function PricingClient({ user }: { user: AuthUser }) {
                 </CardDescription>
               </CardHeader>
               <CardContent className="relative space-y-6">
-                <div className="border-border/60 bg-background/85 flex items-end justify-between rounded-[1.5rem] border px-4 py-4 backdrop-blur-sm">
-                  <div className="flex items-end gap-2">
-                    <span className="text-foreground text-4xl font-black">{plan.amountLabel}</span>
-                    <span className="text-muted-foreground pb-1 text-sm font-semibold">
-                      /{plan.period === 'monthly' ? 'month' : 'year'}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-foreground text-sm font-semibold">Full access</p>
-                    <p className="text-muted-foreground text-xs">For serious creators</p>
-                  </div>
+                <div className="flex items-end gap-2">
+                  <span className="text-foreground text-4xl font-black">{plan.amountLabel}</span>
+                  <span className="text-muted-foreground pb-1 text-sm font-semibold">
+                    /{plan.period === 'monthly' ? 'month' : 'year'}
+                  </span>
                 </div>
 
                 <ul className="space-y-3 text-sm leading-6">
@@ -331,15 +325,8 @@ export default function PricingClient({ user }: { user: AuthUser }) {
                   </li>
                 </ul>
 
-                <div className="border-border/60 bg-background/70 rounded-[1.25rem] border px-4 py-3">
-                  <p className="text-foreground text-sm font-semibold">Built for CroudQ creators</p>
-                  <p className="text-muted-foreground mt-1 text-sm">
-                    Your dashboard, comment insights, and analysis unlock together in one plan.
-                  </p>
-                </div>
-
                 <Button
-                  className="h-12 w-full rounded-2xl text-sm font-semibold shadow-[0_10px_30px_rgba(239,68,68,0.18)]"
+                  className="h-12 w-full rounded-2xl text-sm font-semibold shadow-[0_10px_30px_rgba(73,168,255,0.22)]"
                   disabled={isBusy || isCurrentPlan}
                   onClick={() => void handleUpgrade(plan.code)}>
                   {isBusy ? (
