@@ -1,43 +1,43 @@
 import { createTRPCRouter, protectedProcedure } from "../../server/trpc";
 import {
   commentsScope,
-  dashboardScope,
   generateVideoInsightOnDemand,
-  getInsightArtifact,
+  getStoredAggregateInsightState,
   getStoredVideoInsightState,
   refreshYoutubeInsightsForUser,
+  dashboardScope,
   strategyScope,
 } from "../../modules/insights/controller";
 import { toYoutubeTRPCError } from "../../modules/youtube-errors/controller";
 import {
-  commentsInsightResponseSchema,
-  dashboardInsightResponseSchema,
+  commentsInsightStateResponseSchema,
+  dashboardInsightStateResponseSchema,
   generateVideoInsightResponseSchema,
-  strategyInsightResponseSchema,
+  strategyInsightStateResponseSchema,
   videoInsightParamsSchema,
   videoInsightStateResponseSchema,
 } from "./dto";
 
 export const insightsRouter = createTRPCRouter({
   dashboard: protectedProcedure.query(async ({ ctx }) =>
-    dashboardInsightResponseSchema.parse(
-      await getInsightArtifact({
+    dashboardInsightStateResponseSchema.parse(
+      await getStoredAggregateInsightState({
         userId: ctx.user.id,
         scope: dashboardScope,
       }),
     ),
   ),
   comments: protectedProcedure.query(async ({ ctx }) =>
-    commentsInsightResponseSchema.parse(
-      await getInsightArtifact({
+    commentsInsightStateResponseSchema.parse(
+      await getStoredAggregateInsightState({
         userId: ctx.user.id,
         scope: commentsScope,
       }),
     ),
   ),
   strategy: protectedProcedure.query(async ({ ctx }) =>
-    strategyInsightResponseSchema.parse(
-      await getInsightArtifact({
+    strategyInsightStateResponseSchema.parse(
+      await getStoredAggregateInsightState({
         userId: ctx.user.id,
         scope: strategyScope,
       }),

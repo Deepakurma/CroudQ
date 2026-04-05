@@ -7,6 +7,17 @@ import type {
   YoutubeCommentThreadsResponse,
 } from "./dto";
 
+const YOUTUBE_API_BASE_URL = "https://www.googleapis.com/youtube/v3";
+
+const getYoutubeApiKey = () => {
+  const value = process.env.YOUTUBE_API_KEY?.trim();
+  if (!value) {
+    throw new Error("YOUTUBE_API_KEY is not configured");
+  }
+
+  return value;
+};
+
 export const isCommentsDisabledError = (error: unknown) => {
   if (!(error instanceof Error)) {
     return false;
@@ -18,11 +29,25 @@ export const isCommentsDisabledError = (error: unknown) => {
   );
 };
 
+const isHandledCommentFetchError = (error: unknown) => {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  const message = error.message;
+
+  return (
+    isCommentsDisabledError(error) ||
+    message.includes("videoNotFound") ||
+    message.includes("forbidden") ||
+    message.includes("processingFailure") ||
+    message.includes("PERMISSION_DENIED")
+  );
+};
+
 export const fetchPaginatedCommentsForVideo = async ({
   youtubeVideoId,
-  accessToken,
   commentsPerVideo,
-  fetchYoutubeJson,
 }: Omit<SyncCommentsForVideoInput, "videoId">) => {
   const collectedItems: NonNullable<YoutubeCommentThreadsResponse["items"]> = [];
   let nextPageToken: string | undefined;
@@ -41,18 +66,28 @@ export const fetchPaginatedCommentsForVideo = async ({
       params.set("pageToken", nextPageToken);
     }
 
-    const response = await fetchYoutubeJson<YoutubeCommentThreadsResponse>(
-      `/commentThreads?${params.toString()}`,
-      accessToken,
+    params.set("key", getYoutubeApiKey());
+
+    const response = await fetch(
+      `${YOUTUBE_API_BASE_URL}/commentThreads?${params.toString()}`,
     );
 
-    const items = response.items || [];
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(
+        `YouTube API request failed (${response.status}): ${message || "Unknown error"}`,
+      );
+    }
+
+    const payload = (await response.json()) as YoutubeCommentThreadsResponse;
+
+    const items = payload.items || [];
     if (items.length === 0) {
       break;
     }
 
     collectedItems.push(...items);
-    nextPageToken = response.nextPageToken;
+    nextPageToken = payload.nextPageToken;
 
     if (!nextPageToken) {
       break;
@@ -93,21 +128,17 @@ export const trimCommentsForVideo = async (
 export const syncCommentsForVideo = async ({
   videoId,
   youtubeVideoId,
-  accessToken,
   commentsPerVideo,
-  fetchYoutubeJson,
 }: SyncCommentsForVideoInput) => {
   let commentItems: NonNullable<YoutubeCommentThreadsResponse["items"]>;
 
   try {
     commentItems = await fetchPaginatedCommentsForVideo({
       youtubeVideoId,
-      accessToken,
       commentsPerVideo,
-      fetchYoutubeJson,
     });
   } catch (error) {
-    if (isCommentsDisabledError(error)) {
+    if (isHandledCommentFetchError(error)) {
       return false;
     }
 

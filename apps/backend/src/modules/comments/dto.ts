@@ -16,12 +16,8 @@ export type YoutubeCommentThreadsResponse = {
   }>;
 };
 
-export type FetchYoutubeJson = <T>(path: string, accessToken: string) => Promise<T>;
-
 export type SyncCommentsForVideoInput = {
   videoId: string;
   youtubeVideoId: string;
-  accessToken: string;
   commentsPerVideo: number;
-  fetchYoutubeJson: FetchYoutubeJson;
 };

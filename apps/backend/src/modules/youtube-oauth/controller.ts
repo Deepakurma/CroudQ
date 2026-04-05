@@ -2,7 +2,7 @@ const GOOGLE_OAUTH_URL = "https://accounts.google.com/o/oauth2/v2/auth";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_TOKEN_REVOCATION_URL = "https://oauth2.googleapis.com/revoke";
 const YOUTUBE_SCOPES = [
-  "https://www.googleapis.com/auth/youtube.force-ssl",
+  "https://www.googleapis.com/auth/youtube.readonly",
 ].join(" ");
 
 type GoogleTokenResponse = {

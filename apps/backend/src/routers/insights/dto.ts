@@ -24,12 +24,30 @@ export const dashboardInsightResponseSchema = insightArtifactMetaSchema.extend({
   payload: dashboardPayloadSchema,
 });
 
+export const dashboardInsightStateResponseSchema = z.object({
+  artifact: dashboardInsightResponseSchema.nullable(),
+  hasAnalysis: z.boolean(),
+  currentCommentCount: z.number().int().nonnegative(),
+});
+
 export const commentsInsightResponseSchema = insightArtifactMetaSchema.extend({
   payload: commentsPayloadSchema,
 });
 
+export const commentsInsightStateResponseSchema = z.object({
+  artifact: commentsInsightResponseSchema.nullable(),
+  hasAnalysis: z.boolean(),
+  currentCommentCount: z.number().int().nonnegative(),
+});
+
 export const strategyInsightResponseSchema = insightArtifactMetaSchema.extend({
   payload: strategyPayloadSchema,
+});
+
+export const strategyInsightStateResponseSchema = z.object({
+  artifact: strategyInsightResponseSchema.nullable(),
+  hasAnalysis: z.boolean(),
+  currentCommentCount: z.number().int().nonnegative(),
 });
 
 export const videoInsightParamsSchema = z.object({
@@ -44,6 +62,7 @@ export const videoInsightStateResponseSchema = z.object({
   artifact: videoInsightResponseSchema.nullable(),
   hasAnalysis: z.boolean(),
   currentCommentCount: z.number().int().nonnegative(),
+  publicCommentCount: z.number().int().nonnegative().nullable(),
   newCommentsSinceLastAnalysis: z.number().int().nonnegative(),
   regenerationThreshold: z.number().int().positive(),
   canRegenerate: z.boolean(),
@@ -51,9 +70,10 @@ export const videoInsightStateResponseSchema = z.object({
 
 export const generateVideoInsightResponseSchema = z.object({
   action: z.enum(["generated", "skipped"]),
-  reason: z.enum(["not_enough_new_comments"]).nullable(),
-  artifact: videoInsightResponseSchema,
+  reason: z.enum(["not_enough_new_comments", "not_enough_comment_data"]).nullable(),
+  artifact: videoInsightResponseSchema.nullable(),
   currentCommentCount: z.number().int().nonnegative(),
+  publicCommentCount: z.number().int().nonnegative().nullable(),
   newCommentsSinceLastAnalysis: z.number().int().nonnegative(),
   regenerationThreshold: z.number().int().positive(),
 });

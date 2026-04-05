@@ -16,7 +16,7 @@ import { YoutubeRouteError } from "../youtube-errors/controller";
 
 export const insightPlatform = "youtube" as const;
 export const insightModel = "gpt-5-mini" as const;
-const PROMPT_VERSION = "2026-03-29.v36";
+const PROMPT_VERSION = "2026-04-04.v01";
 export const AGGREGATE_ANALYSIS_REGEN_THRESHOLD = 150;
 export const VIDEO_ANALYSIS_REGEN_THRESHOLD = 150;
 const AGGREGATE_ANALYSIS_VIDEO_LIMIT = 1;
@@ -79,7 +79,6 @@ export const commentsPayloadSchema = z.object({
       id: z.string(),
       title: z.string(),
       count: z.number().int().nonnegative(),
-      implication: z.string(),
       quotes: z.array(z.string()).max(3),
     }),
   ).max(15),
@@ -245,12 +244,11 @@ const commentsJsonSchema = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["id", "title", "count", "implication", "quotes"],
+        required: ["id", "title", "count", "quotes"],
         properties: {
           id: { type: "string" },
           title: { type: "string" },
           count: { type: "integer" },
-          implication: { type: "string" },
           quotes: {
             type: "array",
             maxItems: 3,
@@ -509,15 +507,17 @@ Goal:
 
 Field rules:
 - pulse: one compact line that summarizes the overall audience feel.
-- topThemes: strongest recurring audience patterns, with counts, implication, and quote previews.
+- topThemes: strongest recurring audience patterns, with counts and quote previews.
 - topThemes.title: crisp audience signal, not a generic topic label.
-- topThemes.implication: explain plainly why the theme matters for the creator.
+- topThemes.count must reflect distinct comments, not vague strength or overlap.
 - needsAttention: only the most important friction points for the creator.
-- Use clean rewritten language for pulse, topThemes.title, topThemes.implication, and needsAttention. Do not use masked profanity there.
+- Use clean rewritten language for pulse, topThemes.title, and needsAttention. Do not use masked profanity there.
 - If quote previews include abusive or explicit wording, mask only the sensitive part and keep the preview readable.
 
 Decision rules:
 - Rank topThemes by recurrence and signal strength.
+- Do not count the same comment in multiple topThemes.
+- The combined total of all topThemes.count values must not exceed the total number of comments provided.
 - Rank needsAttention by creator impact and urgency.
 - If comments show a clear negative pattern, unmet expectation, confusion, or complaint, surface it directly.
 - Do not avoid negative or critical comment patterns when they are clearly present.
@@ -525,7 +525,7 @@ Decision rules:
 - Prefer non-overlapping items. Do not repeat the same point with slightly different wording.
 - Return empty arrays when the evidence is too weak.
 - Prefer clean, direct observations over softened or diplomatic phrasing.
-- Do not make pulse, implications, or needs-attention copy overly long.
+- Do not make pulse or needs-attention copy overly long.
 `.trim(),
   [strategyScope]: `
 Goal:
@@ -555,6 +555,7 @@ Field rules:
 - sentimentSummary.copy: concise explanation of the mood signal, plain and direct.
 - If there are not enough meaningful comments to judge mood, return 0 for all three sentiment percentages.
 - commentClusters: main recurring things viewers were saying about this video.
+- commentClusters.count must reflect distinct comments, not vague strength or overlap.
 - commentClusters.preview: preserve readable context, but mask abusive or explicit words with "***".
 - aiSuggestions: concrete, meaningful, value-adding next improvements for a future cut, follow-up, framing, or comment strategy.
 - aiSuggestions: usually return only 1 to 3 items.
@@ -566,6 +567,8 @@ Decision rules:
 - Do not fake a sentiment split when the sample is too small or inconclusive.
 - If the comments lean clearly negative or frustrated, reflect that plainly in sentimentSummary.copy and clusters.
 - Rank commentClusters and aiSuggestions by signal strength and likely usefulness.
+- Do not count the same comment in multiple commentClusters.
+- The combined total of all commentClusters.count values must not exceed the total number of comments provided.
 - Each aiSuggestion should give the creator a genuinely helpful next move, not filler or generic advice.
 - Prefer fewer strong suggestions over filling the list.
 - Do not restate the same advice in slightly different wording.
@@ -577,7 +580,13 @@ Decision rules:
 `.trim(),
 };
 
-const buildUserPrompt = (scope: InsightScope, payload: unknown) => `
+const buildUserPrompt = (scope: InsightScope, payload: unknown) => {
+  const totalComments =
+    payload && typeof payload === "object" && Array.isArray((payload as { comments?: unknown }).comments)
+      ? (payload as { comments: unknown[] }).comments.length
+      : null;
+
+  return `
 Scope: ${scope}
 Prompt version: ${PROMPT_VERSION}
 
@@ -589,9 +598,11 @@ App context:
 - Help the creator quickly see what happened, why it matters, and what to try next.
 - Be clear and useful, not flashy or over-written.
 - Sound like clear, practical content insight for a creator, not a marketer and not a motivational coach.
+${totalComments !== null ? `- Total comments provided in this input: ${totalComments}. Any theme or cluster counts must stay within this comment pool.` : ""}
 
 ${JSON.stringify(payload, null, 2)}
 `.trim();
+};
 
 const roundPercentagesToHundred = (values: number[]) => {
   const safeValues = values.map((value) =>
@@ -1001,6 +1012,22 @@ const extractCommentCountFromRawInput = (rawInput: unknown) => {
   return Array.isArray(candidate.comments) ? candidate.comments.length : 0;
 };
 
+const extractVideoReportedCommentCountFromRawInput = (rawInput: unknown) => {
+  if (!rawInput || typeof rawInput !== "object") {
+    return null;
+  }
+
+  const candidate = rawInput as {
+    video?: {
+      commentCount?: unknown;
+    };
+  };
+
+  return typeof candidate.video?.commentCount === "number"
+    ? candidate.video.commentCount
+    : null;
+};
+
 const extractVideoIdsFromRawInput = (rawInput: unknown) => {
   if (!rawInput || typeof rawInput !== "object") {
     return [] as string[];
@@ -1096,6 +1123,7 @@ const getVideoAnalysisState = async (userId: string, videoId: string) => {
   const { previousCommentCount, existingPromptVersion, existingModel } =
     extractContextMetaFromArtifact(existing);
   const currentCommentCount = extractCommentCountFromRawInput(rawInput);
+  const publicCommentCount = extractVideoReportedCommentCountFromRawInput(rawInput);
   const newCommentsSinceLastAnalysis = Math.max(
     0,
     currentCommentCount - previousCommentCount,
@@ -1109,6 +1137,7 @@ const getVideoAnalysisState = async (userId: string, videoId: string) => {
     rawInput,
     existing,
     currentCommentCount,
+    publicCommentCount,
     previousCommentCount,
     newCommentsSinceLastAnalysis,
     requiresVersionRefresh,
@@ -1208,8 +1237,17 @@ export const generateInsightForScope = async (input: {
 export const refreshYoutubeInsightsForUser = async (input: {
   userId: string;
   forceRefresh?: boolean;
-}) =>
-  Promise.all([
+}) => {
+  const dashboardState = await getAggregateAnalysisState(
+    input.userId,
+    dashboardScope,
+  );
+
+  if (dashboardState.currentCommentCount === 0) {
+    return [];
+  }
+
+  return Promise.all([
     generateInsightForScope({
       userId: input.userId,
       scope: dashboardScope,
@@ -1226,35 +1264,38 @@ export const refreshYoutubeInsightsForUser = async (input: {
       forceRefresh: input.forceRefresh,
     }),
   ]);
+};
 
-export const getInsightArtifact = async (input: {
+export const getStoredAggregateInsightState = async (input: {
   userId: string;
-  scope: InsightScope;
-  scopeRefId?: string;
+  scope: AggregateInsightScope;
 }) => {
-  if (isAggregateScope(input.scope)) {
-    return generateInsightForScope({
-      userId: input.userId,
-      scope: input.scope,
-      scopeRefId: input.scopeRefId,
-    });
+  const state = await getAggregateAnalysisState(input.userId, input.scope);
+
+  if (state.currentCommentCount === 0) {
+    return {
+      artifact: null,
+      hasAnalysis: false,
+      currentCommentCount: 0,
+    };
   }
 
-  const stored = await getStoredArtifact(
-    input.userId,
-    input.scope,
-    input.scopeRefId ?? "",
-  );
-
-  if (!stored?.payloadJson) {
-    return generateInsightForScope({
-      userId: input.userId,
-      scope: input.scope,
-      scopeRefId: input.scopeRefId,
-    });
+  if (!state.existing?.payloadJson) {
+    return {
+      artifact: await generateInsightForScope({
+        userId: input.userId,
+        scope: input.scope,
+      }),
+      hasAnalysis: true,
+      currentCommentCount: state.currentCommentCount,
+    };
   }
 
-  return await formatArtifact(stored);
+  return {
+    artifact: state.existing ? await formatArtifact(state.existing) : null,
+    hasAnalysis: Boolean(state.existing?.payloadJson),
+    currentCommentCount: state.currentCommentCount,
+  };
 };
 
 export const getStoredVideoInsightState = async (input: {
@@ -1263,10 +1304,23 @@ export const getStoredVideoInsightState = async (input: {
 }) => {
   const state = await getVideoAnalysisState(input.userId, input.videoId);
 
+  if (state.currentCommentCount === 0) {
+    return {
+      artifact: null,
+      hasAnalysis: false,
+      currentCommentCount: 0,
+      publicCommentCount: state.publicCommentCount,
+      newCommentsSinceLastAnalysis: 0,
+      regenerationThreshold: VIDEO_ANALYSIS_REGEN_THRESHOLD,
+      canRegenerate: state.publicCommentCount !== 0,
+    };
+  }
+
   return {
     artifact: state.existing ? await formatArtifact(state.existing) : null,
     hasAnalysis: Boolean(state.existing?.payloadJson),
     currentCommentCount: state.currentCommentCount,
+    publicCommentCount: state.publicCommentCount,
     newCommentsSinceLastAnalysis: state.newCommentsSinceLastAnalysis,
     regenerationThreshold: VIDEO_ANALYSIS_REGEN_THRESHOLD,
     canRegenerate: state.canRegenerate,
@@ -1296,12 +1350,25 @@ export const generateVideoInsightOnDemand = async (input: {
 
   const state = await getVideoAnalysisState(input.userId, input.videoId);
 
+  if (state.currentCommentCount === 0) {
+    return {
+      action: "skipped" as const,
+      reason: "not_enough_comment_data" as const,
+      artifact: null,
+      currentCommentCount: 0,
+      publicCommentCount: state.publicCommentCount,
+      newCommentsSinceLastAnalysis: 0,
+      regenerationThreshold: VIDEO_ANALYSIS_REGEN_THRESHOLD,
+    };
+  }
+
   if (state.existing && !state.canRegenerate) {
     return {
       action: "skipped" as const,
       reason: "not_enough_new_comments" as const,
       artifact: await formatArtifact(state.existing),
       currentCommentCount: state.currentCommentCount,
+      publicCommentCount: state.publicCommentCount,
       newCommentsSinceLastAnalysis: state.newCommentsSinceLastAnalysis,
       regenerationThreshold: VIDEO_ANALYSIS_REGEN_THRESHOLD,
     };
@@ -1319,6 +1386,7 @@ export const generateVideoInsightOnDemand = async (input: {
     reason: null,
     artifact,
     currentCommentCount: state.currentCommentCount,
+    publicCommentCount: state.publicCommentCount,
     newCommentsSinceLastAnalysis: state.newCommentsSinceLastAnalysis,
     regenerationThreshold: VIDEO_ANALYSIS_REGEN_THRESHOLD,
   };

@@ -14,6 +14,7 @@ import { useAppTheme } from "@/context/ThemeContext";
 import { trpc } from "@/utils/api";
 import { useQuery } from "@tanstack/react-query";
 import {
+  CircleAlert,
   Rocket,
   Sparkles,
   TrendingUp,
@@ -23,6 +24,14 @@ import {
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import Toast from "react-native-toast-message";
+
+type InsightsScreenState =
+  | "upgrade_required"
+  | "youtube_required"
+  | "loading"
+  | "error"
+  | "not_enough_data"
+  | "ready";
 
 export default function InsightsScreen() {
   const {
@@ -43,6 +52,24 @@ export default function InsightsScreen() {
       retry: false,
     }),
   );
+  const currentCommentCount = strategyQuery.data?.currentCommentCount ?? 0;
+  const screenState: InsightsScreenState = !hasActiveSubscription
+    ? "upgrade_required"
+    : !youtubeConnection.isConnected
+      ? "youtube_required"
+      : strategyQuery.isLoading
+        ? "loading"
+        : strategyQuery.isError
+          ? "error"
+        : currentCommentCount === 0
+          ? "not_enough_data"
+          : "ready";
+  const shouldFillTopSection =
+    screenState === "upgrade_required" ||
+    screenState === "youtube_required" ||
+    screenState === "error" ||
+    screenState === "not_enough_data";
+    
 
   React.useEffect(() => {
     if (!strategyQuery.error) {
@@ -56,20 +83,10 @@ export default function InsightsScreen() {
     });
   }, [strategyQuery.error]);
 
-  return (
-    <TabScreen
-      contentContainerStyle={
-        !hasActiveSubscription || !youtubeConnection.isConnected || strategyQuery.isLoading
-          ? styles.fullHeightContent
-          : undefined
-      }
-    >
-      <View style={styles.section}>
-        <SectionHeader
-          title="Insights"
-          subtitle="See what is working, what is not, and what to do next"
-        />
-        {!hasActiveSubscription ? (
+  const renderPrimaryContent = () => {
+    switch (screenState) {
+      case "upgrade_required":
+        return (
           <AccessGateState
             icon={Sparkles}
             title={
@@ -85,7 +102,9 @@ export default function InsightsScreen() {
             buttonText={isEndedSubscription ? "Renew plan" : "Subscribe now"}
             onPress={() => void openUpgradePage()}
           />
-        ) : !youtubeConnection.isConnected ? (
+        );
+      case "youtube_required":
+        return (
           <AccessGateState
             icon={Youtube}
             title="Connect YouTube"
@@ -93,13 +112,37 @@ export default function InsightsScreen() {
             buttonText="Connect YouTube"
             onPress={() => void connectYouTube()}
           />
-        ) : strategyQuery.isLoading ? null : strategyQuery.data ? (
+        );
+      case "loading":
+        return null;
+      case "error":
+        return (
+          <AccessGateState
+            icon={CircleAlert}
+            title="Could not load insights"
+            description="Please try again. Pull to refresh to retry."
+          />
+        );
+      case "not_enough_data":
+        return (
+          <AccessGateState
+            icon={CircleAlert}
+            title="Not enough data yet"
+            description="Not enough data is available to generate strategy insights yet."
+          />
+        );
+      case "ready":
+        return strategyQuery.data?.artifact ? (
           <InsightHeroCard
-            title={strategyQuery.data.payload.topSignal.title}
-            evidence={strategyQuery.data.payload.topSignal.evidence}
-            actionHint={strategyQuery.data.payload.topSignal.actionHint}
-            priority={strategyQuery.data.payload.topSignal.priority}
-            evidenceLine={strategyQuery.data.payload.topSignal.evidenceLine}
+            title={strategyQuery.data.artifact.payload.topSignal.title}
+            evidence={strategyQuery.data.artifact.payload.topSignal.evidence}
+            actionHint={
+              strategyQuery.data.artifact.payload.topSignal.actionHint
+            }
+            priority={strategyQuery.data.artifact.payload.topSignal.priority}
+            evidenceLine={
+              strategyQuery.data.artifact.payload.topSignal.evidenceLine
+            }
           />
         ) : (
           <EmptyState
@@ -107,12 +150,27 @@ export default function InsightsScreen() {
             title="No strategy insight yet"
             description="Strategy insights will appear after analysis is ready."
           />
-        )}
+        );
+    }
+  };
+
+  return (
+    <TabScreen
+      refreshing={strategyQuery.isRefetching}
+      onRefresh={() => void strategyQuery.refetch()}
+      contentContainerStyle={
+        screenState !== "ready" ? styles.fullHeightContent : undefined
+      }
+    >
+      <View style={shouldFillTopSection ? styles.sectionFill : styles.section}>
+        <SectionHeader
+          title="Insights"
+          subtitle="See what is working, what is not, and what to do next"
+        />
+        {renderPrimaryContent()}
       </View>
 
-      {hasActiveSubscription &&
-      youtubeConnection.isConnected &&
-      strategyQuery.isLoading ? (
+      {screenState === "loading" ? (
         <View style={styles.loadingState}>
           <LoadingState
             title="Generating strategy"
@@ -125,18 +183,19 @@ export default function InsightsScreen() {
         </View>
       ) : null}
 
-      {hasActiveSubscription &&
-      youtubeConnection.isConnected &&
-      !strategyQuery.isLoading ? (
+      {screenState === "ready" ? (
         <>
           <View style={styles.section}>
             <SectionHeader
               title="Recurring Friction"
               subtitle="What may be slowing your next post down"
             />
-            {(strategyQuery.data?.payload.recurringFriction ?? []).length > 0 ? (
+            {(strategyQuery.data?.artifact?.payload.recurringFriction ?? [])
+              .length > 0 ? (
               <View style={styles.stack}>
-                {(strategyQuery.data?.payload.recurringFriction ?? []).map((item) => (
+                {(
+                  strategyQuery.data?.artifact?.payload.recurringFriction ?? []
+                ).map((item) => (
                   <StrategicInsightCard
                     key={item.id}
                     title={item.title}
@@ -155,14 +214,23 @@ export default function InsightsScreen() {
             )}
           </View>
 
-          {strategyQuery.data ? (
+          {strategyQuery.data?.artifact ? (
             <View style={styles.section}>
               <NextContentMoveCard
-                title={strategyQuery.data.payload.nextContentMove.title}
-                steps={strategyQuery.data.payload.nextContentMove.steps}
-                reasons={strategyQuery.data.payload.nextContentMove.reasons}
-                tag={strategyQuery.data.payload.nextContentMove.tag}
-                evidenceLine={strategyQuery.data.payload.nextContentMove.evidenceLine}
+                title={
+                  strategyQuery.data.artifact.payload.nextContentMove.title
+                }
+                steps={
+                  strategyQuery.data.artifact.payload.nextContentMove.steps
+                }
+                reasons={
+                  strategyQuery.data.artifact.payload.nextContentMove.reasons
+                }
+                tag={strategyQuery.data.artifact.payload.nextContentMove.tag}
+                evidenceLine={
+                  strategyQuery.data.artifact.payload.nextContentMove
+                    .evidenceLine
+                }
               />
             </View>
           ) : (
@@ -186,6 +254,10 @@ const getStyles = (colors: AppColors) =>
       flex: 1,
     },
     section: {
+      gap: SCREEN_CONTENT_GAP,
+    },
+    sectionFill: {
+      flex: 1,
       gap: SCREEN_CONTENT_GAP,
     },
     loadingState: {

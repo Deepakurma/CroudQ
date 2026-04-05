@@ -8,7 +8,10 @@ import {
   videos,
   youtubeAccounts,
 } from "../../db/schema";
-import { youtubeDataResponseSchema } from "../../routers/youtube/dto";
+import {
+  youtubeDataResponseSchema,
+  youtubeSyncResponseSchema,
+} from "../../routers/youtube/dto";
 import { syncCommentsForVideo } from "../comments/controller";
 import {
   buildVideoSummary,
@@ -65,6 +68,8 @@ type SyncYoutubeAccountOptions = {
 
 type GetStoredYoutubeDataOptions = {
   userId: string;
+  cursor?: string;
+  limit?: number;
 };
 
 type EnsureSyncCooldownOptions = {
@@ -74,6 +79,51 @@ type EnsureSyncCooldownOptions = {
 
 const YOUTUBE_API_BASE_URL = "https://www.googleapis.com/youtube/v3";
 const YOUTUBE_INSIGHT_PLATFORM = "youtube" as const;
+const DEFAULT_STORED_VIDEOS_PAGE_SIZE = 10;
+const STORED_VIDEOS_PAGE_SIZE_CAP = 25;
+const VIDEO_CURSOR_FALLBACK_ISO = "1970-01-01T00:00:00.000Z";
+
+type StoredVideosCursor = {
+  publishedAt: string;
+  id: string;
+};
+
+const decodeStoredVideosCursor = (value: string): StoredVideosCursor => {
+  try {
+    const parsed = JSON.parse(Buffer.from(value, "base64url").toString("utf8")) as {
+      publishedAt?: unknown;
+      id?: unknown;
+    };
+
+    if (
+      typeof parsed.publishedAt !== "string" ||
+      Number.isNaN(new Date(parsed.publishedAt).getTime()) ||
+      typeof parsed.id !== "string" ||
+      parsed.id.length === 0
+    ) {
+      throw new Error("Invalid cursor");
+    }
+
+    return {
+      publishedAt: parsed.publishedAt,
+      id: parsed.id,
+    };
+  } catch {
+    throw new YoutubeRouteError("Invalid videos cursor", 400);
+  }
+};
+
+const encodeStoredVideosCursor = (video: {
+  publishedAt: Date | null;
+  id: string;
+}) =>
+  Buffer.from(
+    JSON.stringify({
+      publishedAt: video.publishedAt?.toISOString() ?? VIDEO_CURSOR_FALLBACK_ISO,
+      id: video.id,
+    } satisfies StoredVideosCursor),
+    "utf8",
+  ).toString("base64url");
 
 const fetchAuthorizedJson = async <T>(
   path: string,
@@ -345,7 +395,7 @@ const fetchAndStoreYoutubeData = async ({
       })
       .where(eq(youtubeAccounts.userId, userId));
 
-    return youtubeDataResponseSchema.parse({
+    return youtubeSyncResponseSchema.parse({
       channel: {
         id: channel.id,
         title: channel.snippet?.title || null,
@@ -415,9 +465,7 @@ const fetchAndStoreYoutubeData = async ({
     const didRefreshComments = await syncCommentsForVideo({
       videoId: storedVideo.id,
       youtubeVideoId: storedVideo.youtubeVideoId,
-      accessToken,
       commentsPerVideo,
-      fetchYoutubeJson,
     });
 
     if (didRefreshComments) {
@@ -454,7 +502,7 @@ const fetchAndStoreYoutubeData = async ({
     })
     .where(eq(youtubeAccounts.userId, userId));
 
-  return youtubeDataResponseSchema.parse({
+  return youtubeSyncResponseSchema.parse({
     channel: {
       id: channel.id,
       title: channel.snippet?.title || null,
@@ -517,12 +565,31 @@ export const syncStoredVideoCommentsForAnalysis = async (input: {
     fetchYoutubeJson,
   );
 
+  const latestVideoDetails = await fetchVideoDetailsByIds(
+    [selectedVideo.youtubeVideoId],
+    accessToken,
+    fetchYoutubeJson,
+  );
+  const nextVideoDetails = latestVideoDetails.get(selectedVideo.youtubeVideoId);
+
+  await db
+    .update(videos)
+    .set({
+      viewCount: nextVideoDetails?.viewCount ?? selectedVideo.viewCount,
+      likeCount: nextVideoDetails?.likeCount ?? selectedVideo.likeCount,
+      favoriteCount:
+        nextVideoDetails?.favoriteCount ?? selectedVideo.favoriteCount,
+      commentCount: nextVideoDetails?.commentCount ?? selectedVideo.commentCount,
+      duration: nextVideoDetails?.duration ?? selectedVideo.duration,
+      lastManualCommentsSyncAt: syncedAt,
+      updatedAt: syncedAt,
+    })
+    .where(eq(videos.id, selectedVideo.id));
+
   const didRefreshComments = await syncCommentsForVideo({
     videoId: selectedVideo.id,
     youtubeVideoId: selectedVideo.youtubeVideoId,
-    accessToken,
     commentsPerVideo: input.commentsPerVideo,
-    fetchYoutubeJson,
   });
 
   if (didRefreshComments) {
@@ -530,7 +597,6 @@ export const syncStoredVideoCommentsForAnalysis = async (input: {
       .update(videos)
       .set({
         lastCommentsSyncedAt: syncedAt,
-        lastManualCommentsSyncAt: syncedAt,
         updatedAt: syncedAt,
       })
       .where(eq(videos.id, selectedVideo.id));
@@ -539,6 +605,8 @@ export const syncStoredVideoCommentsForAnalysis = async (input: {
 
 export const getStoredYoutubeData = async ({
   userId,
+  cursor,
+  limit,
 }: GetStoredYoutubeDataOptions) => {
   const account = await db.query.youtubeAccounts.findFirst({
     where: eq(youtubeAccounts.userId, userId),
@@ -548,25 +616,52 @@ export const getStoredYoutubeData = async ({
     throw new YoutubeRouteError("YouTube account is not connected", 404);
   }
 
+  const resolvedLimit = Math.min(
+    Math.max(limit ?? DEFAULT_STORED_VIDEOS_PAGE_SIZE, 1),
+    STORED_VIDEOS_PAGE_SIZE_CAP,
+  );
+  const decodedCursor = cursor ? decodeStoredVideosCursor(cursor) : null;
+  const cursorPublishedAt = decodedCursor
+    ? new Date(decodedCursor.publishedAt)
+    : null;
+  const videoOrderPublishedAt = sql<Date>`coalesce(${videos.publishedAt}, to_timestamp(0))`;
+
   const storedVideos = await db.query.videos.findMany({
-    where: eq(videos.userId, userId),
-    orderBy: desc(videos.publishedAt),
+    where: decodedCursor
+      ? and(
+          eq(videos.userId, userId),
+          sql`(
+            ${videoOrderPublishedAt} < ${cursorPublishedAt}
+            or (
+              ${videoOrderPublishedAt} = ${cursorPublishedAt}
+              and ${videos.id} < ${decodedCursor.id}
+            )
+          )`,
+        )
+      : eq(videos.userId, userId),
+    orderBy: [sql`${videoOrderPublishedAt} desc`, desc(videos.id)],
+    limit: resolvedLimit + 1,
   });
 
-  const storedComments = storedVideos.length
-    ? await db.query.comments.findMany({
-        where: inArray(
-          comments.videoId,
-          storedVideos.map((video) => video.id),
-        ),
-      })
-    : [];
+  const [{ count: totalVideosCount }] = await db
+    .select({
+      count: sql<number>`count(*)::int`,
+    })
+    .from(videos)
+    .where(eq(videos.userId, userId));
 
-  const sortedStoredVideos = [...storedVideos].sort((a, b) => {
-    const first = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
-    const second = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
-    return second - first;
-  });
+  const [{ count: commentsCount }] = await db
+    .select({
+      count: sql<number>`count(*)::int`,
+    })
+    .from(comments)
+    .innerJoin(videos, eq(comments.videoId, videos.id))
+    .where(eq(videos.userId, userId));
+
+  const hasNextPage = storedVideos.length > resolvedLimit;
+  const pageVideos = hasNextPage
+    ? storedVideos.slice(0, resolvedLimit)
+    : storedVideos;
   const dashboardAnalysisVideoIds = new Set(
     await getDashboardAnalysisVideoIds(userId),
   );
@@ -576,13 +671,18 @@ export const getStoredYoutubeData = async ({
       id: account.channelId,
       title: account.channelName,
     },
-    videos: sortedStoredVideos.map((video) =>
+    videos: pageVideos.map((video) =>
       buildVideoSummary({
         ...video,
         isUsedInDashboardAnalysis: dashboardAnalysisVideoIds.has(video.id),
       }),
     ),
-    commentsCount: storedComments.length,
+    nextCursor:
+      hasNextPage && pageVideos.length > 0
+        ? encodeStoredVideosCursor(pageVideos[pageVideos.length - 1]!)
+        : null,
+    totalVideosCount,
+    commentsCount,
     lastSyncedAt: account.lastSyncedAt,
   });
 };

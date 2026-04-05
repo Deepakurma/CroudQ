@@ -2,7 +2,7 @@ import { createHash, randomBytes, randomInt } from "crypto";
 
 import { TRPCError } from "@trpc/server";
 import bcrypt from "bcrypt";
-import { and, desc, eq, gt, inArray, isNull, or } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull } from "drizzle-orm";
 
 import { db } from "../../db";
 import {

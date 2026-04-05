@@ -5,6 +5,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
 import {
   Keyboard,
+  RefreshControl,
   ScrollView,
   StyleProp,
   StyleSheet,
@@ -39,6 +40,8 @@ export interface AppScreenProps {
   bottomInsetBehavior?: AppScreenBottomInsetBehavior;
   bottomContentOffset?: number;
   contentContainerStyle?: StyleProp<ViewStyle>;
+  refreshing?: boolean;
+  onRefresh?: () => void;
 }
 
 export function AppScreen({
@@ -48,6 +51,8 @@ export function AppScreen({
   bottomInsetBehavior = "safe-area",
   bottomContentOffset = DEFAULT_BOTTOM_SPACING,
   contentContainerStyle,
+  refreshing = false,
+  onRefresh,
 }: AppScreenProps) {
   const { colors } = useAppTheme();
   const tabBarHeight = useOptionalBottomTabBarHeight();
@@ -61,6 +66,15 @@ export function AppScreen({
     tabBarHeight,
   );
   const contentStyle = [styles.content, contentContainerStyle];
+  const refreshControl = onRefresh ? (
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      tintColor={colors.primary}
+      colors={[colors.primary, colors.secondary]}
+      progressBackgroundColor={colors.card}
+    />
+  ) : undefined;
 
   const body = <View style={contentStyle}>{children}</View>;
   const contentBody = dismissKeyboardOnTap ? (
@@ -79,6 +93,7 @@ export function AppScreen({
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.scrollContentContainer}
+          refreshControl={refreshControl}
         >
           {contentBody}
         </KeyboardAwareScrollView>
@@ -92,6 +107,7 @@ export function AppScreen({
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContentContainer}
         keyboardShouldPersistTaps="handled"
+        refreshControl={refreshControl}
       >
         {contentBody}
       </ScrollView>

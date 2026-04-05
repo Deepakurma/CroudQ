@@ -4,16 +4,13 @@ import { AppColors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { Typography } from "@/constants/Typography";
 import { useAppTheme } from "@/context/ThemeContext";
-import { ChevronRight, Play, TrendingUp } from "lucide-react-native";
+import { ChevronRight, Play } from "lucide-react-native";
 import React from "react";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
 interface VideoListItemProps {
   title: string;
-  views: string;
-  secondaryStatLabel: string;
-  secondaryStatValue: string;
   duration: string;
   thumbnailUrl?: string | null;
   badgeVariant?: "positive" | "negative" | "active" | "pending" | "neutral" | "default";
@@ -57,21 +54,6 @@ export function VideoListItem(props: VideoListItemProps) {
             <Text style={styles.title} numberOfLines={3} ellipsizeMode="tail">
               {props.title}
             </Text>
-          </View>
-        </View>
-
-        <View style={styles.statsRow}>
-          <View style={styles.statPill}>
-            <Text style={styles.statLabel}>Views</Text>
-            <Text style={styles.statValue}>{props.views}</Text>
-          </View>
-
-          <View style={styles.statPill}>
-            <View style={styles.statLabelRow}>
-              <TrendingUp size={14} color={colors.secondary} />
-              <Text style={styles.statLabel}>{props.secondaryStatLabel}</Text>
-            </View>
-            <Text style={styles.statValue}>{props.secondaryStatValue}</Text>
           </View>
         </View>
       </Card>
@@ -150,37 +132,6 @@ const getStyles = (colors: AppColors) =>
       color: colors.text,
       fontSize: Typography.size.xl,
       lineHeight: Typography.lineHeight.l,
-      fontFamily: Typography.font.semibold,
-    },
-    statsRow: {
-      flexDirection: "row",
-      gap: Spacing.m,
-    },
-    statPill: {
-      flex: 1,
-      gap: 4,
-      paddingVertical: Spacing.s,
-      paddingHorizontal: Spacing.m,
-      borderRadius: 18,
-      backgroundColor: colors.cardSecondary,
-      borderWidth: 1,
-      borderColor: colors.border,
-    },
-    statLabelRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 6,
-    },
-    statLabel: {
-      color: colors.textMuted,
-      fontSize: Typography.size.s,
-      fontFamily: Typography.font.medium,
-      textTransform: "uppercase",
-      letterSpacing: 0.4,
-    },
-    statValue: {
-      color: colors.text,
-      fontSize: Typography.size.l,
       fontFamily: Typography.font.semibold,
     },
   });

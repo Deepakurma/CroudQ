@@ -29,6 +29,14 @@ export const mapYoutubeError = (error: unknown) => {
   }
 
   if (error instanceof Error) {
+    if (error.message.includes("quotaExceeded")) {
+      return {
+        message: "We are experiencing unusual traffic, please try again later.",
+        statusCode: 429,
+        trpcCode: "TOO_MANY_REQUESTS",
+      } as const;
+    }
+
     if (
       error.message.includes("invalid_grant") ||
       error.message.toLowerCase().includes("token") ||

@@ -112,10 +112,12 @@ export const youtubeRouter = createTRPCRouter({
     }),
   data: protectedProcedure
     .input(youtubeDataParamsSchema)
-    .query(async ({ ctx }) => {
+    .query(async ({ ctx, input }) => {
       try {
         return await getStoredYoutubeData({
           userId: ctx.user.id,
+          cursor: input.cursor,
+          limit: input.limit,
         });
       } catch (error) {
         throw toYoutubeTRPCError(error);

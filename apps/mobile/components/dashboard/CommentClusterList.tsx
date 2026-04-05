@@ -40,10 +40,12 @@ export function CommentClusterList({ clusters }: CommentClusterListProps) {
       {resolvedClusters.map((cluster) => (
         <Card key={cluster.id} style={styles.card}>
           <View style={styles.header}>
-            <View style={styles.iconWrap}>
-              <MessageSquareMore size={18} color={colors.text} />
+            <View style={styles.topRow}>
+              <View style={styles.iconWrap}>
+                <MessageSquareMore size={18} color={colors.text} />
+              </View>
+              <Text style={styles.title}>{cluster.title}</Text>
             </View>
-            <Text style={styles.title}>{cluster.title}</Text>
             <View style={styles.badgeWrap}>
               <Badge text={`${cluster.count} comments`} variant="default" />
             </View>
@@ -71,9 +73,12 @@ const getStyles = (colors: AppColors) =>
       gap: 16,
     },
     header: {
+      gap: Spacing.s,
+    },
+    topRow: {
       flexDirection: "row",
-      gap: Spacing.m,
       alignItems: "center",
+      gap: Spacing.m,
     },
     iconWrap: {
       width: 38,
@@ -84,21 +89,14 @@ const getStyles = (colors: AppColors) =>
       backgroundColor: colors.accentSoft,
     },
     title: {
-      flex: 1,
-      minWidth: 0,
       flexShrink: 1,
       color: colors.text,
       fontSize: Typography.size.l,
       fontFamily: Typography.font.semibold,
     },
     badgeWrap: {
-      marginLeft: "auto",
       flexShrink: 0,
-    },
-    count: {
-      color: colors.textSecondary,
-      fontSize: Typography.size.s,
-      fontFamily: Typography.font.medium,
+      marginLeft: 50,
     },
     previewWrap: {
       gap: 8,

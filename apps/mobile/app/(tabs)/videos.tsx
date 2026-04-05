@@ -1,19 +1,32 @@
 import { EmptyState } from "@/components/EmptyState";
 import { LoadingState } from "@/components/LoadingState";
 import { AccessGateState } from "@/components/ui/AccessGateState";
+import { SCREEN_SECTION_GAP } from "@/components/ui/AppScreen";
 import { VideoListItem } from "@/components/videos/VideoListItem";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { TabScreen } from "@/components/ui/TabScreen";
 import { AppColors } from "@/constants/Colors";
 import { useAuth } from "@/context/AuthContext";
 import { useAppTheme } from "@/context/ThemeContext";
-import { trpc } from "@/utils/api";
-import { useQuery } from "@tanstack/react-query";
+import { queryClient, trpc } from "@/utils/api";
+import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
+import { useScrollToTop } from "@react-navigation/native";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import { PlayCircle, Sparkles, Youtube } from "lucide-react-native";
 import React from "react";
-import { StyleSheet, View } from "react-native";
+import {
+  ActivityIndicator,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  View,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Toast from "react-native-toast-message";
+
+const VIDEOS_PAGE_SIZE = 10;
 
 type SyncedVideo = {
   id: string;
@@ -45,9 +58,7 @@ const formatDuration = (value: string | null) => {
     return "--:--";
   }
 
-  const match = value.match(
-    /^P(?:(\d+)D)?T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/,
-  );
+  const match = value.match(/^P(?:(\d+)D)?T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
 
   if (!match) {
     return value;
@@ -68,6 +79,7 @@ const formatDuration = (value: string | null) => {
 };
 
 export default function VideosScreen() {
+  const listRef = React.useRef<FlatList<SyncedVideo> | null>(null);
   const router = useRouter();
   const {
     connectYouTube,
@@ -77,21 +89,36 @@ export default function VideosScreen() {
     youtubeConnection,
   } = useAuth();
   const { colors } = useAppTheme();
-  const styles = getStyles(colors);
+  const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
+  const styles = getStyles(colors, insets.top, tabBarHeight);
   const isEndedSubscription = user?.subscriptionState === "ended";
-  const youtubeVideosQuery = useQuery(
-    trpc.youtube.data.queryOptions(
-      {},
-      {
-        enabled: Boolean(
-          user?.id && hasActiveSubscription && youtubeConnection.isConnected,
-        ),
-        retry: false,
-      },
-    ),
+  const youtubeVideosQueryOptions = trpc.youtube.data.infiniteQueryOptions(
+    { limit: VIDEOS_PAGE_SIZE },
+    {
+      enabled: Boolean(
+        user?.id && hasActiveSubscription && youtubeConnection.isConnected,
+      ),
+      retry: false,
+      getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    },
   );
-  const videos: SyncedVideo[] = youtubeVideosQuery.data?.videos ?? [];
+  const videosInfiniteQueryKey = youtubeVideosQueryOptions.queryKey;
+  const youtubeVideosQuery = useInfiniteQuery(youtubeVideosQueryOptions);
+  const videos: SyncedVideo[] =
+    youtubeVideosQuery.data?.pages.flatMap((page) => page.videos) ?? [];
   const isLoading = youtubeVideosQuery.isLoading;
+  const isRefreshing =
+    youtubeVideosQuery.isRefetching && !youtubeVideosQuery.isFetchingNextPage;
+
+  useScrollToTop(listRef);
+
+  const handleRefresh = async () => {
+    await queryClient.resetQueries({
+      queryKey: videosInfiniteQueryKey,
+      exact: true,
+    });
+  };
 
   React.useEffect(() => {
     if (!youtubeVideosQuery.error) {
@@ -105,10 +132,100 @@ export default function VideosScreen() {
     });
   }, [youtubeVideosQuery.error]);
 
+  const renderVideoItem = ({ item }: { item: SyncedVideo }) => (
+    <VideoListItem
+      title={item.title}
+      duration={formatDuration(item.duration)}
+      thumbnailUrl={item.thumbnailUrl}
+      badgeLabel="Synced"
+      badgeVariant="active"
+      onPress={() =>
+        router.push({
+          pathname: "/videos/[id]" as never,
+          params: {
+            id: item.id,
+            title: item.title,
+            views: formatCompactNumber(item.viewCount),
+            likes: formatCompactNumber(item.likeCount),
+            duration: formatDuration(item.duration),
+            thumbnailUrl: item.thumbnailUrl ?? undefined,
+            sentiment: "active",
+            sentimentLabel: "Synced",
+            isUsedInDashboardAnalysis: item.isUsedInDashboardAnalysis
+              ? "true"
+              : "false",
+          },
+        })
+      }
+    />
+  );
+
+  if (
+    hasActiveSubscription &&
+    youtubeConnection.isConnected &&
+    !isLoading &&
+    videos.length > 0
+  ) {
+    return (
+      <LinearGradient
+        colors={colors.gradients.screen}
+        style={styles.listScreen}
+      >
+        <FlatList
+          ref={listRef}
+          data={videos}
+          keyExtractor={(item) => item.id}
+          renderItem={renderVideoItem}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={() => void handleRefresh()}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+              progressBackgroundColor={colors.card}
+            />
+          }
+          contentContainerStyle={styles.listContent}
+          onEndReached={() => {
+            if (
+              youtubeVideosQuery.hasNextPage &&
+              !youtubeVideosQuery.isFetchingNextPage
+            ) {
+              void youtubeVideosQuery.fetchNextPage();
+            }
+          }}
+          onEndReachedThreshold={0.4}
+          ListHeaderComponent={
+            <View style={styles.listHeader}>
+              <SectionHeader
+                title="Videos"
+                subtitle="See which videos are landing and where they lose people"
+              />
+            </View>
+          }
+          ListFooterComponent={
+            youtubeVideosQuery.isFetchingNextPage ? (
+              <View style={styles.listFooter}>
+                <ActivityIndicator color={colors.primary} />
+              </View>
+            ) : null
+          }
+          ItemSeparatorComponent={() => <View style={styles.listSeparator} />}
+        />
+      </LinearGradient>
+    );
+  }
+
   return (
     <TabScreen
+      refreshing={isRefreshing}
+      onRefresh={() => void handleRefresh()}
       contentContainerStyle={
-        !hasActiveSubscription || !youtubeConnection.isConnected || isLoading
+        !hasActiveSubscription ||
+        !youtubeConnection.isConnected ||
+        isLoading ||
+        videos.length === 0
           ? styles.fullHeightContent
           : undefined
       }
@@ -162,44 +279,32 @@ export default function VideosScreen() {
           description="Your latest synced videos will appear here."
         />
       ) : null}
-
-      {videos.map((video) => (
-        <VideoListItem
-          key={video.id}
-          title={video.title}
-          views={formatCompactNumber(video.viewCount)}
-          secondaryStatLabel="Likes"
-          secondaryStatValue={formatCompactNumber(video.likeCount)}
-          duration={formatDuration(video.duration)}
-          thumbnailUrl={video.thumbnailUrl}
-          badgeLabel="Synced"
-          badgeVariant="active"
-          onPress={() =>
-            router.push({
-              pathname: "/videos/[id]" as never,
-              params: {
-                id: video.id,
-                title: video.title,
-                views: formatCompactNumber(video.viewCount),
-                engagement: formatCompactNumber(video.likeCount),
-                duration: formatDuration(video.duration),
-                thumbnailUrl: video.thumbnailUrl ?? undefined,
-                sentiment: "active",
-                sentimentLabel: "Synced",
-                isUsedInDashboardAnalysis: video.isUsedInDashboardAnalysis
-                  ? "true"
-                  : "false",
-              },
-            })
-          }
-        />
-      ))}
     </TabScreen>
   );
 }
 
-const getStyles = (colors: AppColors) =>
+const getStyles = (colors: AppColors, topInset: number, tabBarHeight: number) =>
   StyleSheet.create({
+    listScreen: {
+      flex: 1,
+      backgroundColor: colors.background,
+      paddingTop: topInset + 10,
+    },
+    listContent: {
+      paddingHorizontal: 14,
+      paddingBottom: tabBarHeight + 24,
+    },
+    listHeader: {
+      marginBottom: SCREEN_SECTION_GAP,
+    },
+    listSeparator: {
+      height: SCREEN_SECTION_GAP,
+    },
+    listFooter: {
+      paddingVertical: 18,
+      alignItems: "center",
+      justifyContent: "center",
+    },
     fullHeightContent: {
       flex: 1,
     },

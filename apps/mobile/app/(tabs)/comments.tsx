@@ -15,6 +15,7 @@ import { trpc } from "@/utils/api";
 import { useQuery } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
 import {
+  CircleAlert,
   Lightbulb,
   MessageSquareMore,
   Sparkles,
@@ -24,6 +25,14 @@ import {
 import React from "react";
 import { StyleSheet, Text, View } from "react-native";
 import Toast from "react-native-toast-message";
+
+type CommentsScreenState =
+  | "upgrade_required"
+  | "youtube_required"
+  | "loading"
+  | "error"
+  | "not_enough_data"
+  | "ready";
 
 export default function CommentsScreen() {
   const {
@@ -44,6 +53,23 @@ export default function CommentsScreen() {
       retry: false,
     }),
   );
+  const currentCommentCount = commentsQuery.data?.currentCommentCount ?? 0;
+  const screenState: CommentsScreenState = !hasActiveSubscription
+    ? "upgrade_required"
+    : !youtubeConnection.isConnected
+      ? "youtube_required"
+      : commentsQuery.isLoading
+        ? "loading"
+        : commentsQuery.isError
+          ? "error"
+          : currentCommentCount === 0
+            ? "not_enough_data"
+            : "ready";
+  const shouldFillTopSection =
+    screenState === "upgrade_required" ||
+    screenState === "youtube_required" ||
+    screenState === "error" ||
+    screenState === "not_enough_data";
 
   React.useEffect(() => {
     if (!commentsQuery.error) {
@@ -57,23 +83,12 @@ export default function CommentsScreen() {
     });
   }, [commentsQuery.error]);
 
-  const insights = commentsQuery.data?.payload;
+  const insights = commentsQuery.data?.artifact?.payload;
 
-  return (
-    <TabScreen
-      contentContainerStyle={
-        !hasActiveSubscription || !youtubeConnection.isConnected || commentsQuery.isLoading
-          ? styles.fullHeightContent
-          : undefined
-      }
-    >
-      <View style={styles.section}>
-        <SectionHeader
-          title="Comments"
-          subtitle="Hear your audience clearly and spot what matters"
-        />
-
-        {!hasActiveSubscription ? (
+  const renderPrimaryContent = () => {
+    switch (screenState) {
+      case "upgrade_required":
+        return (
           <AccessGateState
             icon={Sparkles}
             title={
@@ -89,7 +104,9 @@ export default function CommentsScreen() {
             buttonText={isEndedSubscription ? "Renew plan" : "Subscribe now"}
             onPress={() => void openUpgradePage()}
           />
-        ) : !youtubeConnection.isConnected ? (
+        );
+      case "youtube_required":
+        return (
           <AccessGateState
             icon={Youtube}
             title="Connect YouTube"
@@ -97,7 +114,27 @@ export default function CommentsScreen() {
             buttonText="Connect YouTube"
             onPress={() => void connectYouTube()}
           />
-        ) : commentsQuery.isLoading ? null : insights ? (
+        );
+      case "loading":
+        return null;
+      case "error":
+        return (
+          <AccessGateState
+            icon={CircleAlert}
+            title="Could not load comments"
+            description="Please try again. Pull to refresh to retry."
+          />
+        );
+      case "not_enough_data":
+        return (
+          <AccessGateState
+            icon={CircleAlert}
+            title="Not enough data yet"
+            description="Not enough data is available to generate insights yet."
+          />
+        );
+      case "ready":
+        return insights ? (
           <Card style={styles.pulseCard}>
             <LinearGradient
               colors={colors.gradients.card}
@@ -119,12 +156,29 @@ export default function CommentsScreen() {
             title="No comment pulse yet"
             description="Comment insights will appear after analysis is ready."
           />
-        )}
+        );
+    }
+  };
+
+  return (
+    <TabScreen
+      refreshing={commentsQuery.isRefetching}
+      onRefresh={() => void commentsQuery.refetch()}
+      contentContainerStyle={
+        screenState !== "ready" ? styles.fullHeightContent : undefined
+      }
+    >
+      <View
+        style={[styles.section, shouldFillTopSection && styles.sectionFill]}
+      >
+        <SectionHeader
+          title="Comments"
+          subtitle="Hear your audience clearly and spot what matters"
+        />
+        {renderPrimaryContent()}
       </View>
 
-      {hasActiveSubscription &&
-      youtubeConnection.isConnected &&
-      commentsQuery.isLoading ? (
+      {screenState === "loading" ? (
         <View style={styles.loadingState}>
           <LoadingState
             title="Analyzing comments"
@@ -137,9 +191,7 @@ export default function CommentsScreen() {
         </View>
       ) : null}
 
-      {hasActiveSubscription &&
-      youtubeConnection.isConnected &&
-      !commentsQuery.isLoading ? (
+      {screenState === "ready" ? (
         <>
           <View style={styles.section}>
             <SectionHeader
@@ -155,19 +207,14 @@ export default function CommentsScreen() {
                         <View style={styles.themeIconWrap}>
                           <MessageSquareMore size={16} color={colors.text} />
                         </View>
-                        <View style={styles.themeCopy}>
-                          <Text style={styles.themeTitle}>{theme.title}</Text>
-                          <View style={styles.themeBadgeWrap}>
-                            <Badge
-                              text={`${theme.count} comments`}
-                              variant="default"
-                            />
-                          </View>
-                        </View>
+                        <Text style={styles.themeTitle}>{theme.title}</Text>
                       </View>
-                      <Text style={styles.themeImplication}>
-                        {theme.implication}
-                      </Text>
+                      <View style={styles.themeBadgeWrap}>
+                        <Badge
+                          text={`${theme.count} comments`}
+                          variant="default"
+                        />
+                      </View>
                     </View>
                     <View style={styles.quoteList}>
                       {theme.quotes.map((quote) => (
@@ -236,6 +283,9 @@ const getStyles = (colors: AppColors) =>
     section: {
       gap: SCREEN_CONTENT_GAP,
     },
+    sectionFill: {
+      flex: 1,
+    },
     loadingState: {
       flex: 1,
       justifyContent: "center",
@@ -288,6 +338,7 @@ const getStyles = (colors: AppColors) =>
       flexDirection: "row",
       alignItems: "center",
       gap: Spacing.m,
+      justifyContent: "center",
     },
     themeIconWrap: {
       width: 38,
@@ -300,30 +351,16 @@ const getStyles = (colors: AppColors) =>
       borderColor: colors.border,
       flexShrink: 0,
     },
-    themeCopy: {
-      flex: 1,
-      minWidth: 0,
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "flex-start",
-      gap: Spacing.s,
-    },
     themeTitle: {
-      flex: 1,
-      minWidth: 0,
       flexShrink: 1,
       color: colors.text,
       fontSize: Typography.size.l,
       fontFamily: Typography.font.bold,
+      lineHeight: Typography.size.l * 1.25,
     },
     themeBadgeWrap: {
-      flexShrink: 0,
-    },
-    themeImplication: {
-      flexShrink: 1,
-      color: colors.textSecondary,
-      fontSize: Typography.size.m,
-      fontFamily: Typography.font.regular,
+      // alignSelf: "center",
+      marginLeft: 50,
     },
     quoteList: {
       gap: 8,

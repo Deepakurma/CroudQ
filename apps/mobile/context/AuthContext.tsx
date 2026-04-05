@@ -356,6 +356,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem(HOME_PLATFORM_STORAGE_KEY, platform);
   };
 
+  const invalidateInsightQueries = async () => {
+    await queryClient.invalidateQueries({
+      predicate: (query) => {
+        const key = JSON.stringify(query.queryKey);
+        return key.includes('"insights"');
+      },
+    });
+  };
+
   const refreshYoutubeConnection = async ({
     silent = false,
   }: {
@@ -375,7 +384,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isConnected: true,
         channelId: payload.channel.id,
         channelName: payload.channel.title,
-        videosCount: payload.videos.length,
+        videosCount: payload.totalVideosCount,
         commentsCount: payload.commentsCount,
         lastSyncedAt: payload.lastSyncedAt
           ? payload.lastSyncedAt.toISOString()
@@ -798,6 +807,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const refreshed = await refreshYoutubeConnection();
       if (refreshed) {
+        await invalidateInsightQueries();
         Toast.show({
           type: "success",
           text1: "YouTube synced",
@@ -855,6 +865,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const refreshed = await refreshYoutubeConnection();
       setIsYouTubeConnecting(false);
       if (refreshed) {
+        await invalidateInsightQueries();
         Toast.show({
           type: "success",
           text1: "YouTube connected",

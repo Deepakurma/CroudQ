@@ -9,9 +9,9 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 type AccessGateStateProps = {
   icon: LucideIcon;
   title: string;
-  description: string;
-  buttonText: string;
-  onPress: () => void;
+  description?: string;
+  buttonText?: string;
+  onPress?: () => void;
 };
 
 export function AccessGateState({
@@ -32,9 +32,11 @@ export function AccessGateState({
         description={description}
         style={styles.emptyState}
       />
-      <Pressable style={styles.button} onPress={onPress}>
-        <Text style={styles.buttonText}>{buttonText}</Text>
-      </Pressable>
+      {buttonText && (
+        <Pressable style={styles.button} onPress={onPress}>
+          <Text style={styles.buttonText}>{buttonText}</Text>
+        </Pressable>
+      )}
     </View>
   );
 }

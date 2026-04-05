@@ -10,7 +10,7 @@ import { useAppTheme } from "@/context/ThemeContext";
 import { useRouter } from "expo-router";
 import { ChevronLeft } from "lucide-react-native";
 import React from "react";
-import { Pressable, StyleSheet, Text } from "react-native";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
 type AccountRow = {
   id: string;
@@ -107,10 +107,32 @@ export default function ConnectAccountScreen() {
         />
       ))}
       <Card>
-        <Text style={styles.noteTitle}>What gets synced</Text>
-        <Text style={styles.noteText}>
-          Recent uploads, comments, and stats used to generate CroudQ insights.
-        </Text>
+        <Text style={styles.noteTitle}>Note</Text>
+
+        <View style={styles.noteList}>
+          <Text style={styles.noteItem}>
+            Use Sync button to sync your latest upload for analysis.
+          </Text>
+          <Text style={styles.noteItem}>
+            Recent uploads, comments, and stats are used to generate CroudQ
+            insights.
+          </Text>
+          <Text style={styles.noteItem}>
+            Dashboard insights are based on your recent upload (lastest video).
+          </Text>
+          <Text style={styles.noteItem}>
+            Insights are generated from public video performance and public
+            comments only.
+          </Text>
+          <Text style={styles.noteItem}>
+            Private, unlisted, or members-only videos are not supported for
+            insight generation.
+          </Text>
+          <Text style={styles.noteItem}>
+            If comments are disabled or unavailable on a video, CroudQ cannot
+            use them in analysis.
+          </Text>
+        </View>
       </Card>
 
       <ConfirmationDialog
@@ -153,9 +175,13 @@ const getStyles = (colors: AppColors) =>
       color: colors.text,
       fontSize: Typography.size.xl,
       fontFamily: Typography.font.bold,
-      marginBottom: 10,
+      marginBottom: 6,
     },
-    noteText: {
+    noteList: {
+      marginTop: 12,
+      gap: 8,
+    },
+    noteItem: {
       color: colors.textSecondary,
       fontSize: Typography.size.m,
       fontFamily: Typography.font.regular,

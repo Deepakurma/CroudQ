@@ -28,6 +28,10 @@ import Toast from "react-native-toast-message";
 import { Spacing } from "@/constants/Spacing";
 
 type SentimentTone = "positive" | "neutral" | "negative" | "unavailable";
+const getVideoInsightGeneratingKey = (videoId: string) => [
+  "video-insight-generating",
+  videoId,
+];
 
 const getSentimentLabel = (tone: SentimentTone) => {
   switch (tone) {
@@ -60,7 +64,7 @@ export default function VideoDetailScreen() {
     id: string;
     title?: string;
     views?: string;
-    engagement?: string;
+    likes?: string;
     duration?: string;
     thumbnailUrl?: string;
     sentiment?: "positive" | "negative" | "active";
@@ -74,8 +78,7 @@ export default function VideoDetailScreen() {
       : Array.isArray(rawVideoId)
         ? (rawVideoId[0] ?? "")
         : "";
-  const isUsedInDashboardAnalysis =
-    params.isUsedInDashboardAnalysis === "true";
+  const isUsedInDashboardAnalysis = params.isUsedInDashboardAnalysis === "true";
   const router = useRouter();
   const { user, youtubeConnection } = useAuth();
   const { colors } = useAppTheme();
@@ -90,14 +93,23 @@ export default function VideoDetailScreen() {
       },
     ),
   );
+  const cachedGeneratingFlag = queryClient.getQueryData<boolean>(
+    getVideoInsightGeneratingKey(videoId),
+  );
   const generateVideoInsight = useMutation(
     trpc.insights.refreshVideo.mutationOptions({
+      onMutate: async () => {
+        queryClient.setQueryData(getVideoInsightGeneratingKey(videoId), true);
+      },
       onSuccess: async (result) => {
         if (result.action === "skipped") {
           Toast.show({
             type: "info",
             text1: "Video Insight",
-            text2: "No significant change noticed to regenerate.",
+            text2:
+              result.reason === "not_enough_comment_data"
+                ? "This video still does not have enough synced data."
+                : "No significant change noticed to regenerate.",
           });
           return;
         }
@@ -105,6 +117,9 @@ export default function VideoDetailScreen() {
         await queryClient.invalidateQueries({
           queryKey: trpc.insights.video.queryOptions({ videoId }).queryKey,
         });
+      },
+      onSettled: () => {
+        queryClient.setQueryData(getVideoInsightGeneratingKey(videoId), false);
       },
       onError: (error) => {
         Toast.show({
@@ -133,8 +148,12 @@ export default function VideoDetailScreen() {
   const durationLabel = params.duration ?? "--:--";
   const videoInsight = videoQuery.data?.artifact?.payload;
   const hasAnalysis = videoQuery.data?.hasAnalysis ?? false;
-  const isGenerating = generateVideoInsight.isPending;
-  const generateDisabled = isGenerating || !videoId || isUsedInDashboardAnalysis;
+  const isGenerating =
+    generateVideoInsight.isPending || cachedGeneratingFlag === true;
+  const generateDisabled =
+    isGenerating ||
+    !videoId ||
+    isUsedInDashboardAnalysis;
   const dominantVideoSentiment =
     videoInsight?.sentimentSummary.dominantTone ??
     videoInsight?.sentimentSummary.split.reduce((highest, current) =>
@@ -145,7 +164,10 @@ export default function VideoDetailScreen() {
   );
 
   return (
-    <AppScreen>
+    <AppScreen
+      refreshing={videoQuery.isRefetching}
+      onRefresh={() => void videoQuery.refetch()}
+    >
       <Pressable style={styles.back} onPress={() => router.back()}>
         <ChevronLeft size={24} color={colors.text} />
         <Text style={styles.backText}>Back</Text>
@@ -179,8 +201,7 @@ export default function VideoDetailScreen() {
           <Text style={styles.title}>{params.title ?? "Video insight"}</Text>
           <View style={styles.metaRow}>
             <Text style={styles.meta}>
-              {params.views ?? "--"} views . {params.engagement ?? "--"}{" "}
-              engagement
+              {params.views ?? "--"} views . {params.likes ?? "--"} likes
             </Text>
             {youtubeConnection.isConnected && hasAnalysis ? (
               <Pressable
@@ -294,7 +315,9 @@ export default function VideoDetailScreen() {
                     <View
                       style={[
                         styles.legendDot,
-                        { backgroundColor: getSentimentColor(colors, item.tone) },
+                        {
+                          backgroundColor: getSentimentColor(colors, item.tone),
+                        },
                       ]}
                     />
                     <Text style={styles.legendLabel}>
@@ -328,7 +351,7 @@ export default function VideoDetailScreen() {
             <EmptyState
               icon={LayoutDashboard}
               title="Analysis already in use"
-              description="This video is currently powering your dashboard analysis, so there&apos;s nothing new to generate here."
+              description="This video is currently powering your dashboard analysis, so there's nothing new to generate here."
             />
           ) : (
             <>

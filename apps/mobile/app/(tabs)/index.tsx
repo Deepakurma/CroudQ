@@ -18,6 +18,7 @@ import { useBottomTabBarHeight } from "@react-navigation/bottom-tabs";
 import { useQuery } from "@tanstack/react-query";
 import {
   AlertTriangle,
+  CircleAlert,
   Clock3,
   RefreshCw,
   Sparkles,
@@ -26,6 +27,14 @@ import {
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import Toast from "react-native-toast-message";
+
+type DashboardScreenState =
+  | "upgrade_required"
+  | "youtube_required"
+  | "loading"
+  | "error"
+  | "not_enough_data"
+  | "ready";
 
 const formatDeletionDate = (value: string) =>
   new Intl.DateTimeFormat("en-US", {
@@ -62,6 +71,19 @@ export default function DashboardScreen() {
       retry: false,
     }),
   );
+  const currentCommentCount = dashboardQuery.data?.currentCommentCount ?? 0;
+  const screenState: DashboardScreenState = !hasActiveSubscription
+    ? "upgrade_required"
+    : !youtubeConnection.isConnected
+      ? "youtube_required"
+      : dashboardQuery.isLoading
+        ? "loading"
+        : dashboardQuery.isError
+          ? "error"
+        : currentCommentCount === 0
+          ? "not_enough_data"
+          : "ready";
+  const shouldFillContent = screenState !== "ready";
 
   React.useEffect(() => {
     if (!dashboardQuery.error) {
@@ -85,21 +107,10 @@ export default function DashboardScreen() {
     }
   };
 
-  return (
-    <View style={styles.container}>
-      <TabScreen
-        bottomContentOffset={40}
-        contentContainerStyle={[
-          !hasActiveSubscription ||
-          !youtubeConnection.isConnected ||
-          dashboardQuery.isLoading
-            ? styles.fullHeightContent
-            : null,
-        ]}
-      >
-        <GreetingHeader selectedPlatform={selectedHomePlatform} />
-
-        {!hasActiveSubscription ? (
+  const renderPrimaryContent = () => {
+    switch (screenState) {
+      case "upgrade_required":
+        return (
           <AccessGateState
             icon={Sparkles}
             title={
@@ -115,7 +126,144 @@ export default function DashboardScreen() {
             buttonText={isEndedSubscription ? "Renew plan" : "Subscribe now"}
             onPress={() => void openUpgradePage()}
           />
-        ) : null}
+        );
+      case "youtube_required":
+        return (
+          <AccessGateState
+            icon={Youtube}
+            title="Connect YouTube"
+            description="Connect your YouTube account to unlock your dashboard and performance insights."
+            buttonText="Connect YouTube"
+            onPress={() => void connectYouTube()}
+          />
+        );
+      case "loading":
+        return (
+          <View style={styles.loadingState}>
+            <LoadingState
+              title="Building your dashboard"
+              descriptions={[
+                "Analyzing recent posts...",
+                "Generating dashboard insights...",
+                "Finding useful signals...",
+              ]}
+            />
+          </View>
+        );
+      case "error":
+        return (
+          <AccessGateState
+            icon={CircleAlert}
+            title="Could not load dashboard"
+            description="Please try again. Pull to refresh to retry."
+          />
+        );
+      case "not_enough_data":
+        return (
+          <AccessGateState
+            icon={CircleAlert}
+            title="Not enough data yet"
+            description="Not enough data is available to generate dashboard insights yet."
+          />
+        );
+      case "ready":
+        return (
+          <>
+            <View style={styles.section}>
+              <SectionHeader
+                title="What To Watch"
+                subtitle="The clearest signals from your latest upload"
+              />
+              {dashboardQuery.data?.artifact ? (
+                <InsightCarousel
+                  cards={dashboardQuery.data.artifact.payload.insightCards}
+                />
+              ) : (
+                <InsightCarousel />
+              )}
+            </View>
+
+            <View style={styles.section}>
+              <SectionHeader
+                title="Overview"
+                subtitle="How your latest upload compares to your previous one"
+              />
+              {dashboardQuery.data?.artifact ? (
+                <OverviewGrid
+                  stats={dashboardQuery.data.artifact.payload.overviewStats}
+                />
+              ) : (
+                <OverviewGrid />
+              )}
+            </View>
+
+            <View style={styles.section}>
+              <SectionHeader
+                title="Sentiment"
+                subtitle="How people are reacting in your recent comments"
+              />
+              {dashboardQuery.data?.artifact ? (
+                <SentimentCard
+                  positivePercent={
+                    dashboardQuery.data.artifact.payload.sentimentCard
+                      .positivePercent
+                  }
+                  dominantTone={
+                    dashboardQuery.data.artifact.payload.sentimentCard
+                      .dominantTone
+                  }
+                  subtext={
+                    dashboardQuery.data.artifact.payload.sentimentCard.subtext
+                  }
+                  split={
+                    dashboardQuery.data.artifact.payload.sentimentCard.split
+                  }
+                />
+              ) : (
+                <SentimentCard />
+              )}
+            </View>
+
+            <View style={styles.section}>
+              <SectionHeader
+                title="What To Try Next"
+                subtitle="Simple moves that could help your next upload"
+              />
+              {dashboardQuery.data?.artifact ? (
+                <SuggestionList
+                  items={dashboardQuery.data.artifact.payload.suggestions}
+                />
+              ) : (
+                <SuggestionList />
+              )}
+            </View>
+
+            <View style={styles.lastSyncedRow}>
+              <View style={styles.lastSyncedLine} />
+              <View style={styles.lastSyncedContent}>
+                <Clock3 size={14} color={colors.textMuted} />
+                <Text style={styles.lastSyncedText}>
+                  Last synced {youtubeLastSyncedLabel}
+                </Text>
+              </View>
+              <View style={styles.lastSyncedLine} />
+            </View>
+          </>
+        );
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <TabScreen
+        bottomContentOffset={40}
+        refreshing={dashboardQuery.isRefetching}
+        onRefresh={() => void Promise.all([dashboardQuery.refetch()])}
+        contentContainerStyle={[
+          shouldFillContent ? styles.fullHeightContent : null,
+        ]}
+      >
+        <GreetingHeader selectedPlatform={selectedHomePlatform} />
 
         {hasActiveSubscription && scheduledDeletionAt ? (
           <View style={styles.deletionBanner}>
@@ -150,102 +298,7 @@ export default function DashboardScreen() {
           </View>
         ) : null}
 
-        {hasActiveSubscription && !youtubeConnection.isConnected ? (
-          <AccessGateState
-            icon={Youtube}
-            title="Connect YouTube"
-            description="Connect your YouTube account to unlock your dashboard and performance insights."
-            buttonText="Connect YouTube"
-            onPress={() => void connectYouTube()}
-          />
-        ) : hasActiveSubscription && dashboardQuery.isLoading ? (
-          <View style={styles.loadingState}>
-            <LoadingState
-              title="Building your dashboard"
-              descriptions={[
-                "Analyzing recent posts...",
-                "Generating dashboard insights...",
-                "Finding useful signals...",
-              ]}
-            />
-          </View>
-        ) : hasActiveSubscription ? (
-          <>
-            <View style={styles.section}>
-              <SectionHeader
-                title="What To Watch"
-                subtitle="The clearest signals from your latest posts"
-              />
-              {dashboardQuery.data ? (
-                <InsightCarousel
-                  cards={dashboardQuery.data.payload.insightCards}
-                />
-              ) : (
-                <InsightCarousel />
-              )}
-            </View>
-
-            <View style={styles.section}>
-              <SectionHeader
-                title="Overview"
-                subtitle="A quick look at how your content is doing"
-              />
-              {dashboardQuery.data ? (
-                <OverviewGrid
-                  stats={dashboardQuery.data.payload.overviewStats}
-                />
-              ) : (
-                <OverviewGrid />
-              )}
-            </View>
-
-            <View style={styles.section}>
-              <SectionHeader
-                title="Sentiment"
-                subtitle="How people are reacting in your recent comments"
-              />
-              {dashboardQuery.data ? (
-                <SentimentCard
-                  positivePercent={
-                    dashboardQuery.data.payload.sentimentCard.positivePercent
-                  }
-                  dominantTone={
-                    dashboardQuery.data.payload.sentimentCard.dominantTone
-                  }
-                  subtext={dashboardQuery.data.payload.sentimentCard.subtext}
-                  split={dashboardQuery.data.payload.sentimentCard.split}
-                />
-              ) : (
-                <SentimentCard />
-              )}
-            </View>
-
-            <View style={styles.section}>
-              <SectionHeader
-                title="What To Try Next"
-                subtitle="Simple moves that could help your next post"
-              />
-              {dashboardQuery.data ? (
-                <SuggestionList
-                  items={dashboardQuery.data.payload.suggestions}
-                />
-              ) : (
-                <SuggestionList />
-              )}
-            </View>
-
-            <View style={styles.lastSyncedRow}>
-              <View style={styles.lastSyncedLine} />
-              <View style={styles.lastSyncedContent}>
-                <Clock3 size={14} color={colors.textMuted} />
-                <Text style={styles.lastSyncedText}>
-                  Last synced {youtubeLastSyncedLabel}
-                </Text>
-              </View>
-              <View style={styles.lastSyncedLine} />
-            </View>
-          </>
-        ) : null}
+        {renderPrimaryContent()}
       </TabScreen>
 
       {hasActiveSubscription && youtubeConnection.isConnected ? (

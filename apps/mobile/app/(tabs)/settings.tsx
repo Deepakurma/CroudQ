@@ -147,7 +147,6 @@ export default function SettingsScreen() {
           currentPassword: "Current password is incorrect",
         }));
       }
-
     } finally {
       setIsSavingProfile(false);
     }
@@ -424,8 +423,8 @@ export default function SettingsScreen() {
         />
         <SettingsRow
           icon={BellRing}
-          title="Daily recap"
-          subtitle="Get a quick update on new audience shifts"
+          title="Weekly recap"
+          subtitle="Quick insights into this week’s uploads"
           trailing={<Switch value />}
         />
         <SettingsRow
