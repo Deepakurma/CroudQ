@@ -12,7 +12,7 @@ export const authUserSchema = z.object({
   channelType: z.enum(["small", "medium"]),
   handle: z.string().nullable(),
   tier: z.string().nullable(),
-  subscriptionState: z.enum(["active", "ended", "none"]),
+  subscriptionState: z.enum(["active", "created", "ended", "none"]),
   deletionRequestedAt: z.string().datetime().nullable(),
   scheduledDeletionAt: z.string().datetime().nullable(),
 });

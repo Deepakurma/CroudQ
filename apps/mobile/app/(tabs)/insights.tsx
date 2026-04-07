@@ -44,6 +44,7 @@ export default function InsightsScreen() {
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
   const isEndedSubscription = user?.subscriptionState === "ended";
+  const isCreatedSubscription = user?.subscriptionState === "created";
   const strategyQuery = useQuery(
     trpc.insights.strategy.queryOptions(undefined, {
       enabled: Boolean(
@@ -90,16 +91,26 @@ export default function InsightsScreen() {
           <AccessGateState
             icon={Sparkles}
             title={
-              isEndedSubscription
+              isCreatedSubscription
+                ? "Complete your subscription"
+                : isEndedSubscription
                 ? "Your Subscription has ended"
                 : "Subscribe to CroudQ Pro"
             }
             description={
-              isEndedSubscription
+              isCreatedSubscription
+                ? "Subscribe and you're good to go."
+                : isEndedSubscription
                 ? "Renew your plan and you're good to go again."
                 : "Subscribe to get access to your dashboard and performance insights."
             }
-            buttonText={isEndedSubscription ? "Renew plan" : "Subscribe now"}
+            buttonText={
+              isCreatedSubscription
+                ? "Complete"
+                : isEndedSubscription
+                  ? "Renew plan"
+                  : "Subscribe now"
+            }
             onPress={() => void openUpgradePage()}
           />
         );

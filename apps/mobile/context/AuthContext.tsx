@@ -20,7 +20,7 @@ interface User {
   channelType: "small" | "medium";
   handle: string | null;
   tier: string | null;
-  subscriptionState: "active" | "ended" | "none";
+  subscriptionState: "active" | "created" | "ended" | "none";
   deletionRequestedAt: string | null;
   scheduledDeletionAt: string | null;
 }

@@ -232,12 +232,15 @@ export default function PricingClient({ user }: { user: AuthUser }) {
           ) : overview?.currentSubscription ? (
             <>
               <h1 className="text-foreground text-4xl leading-tight font-black tracking-tight sm:text-5xl">
-                Your subscription is not active.
+                {overview.currentSubscription.status === 'created'
+                  ? 'Complete your subscription.'
+                  : 'Your subscription is not active.'}
               </h1>
               <p className="text-muted-foreground text-base leading-7 sm:text-lg">
-                <span className="text-foreground font-semibold">{user.email}</span>. Your plan is
-                currently {overview.currentSubscription.status}. Complete payment or restart your
-                subscription to continue using.
+                <span className="text-foreground font-semibold">{user.email}</span>.{' '}
+                {overview.currentSubscription.status === 'created'
+                  ? 'Finish your subscription and start using it.'
+                  : `Your plan is currently ${overview.currentSubscription.status}. Complete payment or restart your subscription to continue using.`}
               </p>
             </>
           ) : (

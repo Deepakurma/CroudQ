@@ -41,6 +41,7 @@ export const createCheckoutSessionSchema = z.object({
   }),
   prefill: z.object({
     name: z.string(),
+    email: z.string().email(),
   }),
   existing: z.boolean(),
   recovery: z.boolean(),

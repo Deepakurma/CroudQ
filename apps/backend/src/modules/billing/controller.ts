@@ -417,7 +417,7 @@ const getCurrentSubscriptionRecord = async (userId: string) =>
 
 export const getCurrentUserSubscriptionState = async (
   userId: string,
-): Promise<"active" | "ended" | "none"> => {
+): Promise<"active" | "created" | "ended" | "none"> => {
   const latestSubscription = await db.query.billingSubscriptions.findFirst({
     where: eq(billingSubscriptions.userId, userId),
     orderBy: [desc(billingSubscriptions.updatedAt)],
@@ -425,6 +425,10 @@ export const getCurrentUserSubscriptionState = async (
 
   if (!latestSubscription) {
     return "none";
+  }
+
+  if (latestSubscription.status === "created") {
+    return "created";
   }
 
   return ACTIVE_SUBSCRIPTION_STATUSES.includes(
@@ -519,15 +523,23 @@ export const createCheckoutSession = async (input: {
   const rawPlan = await getPlanByCode(input.planCode);
   const plan = await ensureProviderPlan(rawPlan);
   const currentSubscription = await getCurrentSubscriptionRecord(input.userId);
+  const now = new Date();
+  const canReuseCreatedSubscription =
+    currentSubscription?.status === "created" &&
+    currentSubscription.planId === plan.id &&
+    currentSubscription.providerSubscriptionId &&
+    currentSubscription.expireBy &&
+    currentSubscription.expireBy > now;
+  const canRecoverExistingSubscription =
+    currentSubscription?.planId === plan.id &&
+    currentSubscription?.providerSubscriptionId &&
+    RECOVERABLE_SUBSCRIPTION_STATUSES.includes(
+      currentSubscription.status as (typeof RECOVERABLE_SUBSCRIPTION_STATUSES)[number],
+    );
 
   if (
     currentSubscription &&
-    currentSubscription.providerSubscriptionId &&
-    (currentSubscription.status === "created" ||
-      RECOVERABLE_SUBSCRIPTION_STATUSES.includes(
-        currentSubscription.status as (typeof RECOVERABLE_SUBSCRIPTION_STATUSES)[number],
-      )) &&
-    currentSubscription.planId === plan.id
+    (canReuseCreatedSubscription || canRecoverExistingSubscription)
   ) {
     return {
       keyId: getRazorpayCredentials().keyId,
@@ -540,13 +552,17 @@ export const createCheckoutSession = async (input: {
       },
       prefill: {
         name: user.name ?? "",
+        email: user.email,
       },
       existing: true,
-      recovery: currentSubscription.status !== "created",
+      recovery: canRecoverExistingSubscription,
     };
   }
 
-  if (currentSubscription) {
+  if (
+    currentSubscription &&
+    !(currentSubscription.status === "created" && currentSubscription.planId === plan.id)
+  ) {
     const currentPlan = await db.query.billingPlans.findFirst({
       where: eq(billingPlans.id, currentSubscription.planId),
     });
@@ -572,6 +588,7 @@ export const createCheckoutSession = async (input: {
         notes: {
           plan_code: plan.code,
           user_id: user.id,
+          email: user.email,
         },
       }),
     },
@@ -594,6 +611,7 @@ export const createCheckoutSession = async (input: {
     },
     prefill: {
       name: user.name ?? "",
+      email: user.email,
     },
     existing: false,
     recovery: false,

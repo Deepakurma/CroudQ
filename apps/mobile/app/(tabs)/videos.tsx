@@ -96,6 +96,7 @@ export default function VideosScreen() {
   const tabBarHeight = useBottomTabBarHeight();
   const styles = getStyles(colors, insets.top, tabBarHeight);
   const isEndedSubscription = user?.subscriptionState === "ended";
+  const isCreatedSubscription = user?.subscriptionState === "created";
   const youtubeVideosQueryOptions = trpc.youtube.data.infiniteQueryOptions(
     { limit: VIDEOS_PAGE_SIZE },
     {
@@ -242,16 +243,26 @@ export default function VideosScreen() {
         <AccessGateState
           icon={Sparkles}
           title={
-            isEndedSubscription
+            isCreatedSubscription
+              ? "Complete your subscription"
+              : isEndedSubscription
               ? "Your Subscription has ended"
               : "Subscribe to CroudQ Pro"
           }
           description={
-            isEndedSubscription
+            isCreatedSubscription
+              ? "Subscribe and you're good to go."
+              : isEndedSubscription
               ? "Renew your plan and you're good to go again."
               : "Subscribe to get access to your dashboard and performance insights."
           }
-          buttonText={isEndedSubscription ? "Renew plan" : "Subscribe now"}
+          buttonText={
+            isCreatedSubscription
+              ? "Complete"
+              : isEndedSubscription
+                ? "Renew plan"
+                : "Subscribe now"
+          }
           onPress={() => void openUpgradePage()}
         />
       ) : youtubeConnection.isConnected && isLoading ? (
