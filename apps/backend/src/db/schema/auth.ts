@@ -1,4 +1,5 @@
 import {
+  check,
   index,
   integer,
   pgTable,
@@ -10,12 +11,15 @@ import { relations, sql } from "drizzle-orm";
 
 import { videos, youtubeAccounts } from "./youtube";
 
+export type ChannelType = "small" | "medium";
+
 export const users = pgTable(
   "users",
   {
     id: text("id").primaryKey(),
     name: text("name"),
     email: text("email").notNull(),
+    channelType: text("channel_type").$type<ChannelType>().default("small").notNull(),
     emailVerifiedAt: timestamp("email_verified_at", {
       withTimezone: true,
     }),
@@ -33,6 +37,10 @@ export const users = pgTable(
       .notNull(),
   },
   (table) => ({
+    channelTypeCheck: check(
+      "users_channel_type_check",
+      sql`${table.channelType} in ('small', 'medium')`,
+    ),
     emailLowerUniqueIdx: uniqueIndex("users_email_lower_unique_idx").on(
       sql`lower(${table.email})`,
     ),
@@ -87,6 +95,7 @@ export const signupEmailOtps = pgTable(
       .$defaultFn(() => crypto.randomUUID()),
     email: text("email").notNull(),
     name: text("name"),
+    channelType: text("channel_type").$type<ChannelType>().default("small").notNull(),
     passwordHash: text("password_hash").notNull(),
     codeHash: text("code_hash").notNull(),
     expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
@@ -96,6 +105,10 @@ export const signupEmailOtps = pgTable(
       .notNull(),
   },
   (table) => ({
+    channelTypeCheck: check(
+      "signup_email_otps_channel_type_check",
+      sql`${table.channelType} in ('small', 'medium')`,
+    ),
     emailIdx: index("signup_email_otps_email_idx").on(table.email),
     codeHashIdx: index("signup_email_otps_code_hash_idx").on(table.codeHash),
     expiresAtIdx: index("signup_email_otps_expires_at_idx").on(table.expiresAt),

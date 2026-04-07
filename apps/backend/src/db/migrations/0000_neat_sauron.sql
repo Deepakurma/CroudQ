@@ -60,11 +60,13 @@ CREATE TABLE "signup_email_otps" (
 	"id" text PRIMARY KEY NOT NULL,
 	"email" text NOT NULL,
 	"name" text,
+	"channel_type" text DEFAULT 'small' NOT NULL,
 	"password_hash" text NOT NULL,
 	"code_hash" text NOT NULL,
 	"expires_at" timestamp with time zone NOT NULL,
 	"used_at" timestamp with time zone,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "signup_email_otps_channel_type_check" CHECK ("signup_email_otps"."channel_type" in ('small', 'medium'))
 );
 --> statement-breakpoint
 CREATE TABLE "user_credentials" (
@@ -78,11 +80,13 @@ CREATE TABLE "users" (
 	"id" text PRIMARY KEY NOT NULL,
 	"name" text,
 	"email" text NOT NULL,
+	"channel_type" text DEFAULT 'small' NOT NULL,
 	"email_verified_at" timestamp with time zone,
 	"deletion_requested_at" timestamp with time zone,
 	"scheduled_deletion_at" timestamp with time zone,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "users_channel_type_check" CHECK ("users"."channel_type" in ('small', 'medium'))
 );
 --> statement-breakpoint
 CREATE TABLE "web_login_tokens" (

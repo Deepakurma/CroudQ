@@ -9,6 +9,7 @@ export const authUserSchema = z.object({
   id: z.string(),
   name: z.string().nullable(),
   email: z.string().email(),
+  channelType: z.enum(["small", "medium"]),
   handle: z.string().nullable(),
   tier: z.string().nullable(),
   subscriptionState: z.enum(["active", "ended", "none"]),
@@ -26,6 +27,7 @@ export const signupInputSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(80).optional(),
   email: z.string().email(),
   password: passwordSchema,
+  channelType: z.enum(["small", "medium"]),
 });
 
 export const verifySignupOtpInputSchema = z.object({
@@ -54,6 +56,10 @@ export const resetPasswordInputSchema = z.object({
 export const updateProfileInputSchema = z.object({
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(80),
   currentPassword: z.string().min(1, "Current password is required").max(128),
+});
+
+export const updateChannelTypeInputSchema = z.object({
+  channelType: z.enum(["small", "medium"]),
 });
 
 export const refreshSessionInputSchema = z.object({

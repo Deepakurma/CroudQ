@@ -30,6 +30,7 @@ type RazorpayOptions = {
   subscription_id: string;
   name: string;
   description: string;
+  subscription_card_change?: boolean;
   handler: (response: RazorpaySuccessResponse) => void | Promise<void>;
   prefill?: {
     name?: string;
@@ -50,6 +51,8 @@ declare global {
 }
 
 const MOBILE_SUBSCRIPTION_SUCCESS_URL = 'croudq://?subscription=success';
+const ACTIVE_SUBSCRIPTION_STATUSES = new Set(['active', 'authenticated']);
+const RECOVERY_SUBSCRIPTION_STATUSES = new Set(['pending', 'halted']);
 
 const loadRazorpayCheckout = async () => {
   if (window.Razorpay) {
@@ -135,6 +138,12 @@ export default function PricingClient({ user }: { user: AuthUser }) {
       : overview.currentSubscription.planName;
   }, [overview]);
 
+  const hasActiveSubscription = Boolean(
+    overview?.currentSubscription?.status &&
+    ACTIVE_SUBSCRIPTION_STATUSES.has(overview.currentSubscription.status)
+  );
+  const currentSubscriptionStatus = overview?.currentSubscription?.status ?? null;
+
   const handleUpgrade = async (planCode: string) => {
     setActivePlanCode(planCode);
 
@@ -149,6 +158,7 @@ export default function PricingClient({ user }: { user: AuthUser }) {
         subscription_id: checkoutSession.subscriptionId,
         name: 'CroudQ',
         description: checkoutSession.plan.name,
+        subscription_card_change: checkoutSession.recovery,
         prefill: checkoutSession.prefill,
         theme: {
           color: '#ef4444'
@@ -187,7 +197,7 @@ export default function PricingClient({ user }: { user: AuthUser }) {
 
       razorpay.open();
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Unable to start checkout';
+      const message = error instanceof Error ? error.message : 'Unable to open checkout';
       toast.error(message);
       setActivePlanCode(null);
     }
@@ -209,7 +219,7 @@ export default function PricingClient({ user }: { user: AuthUser }) {
             Croud<span className="text-primary">Q</span>
           </p>
 
-          {overview?.currentSubscription ? (
+          {hasActiveSubscription ? (
             <>
               <h1 className="text-foreground text-4xl leading-tight font-black tracking-tight sm:text-5xl">
                 You are subscribed.
@@ -217,6 +227,17 @@ export default function PricingClient({ user }: { user: AuthUser }) {
               <p className="text-muted-foreground text-base leading-7 sm:text-lg">
                 <span className="text-foreground font-semibold">{user.email}</span>. Your
                 subscription is active! Head over to the app to start using it.{' '}
+              </p>
+            </>
+          ) : overview?.currentSubscription ? (
+            <>
+              <h1 className="text-foreground text-4xl leading-tight font-black tracking-tight sm:text-5xl">
+                Your subscription is not active.
+              </h1>
+              <p className="text-muted-foreground text-base leading-7 sm:text-lg">
+                <span className="text-foreground font-semibold">{user.email}</span>. Your plan is
+                currently {overview.currentSubscription.status}. Complete payment or restart your
+                subscription to continue using.
               </p>
             </>
           ) : (
@@ -235,14 +256,24 @@ export default function PricingClient({ user }: { user: AuthUser }) {
       </div>
 
       {overview?.currentSubscription ? (
-        <Card className="mb-8 rounded-3xl border border-emerald-200 bg-emerald-50/80">
+        <Card
+          className={`mb-8 rounded-3xl ${
+            hasActiveSubscription
+              ? 'border border-emerald-200 bg-emerald-50/80'
+              : 'border border-amber-200 bg-amber-50/80'
+          }`}>
           <CardContent className="flex flex-col gap-4 px-6 py-5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-2 text-sm font-semibold text-emerald-700">
+            <div
+              className={`flex items-center gap-2 text-sm font-semibold ${
+                hasActiveSubscription ? 'text-emerald-700' : 'text-amber-700'
+              }`}>
               <CheckCircle2 className="size-4" />
-              Current subscription
+              {hasActiveSubscription ? 'Current subscription' : 'Subscription needs attention'}
             </div>
             <p className="text-foreground text-lg font-bold">
-              {currentPlanLabel ?? 'Subscription active'}
+              {hasActiveSubscription
+                ? (currentPlanLabel ?? 'Subscription active')
+                : (overview.currentSubscription.planName ?? 'Subscription inactive')}
             </p>
             <p className="text-muted-foreground text-sm">
               Status: {overview.currentSubscription.status}
@@ -256,8 +287,19 @@ export default function PricingClient({ user }: { user: AuthUser }) {
 
       <div className="grid gap-6 md:grid-cols-2">
         {overview?.plans.map((plan) => {
-          const isCurrentPlan = overview.currentSubscription?.planCode === plan.code;
+          const isCurrentPlan =
+            hasActiveSubscription && overview.currentSubscription?.planCode === plan.code;
           const isBusy = activePlanCode === plan.code;
+          const isRecoverableCurrentPlan =
+            !hasActiveSubscription &&
+            overview.currentSubscription?.planCode === plan.code &&
+            currentSubscriptionStatus !== null &&
+            RECOVERY_SUBSCRIPTION_STATUSES.has(currentSubscriptionStatus);
+          const buttonLabel = isCurrentPlan
+            ? 'Current plan'
+            : isRecoverableCurrentPlan
+              ? 'Resume Subscription'
+              : 'Start Subscription';
 
           return (
             <Card
@@ -336,10 +378,8 @@ export default function PricingClient({ user }: { user: AuthUser }) {
                       <Loader2 className="size-4 animate-spin" />
                       Opening checkout...
                     </>
-                  ) : isCurrentPlan ? (
-                    'Current plan'
                   ) : (
-                    'Start Subscription'
+                    buttonLabel
                   )}
                 </Button>
               </CardContent>

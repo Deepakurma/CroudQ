@@ -3,6 +3,7 @@ import { AppScreen } from "@/components/ui/AppScreen";
 import { AppTextInput } from "@/components/ui/AppTextInput";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
+import { FloatingDropdownMenu } from "@/components/ui/FloatingDropdownMenu";
 import { AppColors } from "@/constants/Colors";
 import { Spacing } from "@/constants/Spacing";
 import { Typography } from "@/constants/Typography";
@@ -11,6 +12,7 @@ import { useAppTheme } from "@/context/ThemeContext";
 import { openPrivacyPolicy, openTermsOfService } from "@/utils/external-links";
 import { validateSchema } from "@/utils/validation";
 import { useRouter } from "expo-router";
+import { ChevronDown, ChevronUp } from "lucide-react-native";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -28,6 +30,7 @@ const signupSchema = z
     email: z.string().email("Enter a valid email"),
     password: z.string().min(8, "Password must be at least 8 characters"),
     confirmPassword: z.string().min(8, "Confirm your password"),
+    channelType: z.enum(["small", "medium"]),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: "Passwords do not match",
@@ -43,6 +46,20 @@ const otpSchema = z.object({
 
 const OTP_RESEND_SECONDS = 30;
 const OTP_LENGTH = 6;
+const channelTypeOptions = [
+  {
+    value: "small" as const,
+    label: "Emerging",
+    description:
+      "Choose this if you have less than 500K subscribers or followers.",
+  },
+  {
+    value: "medium" as const,
+    label: "Established",
+    description:
+      "Choose this if you have more than 500K subscribers or followers.",
+  },
+];
 
 export default function SignupScreen() {
   const { requestSignupOtp, verifySignupOtp } = useAuth();
@@ -56,6 +73,7 @@ export default function SignupScreen() {
     email: "",
     password: "",
     confirmPassword: "",
+    channelType: "small" as const,
   });
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(""));
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
@@ -88,7 +106,7 @@ export default function SignupScreen() {
   }, [step]);
 
   const updateField = (
-    field: "name" | "email" | "password" | "confirmPassword",
+    field: "name" | "email" | "password" | "confirmPassword" | "channelType",
     value: string,
   ) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -123,6 +141,7 @@ export default function SignupScreen() {
         name: result.data.name,
         email: result.data.email,
         password: result.data.password,
+        channelType: result.data.channelType,
       });
       setOtp(Array(OTP_LENGTH).fill(""));
       setFocusedIndex(0);
@@ -170,6 +189,7 @@ export default function SignupScreen() {
         name: form.name,
         email: form.email,
         password: form.password,
+        channelType: form.channelType,
       });
       setOtp(Array(OTP_LENGTH).fill(""));
       setFocusedIndex(0);
@@ -295,6 +315,76 @@ export default function SignupScreen() {
               error={errors.email}
               placeholder="you@example.com"
             />
+
+            <View style={styles.fieldWrap}>
+              <Text style={styles.fieldLabel}>What best defines you?</Text>
+              <FloatingDropdownMenu
+                align="left"
+                menuWidth={280}
+                renderTrigger={({ isOpen, toggle }) => (
+                  <Pressable
+                    style={[
+                      styles.dropdownTrigger,
+                      isOpen ? styles.dropdownTriggerOpen : null,
+                      errors.channelType ? styles.dropdownTriggerError : null,
+                    ]}
+                    onPress={toggle}
+                  >
+                    <Text style={styles.dropdownTriggerText}>
+                      {form.channelType === "small"
+                        ? "Emerging"
+                        : "Established"}
+                    </Text>
+                    {isOpen ? (
+                      <ChevronUp size={18} color={colors.textSecondary} />
+                    ) : (
+                      <ChevronDown size={18} color={colors.textSecondary} />
+                    )}
+                  </Pressable>
+                )}
+              >
+                {({ close }) => (
+                  <View style={styles.dropdownMenuContent}>
+                    {channelTypeOptions.map((option) => (
+                      <Pressable
+                        key={option.value}
+                        style={[
+                          styles.dropdownOption,
+                          form.channelType === option.value
+                            ? styles.dropdownOptionActive
+                            : null,
+                        ]}
+                        onPress={() => {
+                          updateField("channelType", option.value);
+                          close();
+                        }}
+                      >
+                        <View style={styles.dropdownOptionCopy}>
+                          <Text
+                            style={[
+                              styles.dropdownOptionText,
+                              form.channelType === option.value
+                                ? styles.dropdownOptionTextActive
+                                : null,
+                            ]}
+                          >
+                            {option.label}
+                          </Text>
+                          <Text style={styles.dropdownOptionDescription}>
+                            {option.description}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
+              </FloatingDropdownMenu>
+              {errors.channelType ? (
+                <Text style={styles.dropdownErrorText}>
+                  {errors.channelType}
+                </Text>
+              ) : null}
+            </View>
 
             <AppTextInput
               label="Password"
@@ -468,6 +558,67 @@ const getStyles = (colors: AppColors) =>
     },
     card: {
       gap: 12,
+    },
+    fieldWrap: {
+      gap: 8,
+    },
+    fieldLabel: {
+      color: colors.textSecondary,
+      fontSize: Typography.size.s,
+      fontFamily: Typography.font.medium,
+    },
+    dropdownTrigger: {
+      minHeight: 52,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.cardSecondary,
+      paddingHorizontal: Spacing.l,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    dropdownTriggerOpen: {
+      borderColor: colors.primary,
+    },
+    dropdownTriggerError: {
+      borderColor: colors.error,
+    },
+    dropdownTriggerText: {
+      color: colors.text,
+      fontSize: Typography.size.m,
+      fontFamily: Typography.font.medium,
+    },
+    dropdownMenuContent: {},
+    dropdownOption: {
+      borderRadius: 14,
+      paddingHorizontal: Spacing.m,
+      paddingVertical: Spacing.m,
+      backgroundColor: colors.backgroundElevated,
+    },
+    dropdownOptionActive: {
+      backgroundColor: colors.cardSecondary,
+    },
+    dropdownOptionCopy: {
+      gap: 2,
+    },
+    dropdownOptionText: {
+      color: colors.text,
+      fontSize: Typography.size.m,
+      fontFamily: Typography.font.medium,
+    },
+    dropdownOptionTextActive: {
+      color: colors.primary,
+    },
+    dropdownOptionDescription: {
+      color: colors.textSecondary,
+      fontSize: Typography.size.s,
+      fontFamily: Typography.font.regular,
+    },
+    dropdownErrorText: {
+      color: colors.error,
+      fontSize: Typography.size.s,
+      fontFamily: Typography.font.regular,
     },
     indicationRow: {
       flexDirection: "row",

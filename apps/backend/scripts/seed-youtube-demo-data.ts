@@ -8,6 +8,7 @@ const SEEDED_VIDEOS_COUNT = 101;
 const TOP_VIDEO_COMMENT_COUNT = 500;
 const DEFAULT_VIDEO_COMMENT_COUNT = 100;
 const TOP_VIDEO_COUNT = 5;
+const TOP_VIDEO_LOOK_COUNT = 10;
 
 const themes = [
   "Bengaluru work vlog",
@@ -116,276 +117,169 @@ const lightOpeners = [
 const categories = ["praise", "suggestion", "relatable", "critique"] as const;
 
 type CommentCategory = (typeof categories)[number];
-type SpecialVideoKind = "diverse-comments" | "war-update";
-type LatestCommentTone =
-  | "concern"
-  | "analysis"
-  | "critique"
-  | "question"
-  | "fatigue";
+type SpecialVideoKind = "latest-grwm";
 
-const latestVideoTitle =
-  "Living Alone Reset Vlog: 7 din me habits, routine aur mindset kitna change hua";
-const secondLatestVideoTitle =
-  "USA, Israel, Iran War Update: kya ho raha hai aur aage kya ho sakta hai";
+const topVideoPresets = [
+  {
+    title: "GRWM for a Brunch Date: soft glam, coffee run, and outfit chaos",
+    thumbnailUrl: null,
+  },
+  {
+    title: "My 6AM Reset Routine: skincare, journaling, and a calm apartment morning",
+    thumbnailUrl: null,
+  },
+  {
+    title: "Productive Workday in Bangalore: cafe edit session and creator to-do list",
+    thumbnailUrl: null,
+  },
+  {
+    title: "Closet Cleanout and Outfit Planning for the Week",
+    thumbnailUrl: null,
+  },
+  {
+    title: "Weekend Glow-Up Vlog: salon stop, skincare haul, and dinner plans",
+    thumbnailUrl: null,
+  },
+  {
+    title: "Desk Setup Refresh for Better Focus and Better Videos",
+    thumbnailUrl: null,
+  },
+  {
+    title: "What I Actually Use in My Everyday Makeup Bag",
+    thumbnailUrl: null,
+  },
+  {
+    title: "Spend the Day With Me: errands, editing, and a sunset catch-up",
+    thumbnailUrl: null,
+  },
+  {
+    title: "Night Routine After a Long Shoot Day",
+    thumbnailUrl: null,
+  },
+  {
+    title: "How I Plan Content for the Week Without Burning Out",
+    thumbnailUrl: null,
+  },
+] as const;
 
-const diverseCommentOpeners = [
-  "Sach bolun",
-  "Bhai",
+const latestVideoTitle = topVideoPresets[0].title;
+
+const grwmOpeners = [
+  "Omg",
+  "Girl",
+  "Okay",
   "Honestly",
-  "Mere liye",
-  "Personal take",
+  "Sis",
   "Ngl",
-  "Yeh video dekh ke",
-  "Main alag reason se",
-  "Dil se bolu",
-  "Mujhe sabse zyada",
+  "Babeee",
+  "Aree",
+  "Lowkey",
+  "No because",
 ];
 
-const diverseMoodDescriptors = [
-  "halka sa nostalgic",
-  "andar se motivated",
-  "thoda insecure",
-  "unexpectedly peaceful",
-  "kaafi skeptical",
-  "emotionally heavy",
-  "lowkey jealous",
-  "soft aur hopeful",
-  "thoda defensive",
-  "seedha inspired",
-  "confused but interested",
-  "thoda guilty",
-  "refresh feel karte hue",
-  "protective mode me",
-  "andar se competitive",
-  "surprisingly comforted",
-  "kaafi reflective",
-  "restless type energy ke saath",
-  "calm acceptance ke mood me",
-  "thoda proud",
+const grwmMoods = [
+  "full obsessed",
+  "softly impressed",
+  "slightly jealous",
+  "happy for you",
+  "curious as hell",
+  "lightly entertained",
+  "completely sold",
+  "comforted",
+  "surprisingly inspired",
+  "staring respectfully",
+  "quietly taking notes",
+  "ready to copy this",
+  "still recovering",
+  "fully invested",
+  "randomly emotional",
+  "kind of attacked",
+  "very entertained",
+  "straight up influenced",
+  "locked in",
+  "weirdly motivated",
 ];
 
-const diverseIntentions = [
-  "apni purani routine compare kar raha hoon",
-  "sirf editing nahi, discipline observe kar raha hoon",
-  "comment isliye likh raha hoon kyunki yeh reality rare lagti hai",
-  "tumhari consistency ko silently measure kar raha hoon",
-  "dekhna chahta hoon ki next vlog me yeh energy sustain hoti hai ya nahi",
-  "apne khud ke burnout phase ko yaad kar raha hoon",
-  "isliye react kar raha hoon kyunki yeh video surface level nahi laga",
-  "apni loneliness ka angle yahan project kar raha hoon",
-  "sirf praise nahi, apna internal mess bhi compare kar raha hoon",
-  "yeh dekh kar routine rebuild karne ka mann ho raha hai",
-  "tumhare choices ke through apne decisions ko judge kar raha hoon",
-  "comment karte waqt bhi soch raha hoon ki camera ke bahar story aur kya hogi",
-  "is content me comfort dhoondh raha hoon, bas entertainment nahi",
-  "khud ko push karne ke liye isko reminder bana raha hoon",
-  "dekh raha hoon ki discipline aur loneliness ka mix kaise handle kiya",
-  "tumhare calm tone me apni anxiety ko contrast kar raha hoon",
-  "sirf room aesthetic nahi, emotional effort notice kar raha hoon",
-  "yeh jaanne ki curiosity me hoon ki off-camera din kitne messy hote honge",
-  "thoda validate feel karne aaya tha aur kaafi kuch leke ja raha hoon",
-  "apni failed habits ko yaad karke bhi strangely hopeful feel ho raha hai",
-  "video ko motivation aur warning dono ki tarah dekh raha hoon",
-  "yeh samajhne ki koshish kar raha hoon ki solitude tumhare liye strength hai ya coping mechanism",
-  "apne future self ko imagine karke comment likh raha hoon",
-  "sirf vibe absorb nahi kar raha, patterns decode kar raha hoon",
-  "isliye ruk kar likh raha hoon kyunki isne normal vlog se zyada hit kiya",
+const grwmAngles = [
+  "the base makeup blend looked crazy smooth on camera",
+  "that outfit switch moment actually made the whole vlog hit harder",
+  "your hair and jewelry together looked way too put together in the best way",
+  "the lighting on the skincare part made everything feel expensive",
+  "the final mirror reveal was genuinely worth the build-up",
+  "the casual way you explained each step made it feel very watchable",
+  "the coffee run clips made the whole thing feel like a proper lifestyle vlog",
+  "your makeup table looked chaotic but in a very relatable creator way",
+  "the lip combo at the end pulled the whole look together",
+  "the transitions were clean enough to make the whole video feel polished",
+  "the simple top with the accessories was honestly the smartest styling choice",
+  "your skin prep looked like it made the biggest difference to the final look",
+  "the voiceover felt calm without making the video boring",
+  "the before and after contrast was subtle but super effective",
+  "the perfume and final touch section made the whole thing feel complete",
+  "the outfit felt cute without looking overdone",
+  "the little pauses and reactions made the vlog feel more real",
+  "the makeup choices looked wearable and not forced for camera",
+  "the final glam felt elevated while still looking easy to recreate",
+  "the vibe was very main-character without trying too hard",
+  "the styling choices looked expensive even though the outfit was simple",
+  "the way you paced the ready-with-me section made it easy to stay hooked",
+  "the balance between chatty and aesthetic was actually done really well",
+  "the blush and lip shade combo looked perfect on screen",
+  "the whole thing made me want to get ready for no reason at all",
 ];
 
-const diverseObservationAngles = [
-  "morning routine ka pace forced nahi laga",
-  "kitchen aur room ke beech wali silence kaafi real lagi",
-  "background me jo thakan thi woh hide nahi ki gayi",
-  "camera placement se intentional solitude feel hui",
-  "voiceover me overconfidence nahi tha",
-  "tumne productive dikhne ke pressure ko fully fake nahi kiya",
-  "small habits ka repetition strongest part laga",
-  "mess aur reset ke beech ka transition believable tha",
-  "final takeaway preachy nahi laga",
-  "vlog me loneliness ko glamorize bhi nahi kiya gaya",
+const grwmIntents = [
+  "I need the exact lip combo details",
+  "drop the outfit link somewhere please",
+  "someone please ask for the skincare products because I also need them",
+  "I want a full product list in the caption",
+  "I am here only to know which perfume you used",
+  "this is the kind of video that makes people shop immediately",
+  "I would watch a longer version of this with every product named",
+  "I need a separate video just for the makeup routine",
+  "the hair routine also deserves its own breakdown",
+  "please tell me where the accessories are from",
+  "I am fully influenced and not even mad about it",
+  "this kind of soft glam actually deserves a tutorial",
+  "I need the exact foundation and blush shades",
+  "this video just convinced me to care about getting ready again",
+  "you somehow made simple steps look very premium",
+  "I want the coffee place recommendation too at this point",
+  "the camera quality and the look together sold the whole vibe",
+  "I need links, names, and an updated makeup bag tour immediately",
+  "the final look deserves a thumbnail of its own",
+  "this is the sort of GRWM that makes the comments section useful",
+  "I would genuinely save this before my next outing",
+  "you made the whole process feel fun instead of stressful",
+  "this is exactly the tone more lifestyle vlogs should have",
+  "I need a version of this for office looks too",
+  "this made me want to clean my room and my makeup pouch",
 ];
 
-const diverseEmotionalEffects = [
-  "aur us wajah se video mere dimaag me normal content se zyada der tak rahega",
-  "isliye is par hasi wali reaction nahi aa rahi, thoda quietly process kar raha hoon",
-  "aur shayad isi liye mujhe yeh zyada personal lag raha hai",
-  "jiski wajah se comment chhota rakhna mushkil ho gaya",
-  "aur yeh cheez mujhe impress se zyada disturb karke gayi in a good way",
-  "isliye main isse sirf aesthetic vlog treat nahi kar paa raha",
-  "aur exactly wahi part mujhe sabse honest laga",
-  "jisse yeh video algorithm content se alag khadi ho gayi",
-  "aur usi point par mujhe apni life ki kamiyaan yaad aayi",
-  "isliye yeh bas dekhne wala content nahi, feel karne wala piece ban gaya",
+const grwmClosers = [
+  "more of these please",
+  "absolute serve",
+  "saving this one",
+  "the vibe was immaculate",
+  "you ate that up",
+  "need part two",
+  "comments are going to be full of product questions",
+  "this was way too pretty",
+  "such a clean vlog",
+  "I get the hype now",
 ];
 
-const diverseClosers = [
-  "next part me aur raw raho",
-  "aise comments shayad sab na likhen but feel bahut log karenge",
-  "tumne kaafi layered response nikalwa diya",
-  "iska impact views se zyada internal hoga",
-  "yeh wali honesty easy nahi hoti",
-  "main isko save karke dobara dekhunga",
-  "isse relate karne wale quietly bahut honge",
-  "please is format ko casually mat chhodna",
-  "is tarah ka vlog loud nahi hota but stick karta hai",
-  "yeh comment bhi shayad mere liye note jaisa hi hai",
-];
-
-const latestConcernOpeners = [
-  "Yaar",
-  "Sach bolu toh",
-  "Honestly",
-  "Bhai",
-  "Mujhe lagta hai",
-  "Dil se",
-  "Aaj ki update dekh ke",
-  "Seedhi baat",
-  "Ngl",
-  "Seriously",
-];
-
-const latestConcernBodies = [
-  "iss conflict ka sabse bura part yeh hai ki aam log hi sabse zyada suffer karte hain aur ground reality headlines se bhi zyada painful hoti hogi",
-  "har nayi escalation ke baad lagta hai situation control ke bahar nikal rahi hai aur world leaders bas statements tak limited reh gaye hain",
-  "video dekh ke aur clear hua ki war ka impact sirf borders tak nahi rehta, families, economy aur future sab par padta hai",
-  "jo civilians beech me phas jaate hain unke liye genuinely dil dukhta hai, politics alag cheez hai par human cost sabse heavy lagti hai",
-  "aise moments me social media par noise bahut hota hai par asli dikkat un logon ki hoti hai jinke shehron par direct asar pad raha hota hai",
-  "jitna tumne calmly breakdown kiya usse samajh aaya ki retaliation chain kitni dangerous ho sakti hai agar koi side peeche na hategi",
-  "kabhi kabhi lagta hai duniya history se kuch seekhti hi nahi, har generation ko same type ke conflicts ka naya version dekhna pad raha hai",
-  "mujhe sabse zyada tension is baat ki hoti hai ki ek galat decision aur poora region aur unstable ho sakta hai",
-  "news clips alag alag dekh kar confusion hota tha, is video ne dikhaya ki background samjhe bina reactions dena kitna easy aur kitna risky hai",
-  "sirf military updates dekhne se picture complete nahi hoti, humanitarian angle bhi utna hi important hai aur tumne woh point sahi uthaya",
-];
-
-const latestAnalysisOpeners = [
-  "Mere hisaab se",
-  "Observation yeh hai",
-  "Agar calmly dekho",
-  "Video ka strongest point",
-  "Ek cheez clear lagi",
-  "Strategically dekha jaye toh",
-  "Mujhe jo samajh aaya",
-  "Thoda neutral socho toh",
-  "Ye breakdown dekhne ke baad",
-  "Point yeh bana",
-];
-
-const latestAnalysisBodies = [
-  "tumne alliances, retaliation aur regional pressure ko ek hi frame me samjhaya, warna usually videos sirf breaking headline tak ruk jaati hain",
-  "is conflict me military action ke saath diplomatic signaling bhi chal rahi hai, aur woh nuance kaafi log miss kar dete hain",
-  "jo timeline tumne explain ki usse kaafi clarity mili ki ek incident alag se nahi hota, peeche layered triggers hote hain",
-  "market impact, oil routes aur global politics ka connection mention karna zaroori tha, kyunki war sirf battlefield tak limited nahi rehti",
-  "commentary balanced lagi kyunki tumne kisi ek narrative ko blindly push nahi kiya aur context par focus rakha",
-  "yeh samajhna important hai ki public statements aur actual strategic intent hamesha same nahi hote, aur tumne woh gap achha explain kiya",
-  "jitni complexity is issue me hai us hisaab se concise explanation dena easy nahi hota, but yahan sequence samajh aa gaya",
-  "bahut log map ya regional dynamics explain hi nahi karte, tumne woh part add karke video ko genuinely useful bana diya",
-  "escalation ka risk tumne exaggerated tone me nahi, realistic tone me bataya, isi wajah se video aur credible laga",
-  "yeh topic emotional bhi hai aur political bhi, isliye structured explanation zyada valuable lagti hai compared to shouting-match content",
-];
-
-const latestCritiqueOpeners = [
-  "Ek issue laga",
-  "Thoda disagree karunga",
-  "Mujhe yahan problem lagi",
-  "Respectfully",
-  "Criticism yeh hai",
-  "Main poori tarah convinced nahi hoon",
-  "Video achha tha but",
-  "Genuine feedback",
-  "Honestly ek gap laga",
-  "Meri concern yeh bhi hai",
-];
-
-const latestCritiqueBodies = [
-  "thoda aur sources ya on-screen references dikhate toh argument aur strong lagta, kyunki is topic me misinformation already bahut hai",
-  "timeline achhi thi but kuch parts fast nikal gaye, specially viewers ko history kam pata ho toh unke liye aur context useful hota",
-  "kabhi kabhi laga ki geopolitical angle zyada tha aur humanitarian side comparatively thoda kam cover hua",
-  "itna sensitive topic hai toh terms aur claims ko aur carefully qualify karna chahiye, warna log apni side ka proof samajh lete hain",
-  "video balanced tha but mujhe laga sanctions aur backchannel diplomacy par thoda aur detail dena chahiye tha",
-  "analysis strong thi par maps ya visual markers aur hote toh samajhna aur easy hota, especially mobile pe dekhne walon ke liye",
-  "aaj kal sab log certainty ke saath bolte hain, isliye jab outcome uncertain ho toh us uncertainty ko aur highlight karna chahiye",
-  "conflict ke roots par do minute aur spend karte toh new viewers ke liye overall framing aur better hoti",
-  "headline ke beyond jaana achha tha, lekin civilian casualties aur displacement numbers ka mention aur solid impact create karta",
-  "topic ka weight dekhte hue description me trusted reading links add karna useful hota, taaki log khud bhi verify kar saken",
-];
-
-const latestQuestionOpeners = [
-  "Koi batao",
-  "Mera sawaal yeh hai",
-  "Samajhna chahta hoon",
-  "Ek doubt hai",
-  "Can someone explain",
-  "Mujhe genuinely poochna hai",
-  "Yeh clear karo",
-  "Question simple hai",
-  "Is point par confusion hai",
-  "Ek cheez samajh nahi aayi",
-];
-
-const latestQuestionBodies = [
-  "agar situation aur escalate hoti hai toh kya sirf region affect hoga ya global fuel prices aur markets par bhi immediate impact dikhega",
-  "kya yeh conflict direct full-scale war me badal sakta hai ya mostly calibrated retaliation aur diplomatic pressure ke level par hi rahega",
-  "UN aur major powers itni statements dete hain, practical ground pe unka actual influence kitna hota hai",
-  "jo missile defense aur counter-strike systems discuss hue, unka real success rate kitna reliable maana jata hai",
-  "kya public narrative aur military reality me itna difference hota hai jitna experts bolte hain, ya yeh bhi ek media framing issue hai",
-  "agar ceasefire ki baat hoti bhi hai toh trust deficit itna high hone ke baad implementation possible kaise hota hai",
-  "is situation ka India par foreign policy ya oil import level par koi meaningful indirect effect aa sakta hai kya",
-  "jitni countries involved ya aligned lag rahi hain, unme se kaun actually direct intervention se bachna chahega aur kyun",
-  "history dekh kar kya yeh pattern repeat hota dikhta hai jahan retaliation ka loop khatam karna sabko mushkil padta hai",
-  "civilian evacuation aur aid access jaisi cheezein actual conflict phase me kaun coordinate karta hai aur kitni effective hoti hain",
-];
-
-const latestFatigueOpeners = [
-  "Sach me",
-  "Ab honestly",
-  "Har roz",
-  "News dekh dekh ke",
-  "Public point of view se",
-  "Common aadmi ke liye",
-  "Mann uth gaya hai",
-  "Kab tak",
-  "Ye bhi reality hai",
-  "Thak gaye yaar",
-];
-
-const latestFatigueBodies = [
-  "har din naya alert, nayi strike aur nayi breaking news aati hai, lekin ground par logon ki safety phir bhi guarantee nahi hoti",
-  "common audience ko itni contradictory reports milti hain ki empathy aur exhaustion dono saath me feel hote hain",
-  "jitna zyada conflict content aata hai utna lagta hai ki normalcy ek luxury ban gayi hai un regions ke liye",
-  "hum screen par dekh kar overwhelm ho jaate hain toh jo log wahan live kar rahe hain unka mental state soch kar hi heavy feel hota hai",
-  "online sab log experts ban jaate hain, par asli suffering ko trend aur hashtag se measure nahi kiya ja sakta",
-  "ek taraf propaganda, ek taraf panic, beech me truth dhoondhna bhi full-time job jaisa lagne laga hai",
-  "log camps me baith kar future ka wait kar rahe hote hain aur baahar duniya bas positions count kar rahi hoti hai",
-  "kabhi kabhi lagta hai headlines human beings ko numbers me convert kar deti hain aur wahi sabse disturbing part hai",
-  "yeh sab dekh kar bas itna lagta hai ki de-escalation koi moral luxury nahi, practical necessity hai",
-  "breaking news culture ne har crisis ko fast content bana diya hai, par trauma fast nahi hota",
-];
-
-const latestPureHindiBodies = [
-  "वीडियो देखकर पहली बार पूरा क्रम साफ समझ आया, वरना हर चैनल पर सिर्फ अलग अलग डर फैलाने वाली हेडलाइन ही दिख रही थी",
-  "युद्ध की बहस में सबसे दुखद बात यह है कि सबसे बड़ी कीमत हमेशा सामान्य लोग चुकाते हैं और वही बात यहाँ सबसे ज़्यादा महसूस हुई",
-  "तुमने भावनात्मक शोर से हटकर स्थिति को शांत तरीके से समझाया, इसलिए यह वीडियो बाकी क्लिप्स से अधिक भरोसेमंद लगा",
-  "अगर दुनिया सच में शांति चाहती है तो सिर्फ बयान नहीं, ज़मीन पर दबाव और मानवीय सहायता दोनों एक साथ बढ़ाने होंगे",
-  "इस तरह के संघर्ष में जीत किसी की भी दिखाई दे, हार अंत में इंसानियत की ही लगती है",
-  "इतिहास बार बार चेतावनी देता है कि बदले की श्रृंखला लंबी होती है, पर नेताओं को यह बात सबसे अंत में समझ आती है",
-  "तथ्यों के साथ मानवीय पक्ष भी दिखाना ज़रूरी था, और यही कारण है कि यह वीडियो सिर्फ खबर नहीं बल्कि संदर्भ भी देता है",
-  "लोग अक्सर नक्शे और गठबंधनों की बात करते हैं, लेकिन विस्थापित परिवारों की चिंता उतनी ही महत्वपूर्ण है",
-  "इस विषय पर शोर बहुत है, पर स्पष्टता कम है; इसलिए ऐसी संतुलित व्याख्या वास्तव में उपयोगी लगती है",
-  "सबसे बड़ा डर यही है कि एक गलत कदम पूरे क्षेत्र को और अधिक अस्थिर बना सकता है",
-];
-
-const latestClosers = [
-  "baaki log bhi calmly discuss karo",
-  "facts check karke hi react karna chahiye",
-  "aise context wale videos aur banao",
-  "comment section me civil rehna important hai",
-  "yeh topic lightly lene jaisa nahi hai",
-  "next update bhi isi clarity ke saath dena",
-  "neutral breakdown ki value isi me samajh aati hai",
-  "ground reality ko center me rakhna zaroori hai",
-  "hope situation de-escalate ho",
-  "insaniyat sabse pehle honi chahiye",
+const grwmPureComments = [
+  "this vlog made me want to get dressed up immediately",
+  "your final look was genuinely so pretty and clean",
+  "I need the exact details of the lip shade and blush",
+  "the styling in this video felt effortless in the best way",
+  "this is exactly the kind of get ready with me I replay",
+  "the final reveal was worth every second of the build-up",
+  "the whole video felt soft, polished, and easy to watch",
+  "I would absolutely watch a longer version of this routine",
+  "the products, the outfit, and the mood all worked together",
+  "this was such a pretty and comforting video overall",
 ];
 
 const pick = <T>(items: readonly T[], seed: number) =>
@@ -393,29 +287,24 @@ const pick = <T>(items: readonly T[], seed: number) =>
 
 const getSpecialVideoKind = (index: number): SpecialVideoKind | null => {
   if (index === 0) {
-    return "diverse-comments";
-  }
-
-  if (index === 1) {
-    return "war-update";
+    return "latest-grwm";
   }
 
   return null;
 };
 
 const makeTitle = (index: number) => {
-  if (index === 0) {
-    return latestVideoTitle;
-  }
-
-  if (index === 1) {
-    return secondLatestVideoTitle;
+  if (index < TOP_VIDEO_LOOK_COUNT) {
+    return topVideoPresets[index]!.title;
   }
 
   const theme = pick(themes, index);
   const suffix = pick(titleSuffixes, index * 7 + 3);
   return `${theme} ${index + 1}: ${suffix}`;
 };
+
+const makeThumbnailUrl = (index: number) =>
+  index < TOP_VIDEO_LOOK_COUNT ? topVideoPresets[index]!.thumbnailUrl : null;
 
 const buildSeedPrefix = (userId: string) =>
   `${SEED_PREFIX_BASE}_${userId.replace(/-/g, "").slice(0, 8)}`;
@@ -476,74 +365,29 @@ const makeCommentText = (
   return `${opener}, ${body}${titleRef}${tail} ${closer}.`;
 };
 
-const makeLatestCommentTone = (commentIndex: number): LatestCommentTone => {
-  const tones: LatestCommentTone[] = [
-    "concern",
-    "analysis",
-    "critique",
-    "question",
-    "fatigue",
-  ];
-  return tones[commentIndex % tones.length]!;
-};
-
 const makeDiverseLatestVideoCommentText = (commentIndex: number) => {
-  const moodIndex = Math.floor(commentIndex / diverseIntentions.length);
-  const intentionIndex = commentIndex % diverseIntentions.length;
-  const opener = pick(diverseCommentOpeners, commentIndex * 3 + 1);
-  const mood = diverseMoodDescriptors[moodIndex]!;
-  const intention = diverseIntentions[intentionIndex]!;
-  const observation = pick(diverseObservationAngles, commentIndex * 5 + 2);
-  const effect = pick(diverseEmotionalEffects, commentIndex * 7 + 4);
-  const closer = pick(diverseClosers, commentIndex * 11 + 6);
-
-  return `${opener}, main ${mood} feel karte hue yeh likh raha hoon ki ${intention}. ${observation} ${effect}. ${closer}.`;
-};
-
-const makeLatestVideoCommentText = (commentIndex: number, title: string) => {
   if (commentIndex % 11 === 0) {
-    const body = pick(latestPureHindiBodies, commentIndex);
-    const closer = pick(latestClosers, commentIndex * 3 + 1);
+    const body = pick(grwmPureComments, commentIndex);
+    const closer = pick(grwmClosers, commentIndex * 3 + 1);
     return `${body}. ${closer}.`;
   }
-
-  const tone = makeLatestCommentTone(commentIndex);
-  const openerPool =
-    tone === "concern"
-      ? latestConcernOpeners
-      : tone === "analysis"
-        ? latestAnalysisOpeners
-        : tone === "critique"
-          ? latestCritiqueOpeners
-          : tone === "question"
-            ? latestQuestionOpeners
-            : latestFatigueOpeners;
-  const bodyPool =
-    tone === "concern"
-      ? latestConcernBodies
-      : tone === "analysis"
-        ? latestAnalysisBodies
-        : tone === "critique"
-          ? latestCritiqueBodies
-          : tone === "question"
-            ? latestQuestionBodies
-            : latestFatigueBodies;
-
-  const opener = pick(openerPool, commentIndex * 5 + 1);
-  const body = pick(bodyPool, commentIndex * 7 + 3);
-  const closer = pick(latestClosers, commentIndex * 11 + 5);
-  const titleRef =
-    commentIndex % 9 === 0 ? ` ${title.split(":")[0]?.toLowerCase()} ke context me` : "";
+  const moodIndex = Math.floor(commentIndex / grwmIntents.length);
+  const intentIndex = commentIndex % grwmIntents.length;
+  const opener = pick(grwmOpeners, commentIndex * 5 + 1);
+  const mood = grwmMoods[moodIndex]!;
+  const angle = pick(grwmAngles, commentIndex * 7 + 3);
+  const intent = grwmIntents[intentIndex]!;
+  const closer = pick(grwmClosers, commentIndex * 11 + 5);
   const extra =
     commentIndex % 6 === 0
-      ? " aur isi wajah se impulsive reaction dene se pehle context dekhna zaroori lagta hai"
+      ? " and the camera work made the whole thing look extra polished"
       : commentIndex % 5 === 0
-        ? " comment section me bhi log isi angle par divided dikh rahe hain"
+        ? " and now the whole comment section is going to ask for the product list"
         : commentIndex % 7 === 0
-          ? " is point par thoda aur verified data mil jaye toh picture aur clear hogi"
-          : " isliye is topic par oversimplified takes dekh kar irritate bhi hota hoon";
+          ? " and I genuinely need a follow-up with every single product mentioned"
+          : " and that final look came together way better than I expected";
 
-  return `${opener}, ${body}${titleRef}${extra}. ${closer}.`;
+  return `${opener}, I am ${mood} because ${angle}. ${intent}${extra}. ${closer}.`;
 };
 
 const ensureUniqueTexts = <T extends { text: string }>(items: T[]) => {
@@ -584,7 +428,7 @@ const buildSeedData = (userId: string) => {
       userId,
       title,
       publishedAt,
-      thumbnailUrl: null as string | null,
+      thumbnailUrl: makeThumbnailUrl(index),
       viewCount: makeViewCount(index),
       likeCount: makeLikeCount(index, commentCount),
       favoriteCount: 0,
@@ -614,11 +458,9 @@ const buildSeedData = (userId: string) => {
         videoId: video.id,
         youtubeCommentId: `${video.youtubeVideoId}_c_${String(commentIndex + 1).padStart(4, "0")}`,
         text:
-          getSpecialVideoKind(videoIndex) === "diverse-comments"
+          getSpecialVideoKind(videoIndex) === "latest-grwm"
             ? makeDiverseLatestVideoCommentText(commentIndex)
-            : getSpecialVideoKind(videoIndex) === "war-update"
-              ? makeLatestVideoCommentText(commentIndex, video.title)
-              : makeCommentText(videoIndex, commentIndex, video.title),
+            : makeCommentText(videoIndex, commentIndex, video.title),
         publishedAt,
         likeCount:
           videoIndex < TOP_VIDEO_COUNT

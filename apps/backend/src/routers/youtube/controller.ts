@@ -21,10 +21,10 @@ import {
 } from "../../modules/youtube-sync/controller";
 import {
   COMMENTS_SYNC_VIDEO_LIMIT,
-  COMMENTS_PER_VIDEO,
   SYNC_COOLDOWN_MS,
   SYNC_VIDEO_METRICS_FETCH_LIMIT,
 } from "../../modules/youtube-sync/constants";
+import { getChannelLimitsForUser } from "../../modules/youtube-sync/channel-limits";
 import { refreshYoutubeInsightsForUser } from "../../modules/insights/controller";
 import {
   createTRPCRouter,
@@ -131,11 +131,12 @@ export const youtubeRouter = createTRPCRouter({
           userId: ctx.user.id,
           syncCooldownMs: SYNC_COOLDOWN_MS,
         });
+        const channelLimits = await getChannelLimitsForUser(ctx.user.id);
         const payload = await syncYoutubeAccount({
           userId: ctx.user.id,
           maxVideoResults: SYNC_VIDEO_METRICS_FETCH_LIMIT,
           commentSyncVideoLimit: COMMENTS_SYNC_VIDEO_LIMIT,
-          commentsPerVideo: COMMENTS_PER_VIDEO,
+          commentsPerVideo: channelLimits.commentsPerVideo,
           fetchYoutubeJson,
         });
 
@@ -251,11 +252,12 @@ export async function registerYoutubeCallbackRoute(server: FastifyInstance) {
             },
           });
 
+        const channelLimits = await getChannelLimitsForUser(oauthState.userId);
         const payload = await syncYoutubeAccount({
           userId: oauthState.userId,
           maxVideoResults: SYNC_VIDEO_METRICS_FETCH_LIMIT,
           commentSyncVideoLimit: COMMENTS_SYNC_VIDEO_LIMIT,
-          commentsPerVideo: COMMENTS_PER_VIDEO,
+          commentsPerVideo: channelLimits.commentsPerVideo,
           fetchYoutubeJson,
         });
 

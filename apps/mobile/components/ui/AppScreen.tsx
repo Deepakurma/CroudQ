@@ -5,6 +5,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import React from "react";
 import {
   Keyboard,
+  Platform,
   RefreshControl,
   ScrollView,
   StyleProp,
@@ -55,6 +56,8 @@ export function AppScreen({
   onRefresh,
 }: AppScreenProps) {
   const { colors } = useAppTheme();
+  const refreshIndicatorColor =
+    Platform.OS === "ios" ? colors.text : colors.primary;
   const tabBarHeight = useOptionalBottomTabBarHeight();
   const insets = useSafeAreaInsets();
   const styles = getStyles(
@@ -70,8 +73,8 @@ export function AppScreen({
     <RefreshControl
       refreshing={refreshing}
       onRefresh={onRefresh}
-      tintColor={colors.primary}
-      colors={[colors.primary, colors.secondary]}
+      tintColor={refreshIndicatorColor}
+      colors={[refreshIndicatorColor]}
       progressBackgroundColor={colors.card}
     />
   ) : undefined;

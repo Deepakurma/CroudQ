@@ -8,17 +8,13 @@ import { generateStructuredJson } from "../ai/controller";
 import { buildDashboardOverviewStats } from "../overviewstats/controller";
 import { dashboardOverviewStatSchema } from "../overviewstats/dto";
 import { syncStoredVideoCommentsForAnalysis } from "../youtube-sync/controller";
-import {
-  COMMENTS_PER_VIDEO,
-  VIDEO_COMMENTS_SYNC_COOLDOWN_MS,
-} from "../youtube-sync/constants";
+import { getChannelLimitsForUser } from "../youtube-sync/channel-limits";
+import { VIDEO_COMMENTS_SYNC_COOLDOWN_MS } from "../youtube-sync/constants";
 import { YoutubeRouteError } from "../youtube-errors/controller";
 
 export const insightPlatform = "youtube" as const;
 export const insightModel = "gpt-5-mini" as const;
 const PROMPT_VERSION = "2026-04-04.v01";
-export const AGGREGATE_ANALYSIS_REGEN_THRESHOLD = 150;
-export const VIDEO_ANALYSIS_REGEN_THRESHOLD = 150;
 const AGGREGATE_ANALYSIS_VIDEO_LIMIT = 1;
 
 export const dashboardScope = "dashboard" as const;
@@ -50,7 +46,6 @@ export const dashboardPayloadSchema = z.object({
       }),
     ).min(3).max(3),
   }),
-  suggestions: z.array(z.string()).max(5),
 });
 
 const dashboardAiPayloadSchema = z.object({
@@ -69,7 +64,6 @@ const dashboardAiPayloadSchema = z.object({
     negativePercent: z.number().min(0).max(100),
     subtext: z.string(),
   }),
-  suggestions: z.array(z.string()).max(5),
 });
 
 export const commentsPayloadSchema = z.object({
@@ -181,7 +175,6 @@ const dashboardJsonSchema = {
   required: [
     "insightCards",
     "sentimentCard",
-    "suggestions",
   ],
   properties: {
     insightCards: {
@@ -219,11 +212,6 @@ const dashboardJsonSchema = {
         negativePercent: { type: "number" },
         subtext: { type: "string" },
       },
-    },
-    suggestions: {
-      type: "array",
-      maxItems: 5,
-      items: { type: "string" },
     },
   },
 } as const;
@@ -490,16 +478,14 @@ Field rules:
 - Do not let badgeLabel and title disagree. If the card is mixed, cautious, or early-stage, badgeLabel should say that plainly.
 - sentimentCard: return positivePercent, neutralPercent, negativePercent, and subtext based on the actual recent comment mix.
 - sentimentCard.subtext: 1 short sentence or 2 very short sentences, compact enough for about 4 lines on mobile.
-- suggestions: practical next moves for the next upload, caption, reply, or follow-up. Each should be specific enough to act on.
 
 Decision rules:
-- Rank cards and suggestions by likely usefulness to the creator's next move.
-- Keep only the highest-signal cards and suggestions.
+- Rank cards by likely usefulness to the creator's next move.
+- Keep only the highest-signal cards.
 - If a negative or weak signal is one of the clearest signals, include it directly instead of preferring a softer positive angle.
-- Return an empty suggestions array if there are no clearly useful next steps.
 - Do not include generic advice that could apply to almost any creator.
 - Prefer specific observations over polished-sounding wording.
-- Do not make card copy or suggestions overly long.
+- Do not make card copy overly long.
 `.trim(),
   [commentsScope]: `
 Goal:
@@ -665,7 +651,6 @@ const normalizeDashboardPayload = (
         value: sentimentValues[index] ?? 0,
       })),
     },
-    suggestions: payload.suggestions,
   };
 };
 
@@ -702,7 +687,6 @@ const normalizeStoredDashboardPayload = (
         value: number;
       }>;
     };
-    suggestions: string[];
   },
 ) => ({
   ...payload,
@@ -1075,6 +1059,7 @@ const getAggregateAnalysisState = async (
   userId: string,
   scope: AggregateInsightScope,
 ) => {
+  const channelLimits = await getChannelLimitsForUser(userId);
   const rawInput = await buildScopeInput(userId, scope);
   const existing = await getStoredArtifact(userId, scope, "");
   const {
@@ -1113,11 +1098,13 @@ const getAggregateAnalysisState = async (
       requiresVideoWindowRefresh ||
       requiresVersionRefresh ||
       requiresModelRefresh ||
-      newCommentsSinceLastAnalysis >= AGGREGATE_ANALYSIS_REGEN_THRESHOLD,
+      newCommentsSinceLastAnalysis >= channelLimits.aggregateRegenThreshold,
+    regenerationThreshold: channelLimits.aggregateRegenThreshold,
   };
 };
 
 const getVideoAnalysisState = async (userId: string, videoId: string) => {
+  const channelLimits = await getChannelLimitsForUser(userId);
   const rawInput = await buildScopeInput(userId, videoDetailScope, videoId);
   const existing = await getStoredArtifact(userId, videoDetailScope, videoId);
   const { previousCommentCount, existingPromptVersion, existingModel } =
@@ -1146,7 +1133,8 @@ const getVideoAnalysisState = async (userId: string, videoId: string) => {
       !existing ||
       requiresVersionRefresh ||
       requiresModelRefresh ||
-      newCommentsSinceLastAnalysis >= VIDEO_ANALYSIS_REGEN_THRESHOLD,
+      newCommentsSinceLastAnalysis >= channelLimits.videoRegenThreshold,
+    regenerationThreshold: channelLimits.videoRegenThreshold,
   };
 };
 
@@ -1277,6 +1265,7 @@ export const getStoredAggregateInsightState = async (input: {
       artifact: null,
       hasAnalysis: false,
       currentCommentCount: 0,
+      regenerationThreshold: state.regenerationThreshold,
     };
   }
 
@@ -1288,6 +1277,7 @@ export const getStoredAggregateInsightState = async (input: {
       }),
       hasAnalysis: true,
       currentCommentCount: state.currentCommentCount,
+      regenerationThreshold: state.regenerationThreshold,
     };
   }
 
@@ -1295,6 +1285,7 @@ export const getStoredAggregateInsightState = async (input: {
     artifact: state.existing ? await formatArtifact(state.existing) : null,
     hasAnalysis: Boolean(state.existing?.payloadJson),
     currentCommentCount: state.currentCommentCount,
+    regenerationThreshold: state.regenerationThreshold,
   };
 };
 
@@ -1311,7 +1302,7 @@ export const getStoredVideoInsightState = async (input: {
       currentCommentCount: 0,
       publicCommentCount: state.publicCommentCount,
       newCommentsSinceLastAnalysis: 0,
-      regenerationThreshold: VIDEO_ANALYSIS_REGEN_THRESHOLD,
+      regenerationThreshold: state.regenerationThreshold,
       canRegenerate: state.publicCommentCount !== 0,
     };
   }
@@ -1322,7 +1313,7 @@ export const getStoredVideoInsightState = async (input: {
     currentCommentCount: state.currentCommentCount,
     publicCommentCount: state.publicCommentCount,
     newCommentsSinceLastAnalysis: state.newCommentsSinceLastAnalysis,
-    regenerationThreshold: VIDEO_ANALYSIS_REGEN_THRESHOLD,
+    regenerationThreshold: state.regenerationThreshold,
     canRegenerate: state.canRegenerate,
   };
 };
@@ -1341,10 +1332,11 @@ export const generateVideoInsightOnDemand = async (input: {
     );
   }
 
+  const channelLimits = await getChannelLimitsForUser(input.userId);
   await syncStoredVideoCommentsForAnalysis({
     userId: input.userId,
     videoId: input.videoId,
-    commentsPerVideo: COMMENTS_PER_VIDEO,
+    commentsPerVideo: channelLimits.commentsPerVideo,
     cooldownMs: VIDEO_COMMENTS_SYNC_COOLDOWN_MS,
   });
 
@@ -1358,7 +1350,7 @@ export const generateVideoInsightOnDemand = async (input: {
       currentCommentCount: 0,
       publicCommentCount: state.publicCommentCount,
       newCommentsSinceLastAnalysis: 0,
-      regenerationThreshold: VIDEO_ANALYSIS_REGEN_THRESHOLD,
+      regenerationThreshold: state.regenerationThreshold,
     };
   }
 
@@ -1370,7 +1362,7 @@ export const generateVideoInsightOnDemand = async (input: {
       currentCommentCount: state.currentCommentCount,
       publicCommentCount: state.publicCommentCount,
       newCommentsSinceLastAnalysis: state.newCommentsSinceLastAnalysis,
-      regenerationThreshold: VIDEO_ANALYSIS_REGEN_THRESHOLD,
+      regenerationThreshold: state.regenerationThreshold,
     };
   }
 
@@ -1388,7 +1380,7 @@ export const generateVideoInsightOnDemand = async (input: {
     currentCommentCount: state.currentCommentCount,
     publicCommentCount: state.publicCommentCount,
     newCommentsSinceLastAnalysis: state.newCommentsSinceLastAnalysis,
-    regenerationThreshold: VIDEO_ANALYSIS_REGEN_THRESHOLD,
+    regenerationThreshold: state.regenerationThreshold,
   };
 };
 

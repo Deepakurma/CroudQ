@@ -108,7 +108,7 @@ export default function VideoDetailScreen() {
             text1: "Video Insight",
             text2:
               result.reason === "not_enough_comment_data"
-                ? "This video still does not have enough synced data."
+                ? "This video does not have enough data to generate."
                 : "No significant change noticed to regenerate.",
           });
           return;
@@ -151,9 +151,7 @@ export default function VideoDetailScreen() {
   const isGenerating =
     generateVideoInsight.isPending || cachedGeneratingFlag === true;
   const generateDisabled =
-    isGenerating ||
-    !videoId ||
-    isUsedInDashboardAnalysis;
+    isGenerating || !videoId || isUsedInDashboardAnalysis;
   const dominantVideoSentiment =
     videoInsight?.sentimentSummary.dominantTone ??
     videoInsight?.sentimentSummary.split.reduce((highest, current) =>

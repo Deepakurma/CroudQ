@@ -122,7 +122,7 @@ export default function TermsOfServicePage() {
 
           <PolicySection
             title="12. Contact"
-            body={['For terms or billing questions, contact us at hello@croudq.app.']}
+            body={['For terms or billing questions, contact us at support@croudq.com.']}
           />
         </div>
       </div>

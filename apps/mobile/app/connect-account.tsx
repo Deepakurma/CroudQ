@@ -2,13 +2,15 @@ import { AccountConnectCard } from "@/components/settings/AccountConnectCard";
 import { AppScreen } from "@/components/ui/AppScreen";
 import { Card } from "@/components/ui/Card";
 import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
+import { FloatingDropdownMenu } from "@/components/ui/FloatingDropdownMenu";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { AppColors } from "@/constants/Colors";
+import { Spacing } from "@/constants/Spacing";
 import { Typography } from "@/constants/Typography";
 import { useAuth } from "@/context/AuthContext";
 import { useAppTheme } from "@/context/ThemeContext";
 import { useRouter } from "expo-router";
-import { ChevronLeft } from "lucide-react-native";
+import { ChevronDown, ChevronLeft, ChevronUp } from "lucide-react-native";
 import React from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
@@ -28,20 +30,43 @@ type AccountRow = {
   disabled?: boolean;
 };
 
+const channelTypeOptions = [
+  {
+    value: "small" as const,
+    label: "Emerging",
+    description:
+      "Choose this if you have less than 500K subscribers or followers.",
+  },
+  {
+    value: "medium" as const,
+    label: "Established",
+    description:
+      "Choose this if you have more than 500K subscribers or followers.",
+  },
+];
+
 export default function ConnectAccountScreen() {
   const router = useRouter();
   const {
     connectYouTube,
     disconnectYouTube,
     isYouTubeConnecting,
+    updateChannelType,
     youtubeConnection,
     user,
   } = useAuth();
   const { colors } = useAppTheme();
   const styles = getStyles(colors);
+  const [channelType, setChannelType] = React.useState<"small" | "medium">(
+    user?.channelType ?? "small",
+  );
   const [isDisconnectDialogVisible, setIsDisconnectDialogVisible] =
     React.useState(false);
   const [isDisconnecting, setIsDisconnecting] = React.useState(false);
+
+  React.useEffect(() => {
+    setChannelType(user?.channelType ?? "small");
+  }, [user?.channelType]);
 
   const accounts: AccountRow[] = [
     {
@@ -91,7 +116,7 @@ export default function ConnectAccountScreen() {
       </Pressable>
 
       <SectionHeader
-        title="Connect accounts"
+        title="Connected accounts"
         subtitle="Bring in channel analytics so CroudQ can analyze performance and feedback"
       />
 
@@ -106,6 +131,81 @@ export default function ConnectAccountScreen() {
           disabled={account.disabled}
         />
       ))}
+
+      <Card style={styles.channelTypeCard}>
+        <Text style={styles.channelTypeSubtitle}>
+          Choose what best defines you.
+        </Text>
+
+        <FloatingDropdownMenu
+          align="left"
+          menuWidth={280}
+          renderTrigger={({ isOpen, toggle }) => (
+            <Pressable
+              style={[
+                styles.dropdownTrigger,
+                isOpen ? styles.dropdownTriggerOpen : null,
+              ]}
+              onPress={toggle}
+            >
+              <Text style={styles.dropdownTriggerText}>
+                {channelType === "small" ? "Emerging" : "Established"}
+              </Text>
+              {isOpen ? (
+                <ChevronUp size={18} color={colors.textSecondary} />
+              ) : (
+                <ChevronDown size={18} color={colors.textSecondary} />
+              )}
+            </Pressable>
+          )}
+        >
+          {({ close }) => (
+            <View style={styles.dropdownMenuContent}>
+              {channelTypeOptions.map((option) => (
+                <Pressable
+                  key={option.value}
+                  style={[
+                    styles.dropdownOption,
+                    channelType === option.value
+                      ? styles.dropdownOptionActive
+                      : null,
+                  ]}
+                  onPress={() => {
+                    if (option.value === channelType) {
+                      close();
+                      return;
+                    }
+
+                    const previousChannelType = channelType;
+                    setChannelType(option.value);
+                    close();
+                    void updateChannelType(option.value).catch(() => {
+                      setChannelType(previousChannelType);
+                    });
+                  }}
+                >
+                  <View style={styles.dropdownOptionCopy}>
+                    <Text
+                      style={[
+                        styles.dropdownOptionText,
+                        channelType === option.value
+                          ? styles.dropdownOptionTextActive
+                          : null,
+                      ]}
+                    >
+                      {option.label}
+                    </Text>
+                    <Text style={styles.dropdownOptionDescription}>
+                      {option.description}
+                    </Text>
+                  </View>
+                </Pressable>
+              ))}
+            </View>
+          )}
+        </FloatingDropdownMenu>
+      </Card>
+
       <Card>
         <Text style={styles.noteTitle}>Note</Text>
 
@@ -170,6 +270,59 @@ const getStyles = (colors: AppColors) =>
       color: colors.textSecondary,
       fontSize: Typography.size["2xl"],
       fontFamily: Typography.font.semibold,
+    },
+    channelTypeCard: {
+      gap: 10,
+    },
+    channelTypeSubtitle: {
+      color: colors.textSecondary,
+      fontSize: Typography.size.m,
+      fontFamily: Typography.font.regular,
+    },
+    dropdownTrigger: {
+      minHeight: 52,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.cardSecondary,
+      paddingHorizontal: Spacing.l,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    dropdownTriggerOpen: {
+      borderColor: colors.primary,
+    },
+    dropdownTriggerText: {
+      color: colors.text,
+      fontSize: Typography.size.m,
+      fontFamily: Typography.font.medium,
+    },
+    dropdownMenuContent: {},
+    dropdownOption: {
+      borderRadius: 14,
+      paddingHorizontal: Spacing.m,
+      paddingVertical: Spacing.m,
+      backgroundColor: colors.backgroundElevated,
+    },
+    dropdownOptionActive: {
+      backgroundColor: colors.cardSecondary,
+    },
+    dropdownOptionCopy: {
+      gap: 2,
+    },
+    dropdownOptionText: {
+      color: colors.text,
+      fontSize: Typography.size.m,
+      fontFamily: Typography.font.medium,
+    },
+    dropdownOptionTextActive: {
+      color: colors.primary,
+    },
+    dropdownOptionDescription: {
+      color: colors.textSecondary,
+      fontSize: Typography.size.s,
+      fontFamily: Typography.font.regular,
     },
     noteTitle: {
       color: colors.text,

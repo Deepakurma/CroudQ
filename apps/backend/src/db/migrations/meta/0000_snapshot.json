@@ -1,5 +1,5 @@
 {
-  "id": "f1dba954-008b-490c-8460-9c25ded3e4e1",
+  "id": "03df5e2e-b561-4b9f-a6b3-5aee3f360069",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -610,6 +610,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "channel_type": {
+          "name": "channel_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'small'"
+        },
         "password_hash": {
           "name": "password_hash",
           "type": "text",
@@ -693,7 +700,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "signup_email_otps_channel_type_check": {
+          "name": "signup_email_otps_channel_type_check",
+          "value": "\"signup_email_otps\".\"channel_type\" in ('small', 'medium')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.user_credentials": {
@@ -771,6 +783,13 @@
           "primaryKey": false,
           "notNull": true
         },
+        "channel_type": {
+          "name": "channel_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'small'"
+        },
         "email_verified_at": {
           "name": "email_verified_at",
           "type": "timestamp with time zone",
@@ -825,7 +844,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "users_channel_type_check": {
+          "name": "users_channel_type_check",
+          "value": "\"users\".\"channel_type\" in ('small', 'medium')"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.web_login_tokens": {

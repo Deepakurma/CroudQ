@@ -338,7 +338,6 @@ const getStyles = (colors: AppColors) =>
       flexDirection: "row",
       alignItems: "center",
       gap: Spacing.m,
-      justifyContent: "center",
     },
     themeIconWrap: {
       width: 38,

@@ -19,6 +19,7 @@ import React from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   RefreshControl,
   StyleSheet,
   View,
@@ -89,6 +90,8 @@ export default function VideosScreen() {
     youtubeConnection,
   } = useAuth();
   const { colors } = useAppTheme();
+  const refreshIndicatorColor =
+    Platform.OS === "ios" ? colors.text : colors.primary;
   const insets = useSafeAreaInsets();
   const tabBarHeight = useBottomTabBarHeight();
   const styles = getStyles(colors, insets.top, tabBarHeight);
@@ -181,8 +184,8 @@ export default function VideosScreen() {
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={() => void handleRefresh()}
-              tintColor={colors.primary}
-              colors={[colors.primary]}
+              tintColor={refreshIndicatorColor}
+              colors={[refreshIndicatorColor]}
               progressBackgroundColor={colors.card}
             />
           }

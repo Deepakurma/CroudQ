@@ -10,6 +10,7 @@ import {
   requestPasswordReset,
   requestSignupOtp,
   resetPassword,
+  updateChannelType,
   updateProfileWithPassword,
   verifySignupOtp,
 } from "../../modules/auth/controller";
@@ -26,6 +27,7 @@ import {
   requestPasswordResetInputSchema,
   resetPasswordInputSchema,
   signupInputSchema,
+  updateChannelTypeInputSchema,
   updateProfileInputSchema,
   verifySignupOtpInputSchema,
 } from "./dto";
@@ -151,6 +153,11 @@ export const authRouter = createTRPCRouter({
         await updateProfileWithPassword(ctx.user.id, input),
       );
     }),
+  updateChannelType: protectedProcedure
+    .input(updateChannelTypeInputSchema)
+    .mutation(async ({ ctx, input }) =>
+      authUserSchema.parse(await updateChannelType(ctx.user.id, input)),
+    ),
   refreshSession: publicProcedure
     .input(refreshSessionInputSchema)
     .mutation(async ({ ctx, input }) => {

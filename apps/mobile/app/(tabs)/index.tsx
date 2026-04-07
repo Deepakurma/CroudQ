@@ -2,7 +2,6 @@ import { GreetingHeader } from "@/components/dashboard/GreetingHeader";
 import { InsightCarousel } from "@/components/dashboard/InsightCarousel";
 import { OverviewGrid } from "@/components/dashboard/OverviewGrid";
 import { SentimentCard } from "@/components/dashboard/SentimentCard";
-import { SuggestionList } from "@/components/dashboard/SuggestionList";
 import { LoadingState } from "@/components/LoadingState";
 import { SCREEN_CONTENT_GAP } from "@/components/ui/AppScreen";
 import { AccessGateState } from "@/components/ui/AccessGateState";
@@ -221,20 +220,6 @@ export default function DashboardScreen() {
                 />
               ) : (
                 <SentimentCard />
-              )}
-            </View>
-
-            <View style={styles.section}>
-              <SectionHeader
-                title="What To Try Next"
-                subtitle="Simple moves that could help your next upload"
-              />
-              {dashboardQuery.data?.artifact ? (
-                <SuggestionList
-                  items={dashboardQuery.data.artifact.payload.suggestions}
-                />
-              ) : (
-                <SuggestionList />
               )}
             </View>
 

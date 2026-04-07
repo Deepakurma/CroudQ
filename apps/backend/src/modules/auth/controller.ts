@@ -26,6 +26,7 @@ type AuthUser = {
   id: string;
   name: string | null;
   email: string;
+  channelType: "small" | "medium";
   handle: string | null;
   tier: string | null;
   subscriptionState: "active" | "ended" | "none";
@@ -47,12 +48,14 @@ const toAuthUser = async (user: {
   id: string;
   name: string | null;
   email: string;
+  channelType?: "small" | "medium";
   deletionRequestedAt?: Date | null;
   scheduledDeletionAt?: Date | null;
 }): Promise<AuthUser> => ({
   id: user.id,
   name: user.name,
   email: user.email,
+  channelType: user.channelType ?? "small",
   handle: null,
   tier: await getCurrentUserTier(user.id),
   subscriptionState: await getCurrentUserSubscriptionState(user.id),
@@ -291,6 +294,7 @@ export const requestSignupOtp = async (input: {
   email: string;
   password: string;
   name?: string | null;
+  channelType: "small" | "medium";
 }) => {
   const email = normalizeEmail(input.email);
 
@@ -323,6 +327,7 @@ export const requestSignupOtp = async (input: {
     await tx.insert(signupEmailOtps).values({
       email,
       name: input.name?.trim() || null,
+      channelType: input.channelType,
       passwordHash,
       codeHash,
       expiresAt: new Date(now.getTime() + SIGNUP_OTP_TTL_MS),
@@ -398,6 +403,7 @@ export const verifySignupOtp = async (
           email,
           emailVerifiedAt: now,
           name: signupOtp.name?.trim() || null,
+          channelType: signupOtp.channelType ?? "small",
           updatedAt: now,
         })
         .returning();
@@ -868,6 +874,35 @@ export const updateProfileWithPassword = async (
 
     throw error;
   }
+};
+
+export const updateChannelType = async (
+  userId: string,
+  input: {
+    channelType: "small" | "medium";
+  },
+) => {
+  const existingUser = await db.query.users.findFirst({
+    where: eq(users.id, userId),
+  });
+
+  if (!existingUser) {
+    throw new TRPCError({
+      code: "UNAUTHORIZED",
+      message: "Not authenticated",
+    });
+  }
+
+  const [updatedUser] = await db
+    .update(users)
+    .set({
+      channelType: input.channelType,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, userId))
+    .returning();
+
+  return toAuthUser(updatedUser);
 };
 
 export const refreshAuthSession = async (

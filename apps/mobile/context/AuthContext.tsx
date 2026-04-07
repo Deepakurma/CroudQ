@@ -17,6 +17,7 @@ interface User {
   id: string;
   name: string | null;
   email: string;
+  channelType: "small" | "medium";
   handle: string | null;
   tier: string | null;
   subscriptionState: "active" | "ended" | "none";
@@ -62,17 +63,20 @@ interface AuthContextType {
     name?: string;
     email: string;
     password: string;
+    channelType: "small" | "medium";
   }) => Promise<void>;
   verifySignupOtp: (input: { email: string; code: string }) => Promise<void>;
   signup: (input: {
     name?: string;
     email: string;
     password: string;
+    channelType: "small" | "medium";
   }) => Promise<void>;
   updateProfile: (input: {
     name: string;
     currentPassword: string;
   }) => Promise<void>;
+  updateChannelType: (channelType: "small" | "medium") => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
   requestAccountDeletion: () => Promise<void>;
   cancelAccountDeletion: () => Promise<void>;
@@ -264,6 +268,7 @@ const AuthContext = createContext<AuthContextType>({
   verifySignupOtp: async () => {},
   signup: async () => {},
   updateProfile: async () => {},
+  updateChannelType: async () => {},
   requestPasswordReset: async () => {},
   requestAccountDeletion: async () => {},
   cancelAccountDeletion: async () => {},
@@ -302,6 +307,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
   const updateProfileMutation = useMutation(
     trpc.auth.updateProfile.mutationOptions(),
+  );
+  const updateChannelTypeMutation = useMutation(
+    trpc.auth.updateChannelType.mutationOptions(),
   );
   const logoutMutation = useMutation(trpc.auth.logout.mutationOptions());
   const refreshSessionMutation = useMutation(
@@ -579,6 +587,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     name?: string;
     email: string;
     password: string;
+    channelType: "small" | "medium";
   }) => {
     try {
       const result = await signupMutation.mutateAsync(input);
@@ -695,6 +704,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Could not update profile";
+      showAuthToast("error", "Update failed", getFriendlyAuthMessage(message));
+      throw error;
+    }
+  };
+
+  const updateChannelType = async (channelType: "small" | "medium") => {
+    try {
+      const nextUser = await updateChannelTypeMutation.mutateAsync({
+        channelType,
+      });
+      await persistCurrentUser(nextUser);
+      showAuthToast("success", "Updated", "Your preference was saved.");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Could not update channel type";
       showAuthToast("error", "Update failed", getFriendlyAuthMessage(message));
       throw error;
     }
@@ -899,6 +923,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         verifySignupOtp,
         signup,
         updateProfile,
+        updateChannelType,
         requestPasswordReset,
         requestAccountDeletion,
         cancelAccountDeletion,

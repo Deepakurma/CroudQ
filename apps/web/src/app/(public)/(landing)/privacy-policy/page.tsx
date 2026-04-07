@@ -110,7 +110,7 @@ export default function PrivacyPolicyPage() {
 
           <PolicySection
             title="10. Contact"
-            body={['For privacy questions or requests, contact us at hello@croudq.app.']}
+            body={['For privacy questions or requests, contact us at support@croudq.com.']}
           />
         </div>
       </div>

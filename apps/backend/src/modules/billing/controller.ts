@@ -20,6 +20,7 @@ const REUSABLE_SUBSCRIPTION_STATUSES = [
   "pending",
   "halted",
 ] as const;
+const RECOVERABLE_SUBSCRIPTION_STATUSES = ["pending", "halted"] as const;
 
 type BillingPlanSeed = {
   code: string;
@@ -79,7 +80,7 @@ const DEFAULT_BILLING_PLANS: BillingPlanSeed[] = [
     code: "croudq-pro-monthly",
     name: "CroudQ Pro Monthly",
     description: "Monthly recurring plan for creators",
-    amount: 99900,
+    amount: 79900,
     currency: "INR",
     interval: 1,
     period: "monthly",
@@ -522,7 +523,10 @@ export const createCheckoutSession = async (input: {
   if (
     currentSubscription &&
     currentSubscription.providerSubscriptionId &&
-    currentSubscription.status === "created" &&
+    (currentSubscription.status === "created" ||
+      RECOVERABLE_SUBSCRIPTION_STATUSES.includes(
+        currentSubscription.status as (typeof RECOVERABLE_SUBSCRIPTION_STATUSES)[number],
+      )) &&
     currentSubscription.planId === plan.id
   ) {
     return {
@@ -536,9 +540,9 @@ export const createCheckoutSession = async (input: {
       },
       prefill: {
         name: user.name ?? "",
-        email: user.email,
       },
       existing: true,
+      recovery: currentSubscription.status !== "created",
     };
   }
 
@@ -568,7 +572,6 @@ export const createCheckoutSession = async (input: {
         notes: {
           plan_code: plan.code,
           user_id: user.id,
-          email: user.email,
         },
       }),
     },
@@ -591,9 +594,9 @@ export const createCheckoutSession = async (input: {
     },
     prefill: {
       name: user.name ?? "",
-      email: user.email,
     },
     existing: false,
+    recovery: false,
   };
 };
 
