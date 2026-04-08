@@ -20,7 +20,7 @@ const REUSABLE_SUBSCRIPTION_STATUSES = [
   "pending",
   "halted",
 ] as const;
-const RECOVERABLE_SUBSCRIPTION_STATUSES = ["pending", "halted"] as const;
+const RECOVERABLE_SUBSCRIPTION_STATUSES = ["pending"] as const;
 
 type BillingPlanSeed = {
   code: string;
@@ -541,6 +541,28 @@ export const createCheckoutSession = async (input: {
     currentSubscription &&
     (canReuseCreatedSubscription || canRecoverExistingSubscription)
   ) {
+    let recoveryUrl = canRecoverExistingSubscription
+      ? (currentSubscription.shortUrl ?? null)
+      : null;
+
+    if (
+      canRecoverExistingSubscription &&
+      currentSubscription.status === "pending" &&
+      !recoveryUrl
+    ) {
+      const providerSubscription = await fetchSubscriptionFromProvider(
+        currentSubscription.providerSubscriptionId,
+      );
+
+      await applySubscriptionSnapshot({
+        userId: input.userId,
+        subscription: providerSubscription,
+        localPlanId: plan.id,
+      });
+
+      recoveryUrl = providerSubscription.short_url ?? null;
+    }
+
     return {
       keyId: getRazorpayCredentials().keyId,
       subscriptionId: currentSubscription.providerSubscriptionId,
@@ -555,13 +577,17 @@ export const createCheckoutSession = async (input: {
         email: user.email,
       },
       existing: true,
-      recovery: canRecoverExistingSubscription,
+      recoveryUrl,
     };
   }
 
   if (
     currentSubscription &&
-    !(currentSubscription.status === "created" && currentSubscription.planId === plan.id)
+    !(
+      (currentSubscription.status === "created" &&
+        currentSubscription.planId === plan.id) ||
+      currentSubscription.status === "halted"
+    )
   ) {
     const currentPlan = await db.query.billingPlans.findFirst({
       where: eq(billingPlans.id, currentSubscription.planId),
@@ -614,7 +640,7 @@ export const createCheckoutSession = async (input: {
       email: user.email,
     },
     existing: false,
-    recovery: false,
+    recoveryUrl: null,
   };
 };
 

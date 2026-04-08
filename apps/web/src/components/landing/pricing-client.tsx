@@ -30,7 +30,6 @@ type RazorpayOptions = {
   subscription_id: string;
   name: string;
   description: string;
-  subscription_card_change?: boolean;
   handler: (response: RazorpaySuccessResponse) => void | Promise<void>;
   prefill?: {
     name?: string;
@@ -52,7 +51,7 @@ declare global {
 
 const MOBILE_SUBSCRIPTION_SUCCESS_URL = 'croudq://?subscription=success';
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set(['active', 'authenticated']);
-const RECOVERY_SUBSCRIPTION_STATUSES = new Set(['pending', 'halted']);
+const RECOVERY_SUBSCRIPTION_STATUSES = new Set(['pending']);
 
 const loadRazorpayCheckout = async () => {
   if (window.Razorpay) {
@@ -148,17 +147,22 @@ export default function PricingClient({ user }: { user: AuthUser }) {
     setActivePlanCode(planCode);
 
     try {
-      await loadRazorpayCheckout();
-
       const checkoutSession: CheckoutSession =
         await trpcClient.billing.createCheckoutSession.mutate({ planCode });
+
+      if (checkoutSession.recoveryUrl) {
+        setActivePlanCode(null);
+        window.location.assign(checkoutSession.recoveryUrl);
+        return;
+      }
+
+      await loadRazorpayCheckout();
 
       const razorpay = new window.Razorpay!({
         key: checkoutSession.keyId,
         subscription_id: checkoutSession.subscriptionId,
         name: 'CroudQ',
         description: checkoutSession.plan.name,
-        subscription_card_change: checkoutSession.recovery,
         prefill: checkoutSession.prefill,
         theme: {
           color: '#ef4444'

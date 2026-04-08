@@ -44,7 +44,7 @@ export const createCheckoutSessionSchema = z.object({
     email: z.string().email(),
   }),
   existing: z.boolean(),
-  recovery: z.boolean(),
+  recoveryUrl: z.string().url().nullable(),
 });
 
 export const verifyCheckoutInputSchema = z.object({
