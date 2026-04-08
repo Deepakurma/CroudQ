@@ -226,7 +226,7 @@ export default function PricingClient({ user }: { user: AuthUser }) {
           {hasActiveSubscription ? (
             <>
               <h1 className="text-foreground text-4xl leading-tight font-black tracking-tight sm:text-5xl">
-                You are subscribed.
+                You are subscribed hehe.
               </h1>
               <p className="text-muted-foreground text-base leading-7 sm:text-lg">
                 <span className="text-foreground font-semibold">{user.email}</span>. Your
