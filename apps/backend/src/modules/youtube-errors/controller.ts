@@ -10,10 +10,24 @@ export class YoutubeRouteError extends Error {
   }
 }
 
-export const mapYoutubeError = (error: unknown) => {
+export const mapYoutubeError = (
+  error: unknown,
+): {
+  message: string;
+  statusCode: number;
+  trpcCode:
+    | "NOT_FOUND"
+    | "TOO_MANY_REQUESTS"
+    | "INTERNAL_SERVER_ERROR"
+    | "BAD_REQUEST"
+    | "FORBIDDEN";
+} => {
   if (error instanceof YoutubeRouteError) {
-    let trpcCode: "NOT_FOUND" | "TOO_MANY_REQUESTS" | "INTERNAL_SERVER_ERROR" | "BAD_REQUEST" =
-      "BAD_REQUEST";
+    let trpcCode:
+      | "NOT_FOUND"
+      | "TOO_MANY_REQUESTS"
+      | "INTERNAL_SERVER_ERROR"
+      | "BAD_REQUEST" = "BAD_REQUEST";
 
     if (error.statusCode === 404) {
       trpcCode = "NOT_FOUND";
