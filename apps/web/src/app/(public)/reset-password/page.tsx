@@ -3,17 +3,35 @@
 import { Suspense, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation } from '@tanstack/react-query';
+import { Controller, useForm } from 'react-hook-form';
 import { toast } from 'sonner';
+import * as z from 'zod';
 
 import { Button } from '~/shared/shadcn/button';
+import { Field, FieldError, FieldGroup, FieldLabel } from '~/shared/shadcn/field';
 import { Input } from '~/shared/shadcn/input';
-import { Label } from '~/shared/shadcn/label';
 
-import { trpcClient } from '~/utils/trpc';
+import { trpc } from '~/utils/trpc';
 
-import type { FormEvent, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 
 const LOGIN_APP_SCHEME = 'croudq://login';
+
+const requestResetSchema = z.object({
+  email: z.email('Please enter a valid email address.')
+});
+
+const resetPasswordSchema = z
+  .object({
+    password: z.string().min(8, 'Password must be at least 8 characters.').max(100),
+    confirmPassword: z.string()
+  })
+  .refine((values) => values.password === values.confirmPassword, {
+    path: ['confirmPassword'],
+    message: 'Passwords do not match.'
+  });
 
 function ResetPageShell({ children }: { children: ReactNode }) {
   return (
@@ -27,67 +45,66 @@ function ResetPageShell({ children }: { children: ReactNode }) {
 
 function PasswordResetPageContent() {
   const searchParams = useSearchParams();
+
   const token = searchParams.get('token');
+
   const isResetFlow = Boolean(token);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const [isResetComplete, setIsResetComplete] = useState(false);
 
-  const handleOpenInApp = () => {
-    window.location.assign(LOGIN_APP_SCHEME);
-  };
-
-  const handleRequestReset = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      await trpcClient.auth.requestPasswordReset.mutate({
-        email,
-        redirectTo: `${window.location.origin}/reset-password`
-      });
-
-      toast.success('If an account exists, a reset link has been sent.');
-    } catch (err) {
-      const nextError = err instanceof Error ? err.message : 'Unable to send reset link.';
-      toast.error(nextError);
-    } finally {
-      setIsSubmitting(false);
+  const requestResetForm = useForm<z.infer<typeof requestResetSchema>>({
+    resolver: zodResolver(requestResetSchema),
+    defaultValues: {
+      email: ''
     }
+  });
+
+  const resetPasswordForm = useForm<z.infer<typeof resetPasswordSchema>>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: {
+      password: '',
+      confirmPassword: ''
+    }
+  });
+
+  const requestReset = useMutation(
+    trpc.auth.requestPasswordReset.mutationOptions({
+      onSuccess: () => {
+        toast.success('If an account exists, a reset link has been sent.');
+      },
+      onError: (err) => {
+        toast.error(err.message);
+      }
+    })
+  );
+
+  const resetPassword = useMutation(
+    trpc.auth.resetPassword.mutationOptions({
+      onSuccess: () => {
+        toast.success('Password updated successfully.');
+        setIsResetComplete(true);
+        resetPasswordForm.reset();
+      },
+      onError: (err) => {
+        toast.error(err.message);
+      }
+    })
+  );
+
+  const onRequestReset = async (values: z.infer<typeof requestResetSchema>) => {
+    await requestReset.mutateAsync(values);
   };
 
-  const handleResetPassword = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
+  const onResetPassword = async (values: z.infer<typeof resetPasswordSchema>) => {
     if (!token) {
       toast.error('Reset token is missing.');
       return;
     }
 
-    if (password !== confirmPassword) {
-      toast.error('Passwords do not match.');
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      await trpcClient.auth.resetPassword.mutate({
-        token,
-        password
-      });
-      toast.success('Password updated successfully.');
-      setIsResetComplete(true);
-      setPassword('');
-      setConfirmPassword('');
-    } catch (err) {
-      const nextError = err instanceof Error ? err.message : 'Unable to reset password.';
-      toast.error(nextError);
-    } finally {
-      setIsSubmitting(false);
-    }
+    await resetPassword.mutateAsync({
+      token,
+      password: values.password
+    });
   };
 
   return (
@@ -96,10 +113,11 @@ function PasswordResetPageContent() {
         <h1 className="text-2xl font-bold tracking-tight">
           {isResetFlow ? 'Set New Password' : 'Reset Password'}
         </h1>
+
         <p className="text-muted-foreground text-sm">
           {isResetFlow
-            ? 'Set a new password here in the browser.'
-            : 'Enter your email to receive a reset link.'}
+            ? 'Enter your new password below.'
+            : 'Enter your email to receive a password reset link.'}
         </p>
       </div>
 
@@ -107,59 +125,89 @@ function PasswordResetPageContent() {
         isResetComplete ? (
           <div className="space-y-4">
             <p className="text-muted-foreground text-sm">
-              Your password has been reset. You can go back to the app and log in.
+              Your password has been updated successfully.
             </p>
-            <Button type="button" className="w-full" onClick={handleOpenInApp}>
+
+            <Button className="w-full" onClick={() => window.location.assign(LOGIN_APP_SCHEME)}>
               Open App
             </Button>
           </div>
         ) : (
-          <form onSubmit={handleResetPassword} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="password">New Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
+          <form id="reset-password-form" onSubmit={resetPasswordForm.handleSubmit(onResetPassword)}>
+            <FieldGroup>
+              <Controller
+                name="password"
+                control={resetPasswordForm.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="password">New Password</FieldLabel>
 
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                autoComplete="new-password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-            </div>
+                    <Input
+                      {...field}
+                      id="password"
+                      type="password"
+                      autoComplete="new-password"
+                      aria-invalid={fieldState.invalid}
+                    />
 
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Updating...' : 'Update Password'}
+                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  </Field>
+                )}
+              />
+
+              <Controller
+                name="confirmPassword"
+                control={resetPasswordForm.control}
+                render={({ field, fieldState }) => (
+                  <Field data-invalid={fieldState.invalid}>
+                    <FieldLabel htmlFor="confirmPassword">Confirm Password</FieldLabel>
+
+                    <Input
+                      {...field}
+                      id="confirmPassword"
+                      type="password"
+                      autoComplete="new-password"
+                      aria-invalid={fieldState.invalid}
+                    />
+
+                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                  </Field>
+                )}
+              />
+            </FieldGroup>
+
+            <Button type="submit" className="mt-6 w-full" disabled={resetPassword.isPending}>
+              {resetPassword.isPending ? 'Updating...' : 'Update Password'}
             </Button>
           </form>
         )
       ) : (
-        <form onSubmit={handleRequestReset} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-          </div>
+        <form id="request-reset-form" onSubmit={requestResetForm.handleSubmit(onRequestReset)}>
+          <FieldGroup>
+            <Controller
+              name="email"
+              control={requestResetForm.control}
+              render={({ field, fieldState }) => (
+                <Field data-invalid={fieldState.invalid}>
+                  <FieldLabel htmlFor="email">Email</FieldLabel>
 
-          <Button type="submit" className="w-full" disabled={isSubmitting}>
-            {isSubmitting ? 'Sending...' : 'Send Reset Link'}
+                  <Input
+                    {...field}
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    placeholder="john@example.com"
+                    aria-invalid={fieldState.invalid}
+                  />
+
+                  {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                </Field>
+              )}
+            />
+          </FieldGroup>
+
+          <Button type="submit" className="mt-6 w-full" disabled={requestReset.isPending}>
+            {requestReset.isPending ? 'Sending...' : 'Send Reset Link'}
           </Button>
         </form>
       )}

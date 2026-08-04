@@ -11,13 +11,9 @@ export type StoredVideoMetrics = {
   commentCount: number | null;
 };
 
-export const dashboardOverviewStatSchema = z.object({
-  id: z.string(),
-  label: z.string(),
-  value: z.string(),
-  delta: z.string(),
-});
-
-export type DashboardOverviewStat = z.infer<
-  typeof dashboardOverviewStatSchema
->;
+export type DashboardOverviewStat = {
+  id: string;
+  label: string;
+  value: string;
+  delta: string;
+};

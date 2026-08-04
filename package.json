@@ -1,5 +1,5 @@
 {
-  "name": "croudq-monorepo",
+  "name": "croudq",
   "version": "1.0.0",
   "packageManager": "bun@1.3.5",
   "private": true,
@@ -20,7 +20,7 @@
     "lint": "turbo run lint",
     "lint:fix": "turbo run lint:fix",
     "prepare": "husky",
-    "pre-commit": "bun --filter=@croudq/backend pre-commit && bun --filter=@croudq/web pre-commit && bun --filter=croudq pre-commit"
+    "pre-commit": "bun --filter=@croudq/backend pre-commit && bun --filter=@croudq/web pre-commit"
   },
   "devDependencies": {
     "husky": "^9.1.7",

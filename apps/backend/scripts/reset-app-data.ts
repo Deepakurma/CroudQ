@@ -3,9 +3,6 @@ import {
   admins,
   authRateLimits,
   authSessions,
-  billingPlans,
-  billingSubscriptions,
-  billingWebhookEvents,
   comments,
   feedback,
   insightArtifacts,
@@ -29,7 +26,6 @@ const main = async () => {
   }
 
   await db.transaction(async (tx) => {
-    await tx.delete(billingWebhookEvents);
     await tx.delete(comments);
     await tx.delete(videos);
     await tx.delete(youtubeAccounts);
@@ -40,10 +36,8 @@ const main = async () => {
     await tx.delete(passwordResetTokens);
     await tx.delete(authSessions);
     await tx.delete(userCredentials);
-    await tx.delete(billingSubscriptions);
     await tx.delete(admins);
     await tx.delete(users);
-    await tx.delete(billingPlans);
     await tx.delete(authRateLimits);
     await tx.delete(revokedTokens);
   });

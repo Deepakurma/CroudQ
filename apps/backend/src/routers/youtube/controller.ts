@@ -11,7 +11,10 @@ import {
   buildYoutubeOAuthUrl,
   exchangeCodeForTokens,
 } from "../../modules/youtube-oauth/controller";
-import { createOAuthState, consumeOAuthState } from "../../modules/oauth-state/controller";
+import {
+  createOAuthState,
+  consumeOAuthState,
+} from "../../modules/oauth-state/controller";
 import {
   disconnectYoutubeAccount,
   ensureSyncCooldown,
@@ -23,13 +26,11 @@ import {
   COMMENTS_SYNC_VIDEO_LIMIT,
   SYNC_COOLDOWN_MS,
   SYNC_VIDEO_METRICS_FETCH_LIMIT,
+  COMMENTS_LIMIT,
 } from "../../modules/youtube-sync/constants";
-import { getChannelLimitsForUser } from "../../modules/youtube-sync/channel-limits";
 import { refreshYoutubeInsightsForUser } from "../../modules/insights/controller";
-import {
-  createTRPCRouter,
-  protectedProcedure,
-} from "../../server/trpc";
+import { createTRPCRouter, protectedProcedure } from "../../server/trpc";
+import { encryptSecret } from "../../utils/secrets";
 import {
   youtubeAuthUrlQuerySchema,
   youtubeCallbackQuerySchema,
@@ -37,9 +38,6 @@ import {
   youtubeDataParamsSchema,
   youtubeSyncParamsSchema,
 } from "./dto";
-import { encryptSecret } from "../../utils/secrets";
-
-const YOUTUBE_API_BASE_URL = "https://www.googleapis.com/youtube/v3";
 
 const getFrontendRedirectUrl = (pathAndQuery: string) => {
   const baseUrl = process.env.FRONTEND_URL;
@@ -48,42 +46,17 @@ const getFrontendRedirectUrl = (pathAndQuery: string) => {
   return new URL(pathAndQuery, baseUrl).toString();
 };
 
-const fetchAuthorizedJson = async <T>(
-  url: string,
-  accessToken: string,
-): Promise<T> => {
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
-
-  if (!response.ok) {
-    const message = await response.text();
-    throw new Error(
-      `YouTube API request failed (${response.status}): ${message || "Unknown error"}`,
-    );
-  }
-
-  return (await response.json()) as T;
-};
-
-const fetchYoutubeJson = async <T>(
-  path: string,
-  accessToken: string,
-): Promise<T> =>
-  fetchAuthorizedJson<T>(`${YOUTUBE_API_BASE_URL}${path}`, accessToken);
-
 const sendYoutubeError = (
   reply: FastifyReply,
   redirectTo: string | undefined,
   error: unknown,
 ) => {
   const mapped = mapYoutubeError(error);
+  const separator = redirectTo && redirectTo.includes("?") ? "&" : "?";
 
   if (redirectTo) {
     return reply.redirect(
-      `${redirectTo}${redirectTo.includes("?") ? "&" : "?"}provider=youtube&status=error&message=${encodeURIComponent(mapped.message)}`,
+      `${redirectTo}${separator}provider=youtube&status=error&message=${encodeURIComponent(mapped.message)}`,
     );
   }
 
@@ -93,13 +66,13 @@ const sendYoutubeError = (
 };
 
 export const youtubeRouter = createTRPCRouter({
-  authUrl: protectedProcedure
+  OAuthUrl: protectedProcedure
     .input(youtubeAuthUrlQuerySchema)
-    .query(async ({ ctx, input }) => {
+    .mutation(async ({ ctx, input }) => {
       try {
         const stateToken = await createOAuthState({
           provider: "youtube",
-          userId: ctx.user.id,
+          userId: ctx.user.userId,
           redirectTo: input.redirectTo,
         });
 
@@ -110,38 +83,39 @@ export const youtubeRouter = createTRPCRouter({
         throw toYoutubeTRPCError(error);
       }
     }),
+
   data: protectedProcedure
     .input(youtubeDataParamsSchema)
     .query(async ({ ctx, input }) => {
       try {
         return await getStoredYoutubeData({
-          userId: ctx.user.id,
+          userId: ctx.user.userId,
           cursor: input.cursor,
           limit: input.limit,
         });
       } catch (error) {
+        console.error(error);
         throw toYoutubeTRPCError(error);
       }
     }),
+
   sync: protectedProcedure
     .input(youtubeSyncParamsSchema)
     .mutation(async ({ ctx }) => {
       try {
         await ensureSyncCooldown({
-          userId: ctx.user.id,
+          userId: ctx.user.userId,
           syncCooldownMs: SYNC_COOLDOWN_MS,
         });
-        const channelLimits = await getChannelLimitsForUser(ctx.user.id);
         const payload = await syncYoutubeAccount({
-          userId: ctx.user.id,
+          userId: ctx.user.userId,
           maxVideoResults: SYNC_VIDEO_METRICS_FETCH_LIMIT,
           commentSyncVideoLimit: COMMENTS_SYNC_VIDEO_LIMIT,
-          commentsPerVideo: channelLimits.commentsPerVideo,
-          fetchYoutubeJson,
+          commentsPerVideo: COMMENTS_LIMIT,
         });
 
         void refreshYoutubeInsightsForUser({
-          userId: ctx.user.id,
+          userId: ctx.user.userId,
         }).catch(() => {
           // Keep YouTube sync successful even if the AI refresh fails.
         });
@@ -151,9 +125,10 @@ export const youtubeRouter = createTRPCRouter({
         throw toYoutubeTRPCError(error);
       }
     }),
+
   disconnect: protectedProcedure.mutation(async ({ ctx }) => {
     try {
-      await disconnectYoutubeAccount(ctx.user.id);
+      await disconnectYoutubeAccount(ctx.user.userId);
 
       return youtubeDisconnectResponseSchema.parse({
         success: true,
@@ -183,7 +158,7 @@ export async function registerYoutubeCallbackRoute(server: FastifyInstance) {
       }
 
       const { code, state, error } = parsedQuery.data;
-      let redirectTo = getFrontendRedirectUrl("/connect-account") || undefined;
+      let redirectTo = getFrontendRedirectUrl("/dashboard") || undefined;
 
       if (error) {
         return sendYoutubeError(
@@ -206,12 +181,17 @@ export async function registerYoutubeCallbackRoute(server: FastifyInstance) {
           provider: "youtube",
           token: state,
         });
-        redirectTo = oauthState.redirectTo || redirectTo;
+        redirectTo = oauthState.redirectTo ?? redirectTo;
         await ensureUserExists(oauthState.userId);
 
         const tokens = await exchangeCodeForTokens(code);
         const expiresAt = tokens.expires_in
           ? new Date(Date.now() + tokens.expires_in * 1000)
+          : null;
+        const now = new Date();
+        const accessToken = encryptSecret(tokens.access_token!);
+        const refreshToken = tokens.refresh_token
+          ? encryptSecret(tokens.refresh_token)
           : null;
 
         await db
@@ -220,45 +200,26 @@ export async function registerYoutubeCallbackRoute(server: FastifyInstance) {
             userId: oauthState.userId,
             channelId: "pending",
             channelName: null,
-            accessToken: encryptSecret(
-              tokens.access_token!,
-              "YOUTUBE_TOKEN_ENCRYPTION_KEY",
-            ),
-            refreshToken: tokens.refresh_token
-              ? encryptSecret(
-                  tokens.refresh_token,
-                  "YOUTUBE_TOKEN_ENCRYPTION_KEY",
-                )
-              : null,
+            accessToken,
+            refreshToken,
             expiresAt,
-            updatedAt: new Date(),
+            updatedAt: now,
           })
           .onConflictDoUpdate({
             target: youtubeAccounts.userId,
             set: {
-              accessToken: encryptSecret(
-                tokens.access_token!,
-                "YOUTUBE_TOKEN_ENCRYPTION_KEY",
-              ),
-              refreshToken:
-                tokens.refresh_token
-                  ? encryptSecret(
-                      tokens.refresh_token,
-                      "YOUTUBE_TOKEN_ENCRYPTION_KEY",
-                    )
-                  : youtubeAccounts.refreshToken,
+              accessToken,
+              refreshToken: refreshToken ?? youtubeAccounts.refreshToken,
               expiresAt,
-              updatedAt: new Date(),
+              updatedAt: now,
             },
           });
 
-        const channelLimits = await getChannelLimitsForUser(oauthState.userId);
         const payload = await syncYoutubeAccount({
           userId: oauthState.userId,
           maxVideoResults: SYNC_VIDEO_METRICS_FETCH_LIMIT,
           commentSyncVideoLimit: COMMENTS_SYNC_VIDEO_LIMIT,
-          commentsPerVideo: channelLimits.commentsPerVideo,
-          fetchYoutubeJson,
+          commentsPerVideo: COMMENTS_LIMIT,
         });
 
         if (redirectTo) {

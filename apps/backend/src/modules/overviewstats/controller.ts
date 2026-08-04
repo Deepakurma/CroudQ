@@ -43,19 +43,11 @@ const formatSignedDelta = (
   return `${prefix}${formatter(normalizedValue)}`;
 };
 
-const getPublicViews = (video: StoredVideoMetrics) =>
-  video.viewCount === null ? null : Math.max(video.viewCount, 0);
-
-const getPublicLikes = (video: StoredVideoMetrics) =>
-  video.likeCount === null ? null : Math.max(video.likeCount, 0);
-
-const getPublicComments = (video: StoredVideoMetrics) =>
-  video.commentCount === null ? null : Math.max(video.commentCount, 0);
-
 const getEngagementRate = (video: StoredVideoMetrics) => {
-  const views = getPublicViews(video);
-  const likes = getPublicLikes(video);
-  const comments = getPublicComments(video);
+  const views = video.viewCount === null ? null : Math.max(video.viewCount, 0);
+  const likes = video.likeCount === null ? null : Math.max(video.likeCount, 0);
+  const comments =
+    video.commentCount === null ? null : Math.max(video.commentCount, 0);
 
   if (views === null || likes === null || comments === null) {
     return null;
@@ -103,13 +95,27 @@ export const buildDashboardOverviewStats = (
   }
 
   const previousVideo = sortedVideos[1];
-  const latestViews = getPublicViews(latestVideo);
-  const latestLikes = getPublicLikes(latestVideo);
-  const latestComments = getPublicComments(latestVideo);
+  const latestViews =
+    latestVideo.viewCount === null ? null : Math.max(latestVideo.viewCount, 0);
+  const latestLikes =
+    latestVideo.likeCount === null ? null : Math.max(latestVideo.likeCount, 0);
+  const latestComments =
+    latestVideo.commentCount === null
+      ? null
+      : Math.max(latestVideo.commentCount, 0);
   const latestEngagementRate = getEngagementRate(latestVideo);
-  const previousViews = previousVideo ? getPublicViews(previousVideo) : null;
-  const previousLikes = previousVideo ? getPublicLikes(previousVideo) : null;
-  const previousComments = previousVideo ? getPublicComments(previousVideo) : null;
+  const previousViews =
+    previousVideo && previousVideo.viewCount !== null
+      ? Math.max(previousVideo.viewCount, 0)
+      : null;
+  const previousLikes =
+    previousVideo && previousVideo.likeCount !== null
+      ? Math.max(previousVideo.likeCount, 0)
+      : null;
+  const previousComments =
+    previousVideo && previousVideo.commentCount !== null
+      ? Math.max(previousVideo.commentCount, 0)
+      : null;
   const previousEngagementRate = previousVideo
     ? getEngagementRate(previousVideo)
     : null;

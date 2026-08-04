@@ -14,12 +14,12 @@ export const fetchVideoDetailsByIds = async (
     return new Map<string, VideoDetails>();
   }
 
-  const response = await fetchYoutubeJson<YoutubeVideosListResponse>(
+  const response = (await fetchYoutubeJson(
     `/videos?part=contentDetails,statistics&id=${encodeURIComponent(
       youtubeVideoIds.join(","),
     )}`,
     accessToken,
-  );
+  )) as YoutubeVideosListResponse;
 
   return new Map(
     (response.items || []).map((item) => [
@@ -55,4 +55,5 @@ export const buildVideoSummary = (video: VideoSummaryInput) => ({
   commentCount: video.commentCount ?? null,
   duration: video.duration ?? null,
   isUsedInDashboardAnalysis: video.isUsedInDashboardAnalysis ?? false,
+  updatedAt: video.updatedAt,
 });

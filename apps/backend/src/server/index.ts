@@ -1,14 +1,13 @@
 import cookie from "@fastify/cookie";
 import cors from "@fastify/cors";
+import jwt from "@fastify/jwt";
 import rateLimit from "@fastify/rate-limit";
 import type { FastifyTRPCPluginOptions } from "@trpc/server/adapters/fastify";
 import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
-import { CorsConfig, isAllowedOrigin } from "../config/cors-config";
+import { CorsConfig } from "../config/cors-config";
 import { appRouter } from "../routers";
-import { registerWebClaimRoute } from "../routers/auth/web-claim-route";
-import { registerRazorpayWebhookRoute } from "../routers/billing/razorpay-webhook-route";
 import { registerYoutubeCallbackRoute } from "../routers/youtube/controller";
 import { createContext } from "./context";
 import { registerRevokedTokenCleanup } from "./revoked-token-cleanup";
@@ -29,7 +28,6 @@ export async function createServer(
   });
 
   server.register(cors, CorsConfig);
-  server.register(cookie);
 
   server.get("/", async () => {
     return { message: "Hello, Developer 😁!" };
@@ -40,42 +38,43 @@ export async function createServer(
   });
 
   await registerYoutubeCallbackRoute(server);
-  await registerWebClaimRoute(server);
-  await registerRazorpayWebhookRoute(server);
 
-  server.addHook("onRequest", async (req: FastifyRequest, reply: FastifyReply) => {
-    const isMutationMethod =
-      req.method === "POST" ||
-      req.method === "PUT" ||
-      req.method === "PATCH" ||
-      req.method === "DELETE";
-    if (!isMutationMethod || !req.url.startsWith("/trpc")) {
-      return;
-    }
-
-    const hasAuthCookie = Boolean(req.cookies?.auth_token);
-    const hasBearerToken =
-      req.headers.authorization?.startsWith("Bearer ") ?? false;
-    if (!hasAuthCookie || hasBearerToken) {
-      return;
-    }
-
-    const origin = req.headers.origin || "";
-    const referer = req.headers.referer || "";
-    let refererOrigin = "";
-    if (referer) {
-      try {
-        refererOrigin = new URL(referer).origin;
-      } catch {
-        refererOrigin = "";
-      }
-    }
-    const requestOrigin = origin || refererOrigin;
-
-    if (!requestOrigin || !isAllowedOrigin(requestOrigin)) {
-      return reply.code(403).send({ message: "Invalid request origin." });
-    }
+  await server.register(cookie, {
+    secret: process.env.COOKIE_SECRET!,
+    hook: "onRequest",
   });
+
+  server.register(jwt, {
+    secret: process.env.JWT_SECRET!,
+    cookie: {
+      cookieName: "token",
+      signed: false,
+    },
+    sign: {
+      expiresIn: "7d",
+    },
+  });
+
+  server.addHook(
+    "preHandler",
+    async (request: FastifyRequest, reply: FastifyReply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err: unknown) {
+        if (err instanceof Error) {
+          request.log.warn(
+            { err },
+            "JWT verification failed (preHandler hook)",
+          );
+        } else {
+          request.log.warn({ err }, "Unknown JWT verification error");
+        }
+        if (request.cookies.token) {
+          reply.clearCookie("token", { path: "/" });
+        }
+      }
+    },
+  );
 
   server.register(fastifyTRPCPlugin, {
     prefix: "/trpc",

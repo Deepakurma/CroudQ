@@ -13,21 +13,27 @@ type GoogleTokenResponse = {
   error_description?: string;
 };
 
-const getRequiredEnv = (
-  key: "YOUTUBE_CLIENT_ID" | "YOUTUBE_CLIENT_SECRET" | "YOUTUBE_REDIRECT_URI",
-) => {
-  const value = process.env[key];
-  if (!value) {
+const getYoutubeOAuthConfig = () => {
+  const clientId = process.env.YOUTUBE_CLIENT_ID;
+  const clientSecret = process.env.YOUTUBE_CLIENT_SECRET;
+  const redirectUri = process.env.YOUTUBE_REDIRECT_URI;
+
+  if (!clientId || !clientSecret || !redirectUri) {
     throw new Error("YouTube integration is not configured yet");
   }
 
-  return value;
+  return {
+    clientId,
+    clientSecret,
+    redirectUri,
+  };
 };
 
 export const buildYoutubeOAuthUrl = (stateToken: string) => {
+  const config = getYoutubeOAuthConfig();
   const params = new URLSearchParams({
-    client_id: getRequiredEnv("YOUTUBE_CLIENT_ID"),
-    redirect_uri: getRequiredEnv("YOUTUBE_REDIRECT_URI"),
+    client_id: config.clientId,
+    redirect_uri: config.redirectUri,
     response_type: "code",
     scope: YOUTUBE_SCOPES,
     access_type: "offline",
@@ -39,11 +45,12 @@ export const buildYoutubeOAuthUrl = (stateToken: string) => {
 };
 
 export const exchangeCodeForTokens = async (code: string) => {
+  const config = getYoutubeOAuthConfig();
   const body = new URLSearchParams({
     code,
-    client_id: getRequiredEnv("YOUTUBE_CLIENT_ID"),
-    client_secret: getRequiredEnv("YOUTUBE_CLIENT_SECRET"),
-    redirect_uri: getRequiredEnv("YOUTUBE_REDIRECT_URI"),
+    client_id: config.clientId,
+    client_secret: config.clientSecret,
+    redirect_uri: config.redirectUri,
     grant_type: "authorization_code",
   });
 
@@ -56,12 +63,9 @@ export const exchangeCodeForTokens = async (code: string) => {
   });
 
   const payload = (await response.json()) as GoogleTokenResponse;
-  if (!response.ok || !payload.access_token) {
-    throw new Error(
-      payload.error_description ||
-        payload.error ||
-        "Failed to exchange OAuth code",
-    );
+
+  if (!response.ok) {
+    throw new Error(payload.error_description || payload.error);
   }
 
   return payload;
@@ -100,9 +104,10 @@ export const revokeYoutubeToken = async (token: string) => {
 };
 
 export const refreshYoutubeAccessToken = async (refreshToken: string) => {
+  const config = getYoutubeOAuthConfig();
   const body = new URLSearchParams({
-    client_id: getRequiredEnv("YOUTUBE_CLIENT_ID"),
-    client_secret: getRequiredEnv("YOUTUBE_CLIENT_SECRET"),
+    client_id: config.clientId,
+    client_secret: config.clientSecret,
     refresh_token: refreshToken,
     grant_type: "refresh_token",
   });

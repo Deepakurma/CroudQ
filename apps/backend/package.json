@@ -21,8 +21,9 @@
   },
   "dependencies": {
     "@aws-sdk/client-ses": "^3.1002.0",
-    "@fastify/cookie": "^11.0.2",
+    "@fastify/cookie": "^11.1.2",
     "@fastify/cors": "^11.2.0",
+    "@fastify/jwt": "^10.2.1",
     "@fastify/rate-limit": "^10.3.0",
     "@trpc/server": "^11.9.0",
     "bcrypt": "^6.0.0",
@@ -47,8 +48,7 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:reset": "bun --env-file=.env scripts/reset-app-data.ts --yes",
-    "db:seed-admin": "bun --env-file=.env scripts/create-first-admin.ts",
-    "billing:set-user-subscription": "bun --env-file=.env scripts/set-user-subscription.ts"
+    "db:seed-admin": "bun --env-file=.env scripts/create-first-admin.ts"
   },
   "lint-staged": {
     "*.{js,ts}": [

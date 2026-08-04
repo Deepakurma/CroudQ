@@ -9,6 +9,7 @@ import {
 import { relations } from "drizzle-orm";
 
 import { users } from "./auth";
+// import { videos } from "./youtube";
 
 export const insightArtifacts = pgTable(
   "insight_artifacts",
@@ -16,12 +17,12 @@ export const insightArtifacts = pgTable(
     id: text("id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
+    // videoId: text("video_id")
+    //   .notNull()
+    //   .references(() => videos.id, { onDelete: "cascade" }),
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
-    platform: text("platform").notNull(),
-    scope: text("scope").notNull(),
-    scopeRefId: text("scope_ref_id").default("").notNull(),
     sourceHash: text("source_hash").notNull(),
     model: text("model").notNull(),
     promptVersion: text("prompt_version").notNull(),
@@ -39,16 +40,9 @@ export const insightArtifacts = pgTable(
   },
   (table) => ({
     userIdIdx: index("insight_artifacts_user_id_idx").on(table.userId),
-    scopeIdx: index("insight_artifacts_scope_idx").on(
-      table.userId,
-      table.platform,
-      table.scope,
-    ),
+    // videoIdx: index("insight_artifacts_video_id_idx").on(table.videoId),
     latestUniqueIdx: uniqueIndex("insight_artifacts_latest_unique_idx").on(
       table.userId,
-      table.platform,
-      table.scope,
-      table.scopeRefId,
     ),
   }),
 );
@@ -60,5 +54,10 @@ export const insightArtifactsRelations = relations(
       fields: [insightArtifacts.userId],
       references: [users.id],
     }),
+
+    // video: one(videos, {
+    //   fields: [insightArtifacts.videoId],
+    //   references: [videos.id],
+    // }),
   }),
 );

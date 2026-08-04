@@ -4,8 +4,6 @@ import { eq } from "drizzle-orm";
 import { db } from "../../db";
 import { authRateLimits } from "../../db/schema";
 
-const normalizeIdentifier = (value: string) => value.trim().toLowerCase();
-
 export const enforceRateLimit = async ({
   scope,
   identifier,
@@ -19,7 +17,7 @@ export const enforceRateLimit = async ({
   windowMs: number;
   message: string;
 }) => {
-  const normalizedIdentifier = normalizeIdentifier(identifier);
+  const normalizedIdentifier = identifier.trim().toLowerCase();
   const id = `${scope}:${normalizedIdentifier}`;
   const now = new Date();
   const existing = await db.query.authRateLimits.findFirst({

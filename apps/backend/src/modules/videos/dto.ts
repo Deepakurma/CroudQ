@@ -21,7 +21,10 @@ export type VideoDetails = {
   duration: string | null;
 };
 
-export type FetchYoutubeJson = <T>(path: string, accessToken: string) => Promise<T>;
+export type FetchYoutubeJson = (
+  path: string,
+  accessToken: string,
+) => Promise<unknown>;
 
 export type VideoSummaryInput = {
   id: string;
@@ -35,4 +38,5 @@ export type VideoSummaryInput = {
   commentCount: number | null;
   duration: string | null;
   isUsedInDashboardAnalysis?: boolean;
+  updatedAt: Date | null;
 };

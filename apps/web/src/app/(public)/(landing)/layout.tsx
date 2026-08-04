@@ -14,9 +14,9 @@ export default function LandingLayout({ children }: { children: React.ReactNode 
           </Link>
 
           <a
-            href="mailto:hello@croudq.app"
+            href="/dashboard"
             className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-10 items-center rounded-full px-5 text-sm font-semibold transition-colors">
-            Download the App
+            Try It Now
             <ChevronRight className="ml-1 size-4" />
           </a>
         </div>

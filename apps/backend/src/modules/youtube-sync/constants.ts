@@ -1,4 +1,5 @@
 export const SYNC_COOLDOWN_MS = 60 * 60 * 1000;
-export const SYNC_VIDEO_METRICS_FETCH_LIMIT = 2;
+export const SYNC_VIDEO_METRICS_FETCH_LIMIT = 1;
 export const COMMENTS_SYNC_VIDEO_LIMIT = 1;
+export const COMMENTS_LIMIT = 100;
 export const VIDEO_COMMENTS_SYNC_COOLDOWN_MS = 24 * 60 * 60 * 1000;

@@ -1,81 +1,66 @@
-import { TRPCError } from "@trpc/server";
-
 import {
   cancelAccountDeletion,
-  createUpgradeLink,
-  getCurrentAuthUser,
   loginWithEmail,
-  logoutSession,
   requestAccountDeletion,
   requestPasswordReset,
   requestSignupOtp,
   resetPassword,
-  updateChannelType,
   updateProfileWithPassword,
   verifySignupOtp,
 } from "../../modules/auth/controller";
 import { enforceRateLimit } from "../../modules/rate-limit/controller";
-import { createTRPCRouter, protectedProcedure, publicProcedure } from "../../server/trpc";
 import {
-  authMessageSchema,
-  authUpgradeLinkSchema,
-  authSessionSchema,
-  authUserSchema,
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from "../../server/trpc";
+import {
   loginInputSchema,
-  logoutInputSchema,
-  refreshSessionInputSchema,
   requestPasswordResetInputSchema,
   resetPasswordInputSchema,
   signupInputSchema,
-  updateChannelTypeInputSchema,
   updateProfileInputSchema,
   verifySignupOtpInputSchema,
 } from "./dto";
-import { refreshAuthSession } from "../../modules/auth/controller";
-import {
-  clearWebAuthCookies,
-  getWebRefreshTokenFromCookies,
-  setWebAuthCookies,
-} from "../../modules/web-auth/controller";
-
-const getRequestIp = (req: { ip?: string }) => req.ip?.trim() || "unknown";
 
 export const authRouter = createTRPCRouter({
-  signup: publicProcedure.input(signupInputSchema).mutation(async ({ ctx, input }) => {
-    await enforceRateLimit({
-      scope: "auth.signup.request.ip",
-      identifier: getRequestIp(ctx.req),
-      maxAttempts: 5,
-      windowMs: 60 * 60 * 1000,
-      message: "Too many sign-up attempts. Please try again later.",
-    });
-    await enforceRateLimit({
-      scope: "auth.signup.request.email",
-      identifier: input.email,
-      maxAttempts: 5,
-      windowMs: 60 * 60 * 1000,
-      message: "Too many sign-up attempts. Please try again later.",
-    });
-    await enforceRateLimit({
-      scope: "auth.signup.request.email.cooldown",
-      identifier: input.email,
-      maxAttempts: 1,
-      windowMs: 30 * 1000,
-      message: "Please wait before requesting another code.",
-    });
+  signup: publicProcedure
+    .input(signupInputSchema)
+    .mutation(async ({ input }) => {
+      await enforceRateLimit({
+        scope: "auth.signup.request.email",
+        identifier: input.email,
+        maxAttempts: 5,
+        windowMs: 60 * 60 * 1000,
+        message: "Too many sign-up attempts. Please try again later.",
+      });
+      await enforceRateLimit({
+        scope: "auth.signup.request.email.cooldown",
+        identifier: input.email,
+        maxAttempts: 1,
+        windowMs: 30 * 1000,
+        message: "Please wait before requesting another code.",
+      });
 
-    return authMessageSchema.parse(await requestSignupOtp(input));
-  }),
+      return await requestSignupOtp(input);
+    }),
+
   verifySignupOtp: publicProcedure
     .input(verifySignupOtpInputSchema)
     .mutation(async ({ ctx, input }) => {
-      await enforceRateLimit({
-        scope: "auth.signup.verify.ip",
-        identifier: getRequestIp(ctx.req),
-        maxAttempts: 10,
-        windowMs: 15 * 60 * 1000,
-        message: "Too many verification attempts. Please try again later.",
+      const result = await verifySignupOtp(input);
+
+      const token = await ctx.res.jwtSign({
+        userId: result.user.id,
       });
+
+      ctx.res.setCookie("token", token, {
+        httpOnly: true,
+        secure: false,
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7,
+      });
+
       await enforceRateLimit({
         scope: "auth.signup.verify.email",
         identifier: input.email,
@@ -84,146 +69,69 @@ export const authRouter = createTRPCRouter({
         message: "Too many verification attempts. Please try again later.",
       });
 
-      return authSessionSchema.parse(
-        await verifySignupOtp(input, {
-          ipAddress: getRequestIp(ctx.req),
-          userAgent:
-            typeof ctx.req.headers["user-agent"] === "string"
-              ? ctx.req.headers["user-agent"]
-              : null,
-        }),
-      );
+      return result;
     }),
-  login: publicProcedure.input(loginInputSchema).mutation(async ({ ctx, input }) => {
-    await enforceRateLimit({
-      scope: "auth.login.ip",
-      identifier: getRequestIp(ctx.req),
-      maxAttempts: 10,
-      windowMs: 15 * 60 * 1000,
-      message: "Too many sign-in attempts. Please try again later.",
-    });
-    await enforceRateLimit({
-      scope: "auth.login.email",
-      identifier: input.email,
-      maxAttempts: 8,
-      windowMs: 15 * 60 * 1000,
-      message: "Too many sign-in attempts. Please try again later.",
-    });
 
-    return authSessionSchema.parse(
-      await loginWithEmail(input, {
-        ipAddress: getRequestIp(ctx.req),
-        userAgent:
-          typeof ctx.req.headers["user-agent"] === "string"
-            ? ctx.req.headers["user-agent"]
-            : null,
-      }),
-    );
+  login: publicProcedure
+    .input(loginInputSchema)
+    .mutation(async ({ ctx, input }) => {
+      const result = await loginWithEmail(input);
+
+      const token = await ctx.res.jwtSign({
+        userId: result.userId,
+      });
+
+      ctx.res.setCookie("token", token, {
+        httpOnly: true,
+        secure: false,
+        path: "/",
+        maxAge: 60 * 60 * 24 * 7,
+      });
+
+      await enforceRateLimit({
+        scope: "auth.login.email",
+        identifier: input.email,
+        maxAttempts: 8,
+        windowMs: 15 * 60 * 1000,
+        message: "Too many sign-in attempts. Please try again later.",
+      });
+
+      return result;
+    }),
+
+  getSession: publicProcedure.query(async ({ ctx }) => {
+    console.log("getSession called");
+    return ctx.user;
   }),
-  me: protectedProcedure.query(async ({ ctx }) => {
-    return authUserSchema.parse(await getCurrentAuthUser(ctx.user.id));
-  }),
-  createUpgradeLink: protectedProcedure.mutation(async ({ ctx }) => {
-    return authUpgradeLinkSchema.parse(
-      await createUpgradeLink({
-        userId: ctx.user.id,
-        host:
-          typeof ctx.req.headers.host === "string" ? ctx.req.headers.host : null,
-        forwardedHost:
-          typeof ctx.req.headers["x-forwarded-host"] === "string"
-            ? ctx.req.headers["x-forwarded-host"]
-            : null,
-        forwardedProto:
-          typeof ctx.req.headers["x-forwarded-proto"] === "string"
-            ? ctx.req.headers["x-forwarded-proto"]
-            : null,
-      }),
-    );
-  }),
+
   requestAccountDeletion: protectedProcedure.mutation(async ({ ctx }) => {
-    return authUserSchema.parse(await requestAccountDeletion(ctx.user.id));
+    return await requestAccountDeletion(ctx.user.userId);
   }),
   cancelAccountDeletion: protectedProcedure.mutation(async ({ ctx }) => {
-    return authUserSchema.parse(await cancelAccountDeletion(ctx.user.id));
+    return await cancelAccountDeletion(ctx.user.userId);
   }),
   updateProfile: protectedProcedure
     .input(updateProfileInputSchema)
     .mutation(async ({ ctx, input }) => {
-      return authUserSchema.parse(
-        await updateProfileWithPassword(ctx.user.id, input),
-      );
+      return await updateProfileWithPassword(ctx.user.userId, input);
     }),
-  updateChannelType: protectedProcedure
-    .input(updateChannelTypeInputSchema)
-    .mutation(async ({ ctx, input }) =>
-      authUserSchema.parse(await updateChannelType(ctx.user.id, input)),
-    ),
-  refreshSession: publicProcedure
-    .input(refreshSessionInputSchema)
-    .mutation(async ({ ctx, input }) => {
-      return authSessionSchema.parse(
-        await refreshAuthSession(input, {
-          ipAddress: getRequestIp(ctx.req),
-          userAgent:
-            typeof ctx.req.headers["user-agent"] === "string"
-              ? ctx.req.headers["user-agent"]
-              : null,
-        }),
-      );
-    }),
-  refreshWebSession: publicProcedure.mutation(async ({ ctx }) => {
-    const refreshToken = getWebRefreshTokenFromCookies(ctx.req);
 
-    if (!refreshToken) {
-      throw new TRPCError({
-        code: "UNAUTHORIZED",
-        message: "Refresh session is invalid or expired",
-      });
-    }
-
-    const session = await refreshAuthSession(
-      { refreshToken },
-      {
-        ipAddress: getRequestIp(ctx.req),
-        userAgent:
-          typeof ctx.req.headers["user-agent"] === "string"
-            ? ctx.req.headers["user-agent"]
-            : null,
-      },
-    );
-
-    setWebAuthCookies(ctx.res, session);
-    return authUserSchema.parse(session.user);
-  }),
-  logout: publicProcedure.input(logoutInputSchema.optional()).mutation(async ({ ctx, input }) => {
-    return authMessageSchema.parse(
-      await logoutSession({
-        accessToken: ctx.token,
-        refreshToken: input?.refreshToken ?? null,
-      }),
-    );
-  }),
-  logoutWeb: publicProcedure.mutation(async ({ ctx }) => {
-    const refreshToken = getWebRefreshTokenFromCookies(ctx.req);
-
-    const result = await logoutSession({
-      accessToken: ctx.token,
-      refreshToken,
+  logout: publicProcedure.mutation(async ({ ctx }) => {
+    ctx.res.clearCookie("token", {
+      path: "/",
+      httpOnly: true,
+      secure: false,
     });
 
-    clearWebAuthCookies(ctx.res);
-    return authMessageSchema.parse(result);
+    return {
+      success: true,
+      message: "Logged out successfully",
+    };
   }),
+
   requestPasswordReset: publicProcedure
     .input(requestPasswordResetInputSchema)
-    .mutation(async ({ ctx, input }) => {
-      await enforceRateLimit({
-        scope: "auth.reset.ip",
-        identifier: getRequestIp(ctx.req),
-        maxAttempts: 5,
-        windowMs: 60 * 60 * 1000,
-        message: "Too many reset requests. Please try again later.",
-      });
+    .mutation(async ({ input }) => {
       await enforceRateLimit({
         scope: "auth.reset.email",
         identifier: input.email,
@@ -232,11 +140,12 @@ export const authRouter = createTRPCRouter({
         message: "Too many reset requests. Please try again later.",
       });
 
-      return authMessageSchema.parse(await requestPasswordReset(input));
+      return await requestPasswordReset(input);
     }),
+
   resetPassword: publicProcedure
     .input(resetPasswordInputSchema)
     .mutation(async ({ input }) => {
-      return authMessageSchema.parse(await resetPassword(input));
+      return await resetPassword(input);
     }),
 });

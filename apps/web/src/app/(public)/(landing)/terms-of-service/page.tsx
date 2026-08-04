@@ -2,8 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Terms of Service | CroudQ',
-  description:
-    'Terms that govern use of CroudQ, including accounts, billing, and connected platforms.'
+  description: 'Terms that govern use of CroudQ, including accounts and connected platforms.'
 };
 
 const lastUpdated = 'March 27, 2026';
@@ -53,25 +52,7 @@ export default function TermsOfServicePage() {
           />
 
           <PolicySection
-            title="4. Billing and Subscriptions"
-            body={[
-              'Paid features may be offered through recurring subscriptions.',
-              'Subscription pricing, billing interval, and available plan details are shown at checkout.',
-              'Unless otherwise stated, subscriptions renew automatically through the payment provider until ended or otherwise stopped through the applicable billing flow.',
-              'If payment is not completed, expires, fails, or the provider marks the subscription inactive, access to paid features may be limited or removed.'
-            ]}
-          />
-
-          <PolicySection
-            title="5. Refunds"
-            body={[
-              'Unless required by law, payments are non-refundable.',
-              'If you believe there has been a billing error, contact us and we will review the issue in good faith.'
-            ]}
-          />
-
-          <PolicySection
-            title="6. AI-Assisted Features"
+            title="4. AI-Assisted Features"
             body={[
               'CroudQ may generate summaries, suggestions, or other AI-assisted outputs based on your connected data.',
               'These outputs are provided as assistive tools only and should be reviewed by you before publication or business use.',
@@ -80,7 +61,7 @@ export default function TermsOfServicePage() {
           />
 
           <PolicySection
-            title="7. Intellectual Property"
+            title="5. Intellectual Property"
             body={[
               'CroudQ and its software, branding, interface, and service materials are owned by us or our licensors.',
               'You retain rights to the content and account data you provide or connect, subject to the permissions needed for us to operate the service.'
@@ -88,7 +69,7 @@ export default function TermsOfServicePage() {
           />
 
           <PolicySection
-            title="8. Availability and Changes"
+            title="6. Availability and Changes"
             body={[
               'We may update, improve, limit, or discontinue parts of the service at any time.',
               'We do not guarantee uninterrupted availability, and temporary downtime or feature changes may occur.'
@@ -96,7 +77,7 @@ export default function TermsOfServicePage() {
           />
 
           <PolicySection
-            title="9. Disclaimers and Liability"
+            title="7. Disclaimers and Liability"
             body={[
               'The service is provided on an as-is and as-available basis to the extent permitted by law.',
               'To the extent permitted by law, we disclaim warranties not expressly stated in these terms.',
@@ -105,7 +86,7 @@ export default function TermsOfServicePage() {
           />
 
           <PolicySection
-            title="10. Termination"
+            title="8. Termination"
             body={[
               'You may stop using CroudQ at any time.',
               'We may suspend or terminate access if necessary to protect the service, comply with law, or address violations of these terms.'
@@ -113,16 +94,16 @@ export default function TermsOfServicePage() {
           />
 
           <PolicySection
-            title="11. Updates to These Terms"
+            title="9. Updates to These Terms"
             body={[
-              'We may update these terms as the product, billing flows, or legal requirements change.',
+              'We may update these terms as the product or legal requirements change.',
               'If changes are material, we will update the date above and provide notice where appropriate.'
             ]}
           />
 
           <PolicySection
-            title="12. Contact"
-            body={['For terms or billing questions, contact us at support@croudq.com.']}
+            title="10. Contact"
+            body={['For terms questions, contact us at support@croudq.com.']}
           />
         </div>
       </div>

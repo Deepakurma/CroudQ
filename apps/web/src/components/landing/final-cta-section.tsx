@@ -28,9 +28,9 @@ export function FinalCtaSection() {
           CROUDQ HELPS YOU PLAN CONTENT WITH ANALYTICS AND AI SUPPORT
         </p>
         <Link
-          href={'#'}
+          href={'/dashboard'}
           className="bg-background text-foreground hover:bg-background/90 mx-auto mt-10 flex w-fit flex-row items-center gap-2 rounded-full px-6 py-3 text-[1rem] font-bold transition-transform hover:scale-105 md:mt-12 md:text-[1.1rem]">
-          Get early access <ChevronRight className="h-5 w-5" />
+          Try It Now <ChevronRight className="h-5 w-5" />
         </Link>
       </motion.div>
       <div className="text-primary-foreground/80 absolute right-0 bottom-6 left-0 flex flex-col items-center gap-2 px-[clamp(1rem,4vw,3rem)]">

@@ -11,7 +11,12 @@ export const youtubeCallbackQuerySchema = z.object({
 });
 
 export const youtubeDataParamsSchema = z.object({
-  cursor: z.string().min(1).optional(),
+  cursor: z
+    .object({
+      publishedAt: z.string(),
+      id: z.string().uuid(),
+    })
+    .nullish(),
   limit: z.number().int().positive().max(25).optional(),
 });
 
@@ -33,6 +38,7 @@ export const youtubeVideoSummarySchema = z.object({
   commentCount: z.number().int().nonnegative().nullable(),
   duration: z.string().nullable(),
   isUsedInDashboardAnalysis: z.boolean(),
+  updatedAt: z.date(),
 });
 
 export const youtubeDataResponseSchema = z.object({
@@ -41,7 +47,12 @@ export const youtubeDataResponseSchema = z.object({
     title: z.string().nullable(),
   }),
   videos: z.array(youtubeVideoSummarySchema),
-  nextCursor: z.string().nullable(),
+  nextCursor: z
+    .object({
+      publishedAt: z.string(),
+      id: z.string().uuid(),
+    })
+    .nullish(),
   totalVideosCount: z.number().int().nonnegative(),
   commentsCount: z.number().int().nonnegative(),
   lastSyncedAt: z.date().nullable(),
@@ -56,10 +67,3 @@ export const youtubeSyncResponseSchema = z.object({
   commentsCount: z.number().int().nonnegative(),
   lastSyncedAt: z.date().nullable(),
 });
-
-export type YoutubeAuthUrlQuery = z.infer<typeof youtubeAuthUrlQuerySchema>;
-export type YoutubeCallbackQuery = z.infer<typeof youtubeCallbackQuerySchema>;
-export type YoutubeDataParams = z.infer<typeof youtubeDataParamsSchema>;
-export type YoutubeSyncParams = z.infer<typeof youtubeSyncParamsSchema>;
-export type YoutubeDataResponse = z.infer<typeof youtubeDataResponseSchema>;
-export type YoutubeSyncResponse = z.infer<typeof youtubeSyncResponseSchema>;

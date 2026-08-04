@@ -27,32 +27,25 @@ type OpenAiResponsesPayload = {
   output?: OpenAiResponseItem[];
 };
 
-const getRequiredOpenAiApiKey = () => {
-  const value = process.env.OPENAI_API_KEY?.trim();
-  if (!value) {
-    throw new Error("OPENAI_API_KEY is required");
-  }
-
-  return value;
-};
-
 const extractOutputText = (payload: OpenAiResponsesPayload) => {
   if (payload.output_text?.trim()) {
     return payload.output_text.trim();
   }
 
-  const text = (payload.output || [])
-    .flatMap((item) =>
-      item.type === "message"
-        ? (item.content || []).flatMap((contentItem) =>
-            contentItem.type === "output_text" && contentItem.text
-              ? [contentItem.text]
-              : [],
-          )
-        : [],
-    )
-    .join("")
-    .trim();
+  let text = "";
+  for (const item of payload.output || []) {
+    if (item.type !== "message") {
+      continue;
+    }
+
+    for (const contentItem of item.content || []) {
+      if (contentItem.type === "output_text" && contentItem.text) {
+        text += contentItem.text;
+      }
+    }
+  }
+
+  text = text.trim();
 
   if (!text) {
     throw new Error("OpenAI did not return any output text");
@@ -68,7 +61,7 @@ export const generateStructuredJson = async ({
   userPrompt,
   maxOutputTokens = 2500,
 }: StructuredJsonRequest) => {
-  const apiKey = getRequiredOpenAiApiKey();
+  const apiKey = process.env.OPENAI_API_KEY?.trim();
 
   const response = await fetch(OPENAI_RESPONSES_URL, {
     method: "POST",
@@ -133,7 +126,6 @@ export const generateStructuredJson = async ({
   const outputText = extractOutputText(payload);
 
   return {
-    rawResponse: payload,
     outputText,
     parsedJson: JSON.parse(outputText) as unknown,
   };

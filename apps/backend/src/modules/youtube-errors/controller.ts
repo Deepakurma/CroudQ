@@ -12,20 +12,22 @@ export class YoutubeRouteError extends Error {
 
 export const mapYoutubeError = (error: unknown) => {
   if (error instanceof YoutubeRouteError) {
-    const trpcCode =
-      error.statusCode === 404
-        ? "NOT_FOUND"
-        : error.statusCode === 429
-          ? "TOO_MANY_REQUESTS"
-          : error.statusCode >= 500
-            ? "INTERNAL_SERVER_ERROR"
-            : "BAD_REQUEST";
+    let trpcCode: "NOT_FOUND" | "TOO_MANY_REQUESTS" | "INTERNAL_SERVER_ERROR" | "BAD_REQUEST" =
+      "BAD_REQUEST";
+
+    if (error.statusCode === 404) {
+      trpcCode = "NOT_FOUND";
+    } else if (error.statusCode === 429) {
+      trpcCode = "TOO_MANY_REQUESTS";
+    } else if (error.statusCode >= 500) {
+      trpcCode = "INTERNAL_SERVER_ERROR";
+    }
 
     return {
       message: error.message,
       statusCode: error.statusCode,
       trpcCode,
-    } as const;
+    };
   }
 
   if (error instanceof Error) {
@@ -34,7 +36,7 @@ export const mapYoutubeError = (error: unknown) => {
         message: "We are experiencing unusual traffic, please try again later.",
         statusCode: 429,
         trpcCode: "TOO_MANY_REQUESTS",
-      } as const;
+      };
     }
 
     if (
@@ -46,7 +48,7 @@ export const mapYoutubeError = (error: unknown) => {
         message: "Could not connect your YouTube account",
         statusCode: 400,
         trpcCode: "BAD_REQUEST",
-      } as const;
+      };
     }
 
     if (
@@ -58,7 +60,7 @@ export const mapYoutubeError = (error: unknown) => {
         message: "Could not sync YouTube data right now",
         statusCode: 403,
         trpcCode: "FORBIDDEN",
-      } as const;
+      };
     }
   }
 
@@ -66,7 +68,7 @@ export const mapYoutubeError = (error: unknown) => {
     message: "Something went wrong. Please try again.",
     statusCode: 500,
     trpcCode: "INTERNAL_SERVER_ERROR",
-  } as const;
+  };
 };
 
 export const toYoutubeTRPCError = (error: unknown) => {

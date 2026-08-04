@@ -48,8 +48,12 @@ const isHandledCommentFetchError = (error: unknown) => {
 export const fetchPaginatedCommentsForVideo = async ({
   youtubeVideoId,
   commentsPerVideo,
-}: Omit<SyncCommentsForVideoInput, "videoId">) => {
-  const collectedItems: NonNullable<YoutubeCommentThreadsResponse["items"]> = [];
+}: {
+  youtubeVideoId: string;
+  commentsPerVideo: number;
+}) => {
+  const collectedItems: NonNullable<YoutubeCommentThreadsResponse["items"]> =
+    [];
   let nextPageToken: string | undefined;
 
   while (collectedItems.length < commentsPerVideo) {
@@ -115,14 +119,12 @@ export const trimCommentsForVideo = async (
     return;
   }
 
-  await db
-    .delete(comments)
-    .where(
-      inArray(
-        comments.id,
-        overflowComments.map((comment) => comment.id),
-      ),
-    );
+  await db.delete(comments).where(
+    inArray(
+      comments.id,
+      overflowComments.map((comment) => comment.id),
+    ),
+  );
 };
 
 export const syncCommentsForVideo = async ({
@@ -145,32 +147,28 @@ export const syncCommentsForVideo = async ({
     throw error;
   }
 
-  const commentValues = commentItems
-    .map((item) => {
-      const snippet = item.snippet?.topLevelComment?.snippet;
-      const youtubeCommentId = item.snippet?.topLevelComment?.id || item.id || "";
+  const commentValues = [];
+  for (const item of commentItems) {
+    const snippet = item.snippet?.topLevelComment?.snippet;
+    const youtubeCommentId = item.snippet?.topLevelComment?.id || item.id || "";
 
-      if (!snippet || !youtubeCommentId) return null;
+    if (!snippet || !youtubeCommentId) {
+      continue;
+    }
 
-      return {
-        videoId,
-        youtubeCommentId,
-        text: snippet.textOriginal || snippet.textDisplay || "",
-        publishedAt: snippet.publishedAt ? new Date(snippet.publishedAt) : null,
-        likeCount: snippet.likeCount || 0,
-      };
-    })
-    .filter(
-      (
-        value,
-      ): value is {
-        videoId: string;
-        youtubeCommentId: string;
-        text: string;
-        publishedAt: Date | null;
-        likeCount: number;
-      } => Boolean(value?.text),
-    );
+    const text = snippet.textOriginal || snippet.textDisplay || "";
+    if (!text) {
+      continue;
+    }
+
+    commentValues.push({
+      videoId,
+      youtubeCommentId,
+      text,
+      publishedAt: snippet.publishedAt ? new Date(snippet.publishedAt) : null,
+      likeCount: snippet.likeCount || 0,
+    });
+  }
 
   if (commentValues.length === 0) {
     return false;

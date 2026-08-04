@@ -8,9 +8,6 @@ import { oauthStates } from "../../db/schema";
 
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 
-const hashStateToken = (token: string) =>
-  createHash("sha256").update(token).digest("hex");
-
 export const createOAuthState = async ({
   provider,
   userId,
@@ -24,7 +21,7 @@ export const createOAuthState = async ({
 
   await db.insert(oauthStates).values({
     provider,
-    tokenHash: hashStateToken(rawToken),
+    tokenHash: createHash("sha256").update(rawToken).digest("hex"),
     userId,
     redirectTo: redirectTo?.trim() || null,
     expiresAt: new Date(Date.now() + OAUTH_STATE_TTL_MS),
@@ -40,7 +37,7 @@ export const consumeOAuthState = async ({
   provider: string;
   token: string;
 }) => {
-  const tokenHash = hashStateToken(token);
+  const tokenHash = createHash("sha256").update(token).digest("hex");
   const now = new Date();
 
   const state = await db.query.oauthStates.findFirst({
