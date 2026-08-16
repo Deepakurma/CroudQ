@@ -33,7 +33,7 @@ export function ConnectYoutube() {
         <Button
           onClick={() =>
             getOAuthUrl.mutate({
-              redirectTo: `${window.location.origin}/home`
+              redirectTo: `${window.location.origin}/dashboard`
             })
           }
           disabled={getOAuthUrl.isPending}

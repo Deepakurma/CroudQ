@@ -21,7 +21,7 @@ import {
 import { Field, FieldError, FieldGroup, FieldLabel } from '~/shared/shadcn/field';
 import { Input } from '~/shared/shadcn/input';
 
-import { trpc } from '~/utils/trpc';
+import { queryClient, trpc } from '~/utils/trpc';
 
 const formSchema = z.object({
   code: z
@@ -45,8 +45,11 @@ function VerifyEmailContent() {
 
   const verifySignupOtp = useMutation(
     trpc.auth.verifySignupOtp.mutationOptions({
-      onSuccess: () => {
+      onSuccess: async () => {
         toast.success('Email verified successfully.');
+        await queryClient.invalidateQueries({
+          queryKey: trpc.auth.getSession.queryOptions().queryKey
+        });
         router.replace('/dashboard');
       },
       onError: (err) => {

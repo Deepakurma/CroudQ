@@ -4,7 +4,6 @@ const ALLOWED_ORIGINS = [
   "http://localhost:3000",
   "https://www.croudq.com",
   "https://croudq.com",
-  "https://main.d2hpnq8wzclbiw.amplifyapp.com",
 ];
 
 export const isAllowedOrigin = (origin: string) => {

@@ -27,6 +27,7 @@ type OpenAiResponsesPayload = {
   output?: OpenAiResponseItem[];
 };
 
+//extracts the actuall text or output that we require from the output object or json
 const extractOutputText = (payload: OpenAiResponsesPayload) => {
   if (payload.output_text?.trim()) {
     return payload.output_text.trim();
@@ -126,7 +127,6 @@ export const generateStructuredJson = async ({
   const outputText = extractOutputText(payload);
 
   return {
-    outputText,
     parsedJson: JSON.parse(outputText) as unknown,
   };
 };

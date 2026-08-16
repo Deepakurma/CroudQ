@@ -1,8 +1,8 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNow } from 'date-fns';
 import {
   ArrowRight,
@@ -32,24 +32,35 @@ import { trpc } from '~/utils/trpc';
 export default function DashboardPage() {
   const queryClient = useQueryClient();
 
-  const { data: insightQuery, isLoading } = useQuery(trpc.insights.insight.queryOptions());
-
-  const syncYoutube = useMutation(
-    trpc.youtube.sync.mutationOptions({
-      onSuccess: () => {
-        toast.success('YouTube data synced');
-        void queryClient.invalidateQueries();
-      },
+  const {
+    data: insightQuery,
+    isPending: insightsPending,
+    mutate: refreshInsights
+  } = useMutation(
+    trpc.insights.insight.mutationOptions({
       onError: (error) => {
         toast.error(error.message);
       }
     })
   );
 
-  const refreshInsights = useMutation(
-    trpc.insights.refresh.mutationOptions({
+  useEffect(() => {
+    console.log('DASHBOARD MOUNT');
+
+    return () => {
+      console.log('DASHBOARD UNMOUNT');
+    };
+  }, []);
+
+  useEffect(() => {
+    console.log('CALLING refreshInsights');
+    refreshInsights({ forceRefresh: false });
+  }, []);
+
+  const syncYoutube = useMutation(
+    trpc.youtube.sync.mutationOptions({
       onSuccess: () => {
-        toast.success('Insights refreshed');
+        toast.success('YouTube data synced');
         void queryClient.invalidateQueries();
       },
       onError: (error) => {
@@ -66,7 +77,7 @@ export default function DashboardPage() {
   const canRegenerate = insightQuery?.canRegenerate ?? false;
   const channelName = insightQuery?.channelName;
 
-  const isBusy = syncYoutube.isPending || refreshInsights.isPending;
+  const isBusy = syncYoutube.isPending || insightsPending;
 
   const isYoutubeConnected = insightQuery?.hasYoutubeAccount;
 
@@ -77,10 +88,10 @@ export default function DashboardPage() {
   };
 
   const onRefresh = async () => {
-    await refreshInsights.mutateAsync();
+    refreshInsights({ forceRefresh: true });
   };
 
-  if (isLoading) {
+  if (insightsPending) {
     return <Loader />;
   }
 
@@ -118,15 +129,15 @@ export default function DashboardPage() {
             <RefreshCw
               className={cn('h-4 w-4 text-red-500', syncYoutube.isPending && 'animate-spin')}
             />
-            {syncYoutube.isPending || refreshInsights.isPending ? 'Syncing…' : 'Sync'}
+            {syncYoutube.isPending || insightsPending ? 'Syncing…' : 'Sync'}
           </Button>
           <Button
             size="sm"
             onClick={onRefresh}
             disabled={isBusy || !canRegenerate}
             className="gap-2">
-            <RefreshCw className={cn('h-4 w-4', refreshInsights.isPending && 'animate-spin')} />
-            {refreshInsights.isPending || syncYoutube.isPending ? 'Refreshing…' : 'Refresh '}
+            <RefreshCw className={cn('h-4 w-4', insightsPending && 'animate-spin')} />
+            {insightsPending || syncYoutube.isPending ? 'Refreshing…' : 'Refresh '}
           </Button>
         </div>
       </div>

@@ -52,8 +52,7 @@ export const fetchPaginatedCommentsForVideo = async ({
   youtubeVideoId: string;
   commentsPerVideo: number;
 }) => {
-  const collectedItems: NonNullable<YoutubeCommentThreadsResponse["items"]> =
-    [];
+  const collectedItems = [];
   let nextPageToken: string | undefined;
 
   while (collectedItems.length < commentsPerVideo) {
@@ -115,6 +114,7 @@ export const trimCommentsForVideo = async (
   });
 
   const overflowComments = storedComments.slice(commentsPerVideo);
+
   if (overflowComments.length === 0) {
     return;
   }
@@ -132,8 +132,7 @@ export const syncCommentsForVideo = async ({
   youtubeVideoId,
   commentsPerVideo,
 }: SyncCommentsForVideoInput) => {
-  let commentItems: NonNullable<YoutubeCommentThreadsResponse["items"]>;
-
+  let commentItems = [];
   try {
     commentItems = await fetchPaginatedCommentsForVideo({
       youtubeVideoId,
@@ -157,6 +156,7 @@ export const syncCommentsForVideo = async ({
     }
 
     const text = snippet.textOriginal || snippet.textDisplay || "";
+
     if (!text) {
       continue;
     }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { LogOut, Youtube } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { toast } from 'sonner';
@@ -32,8 +32,6 @@ export default function SettingsPage() {
     })
   );
 
-  const { data: query } = useQuery(trpc.insights.insight.queryOptions());
-
   const DisconnectYoutube = useMutation(trpc.youtube.disconnect.mutationOptions());
 
   const { theme, setTheme } = useTheme();
@@ -55,7 +53,7 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <h3 className="font-medium">{query?.channelName || 'CroudQ'}</h3>
+                <h3 className="font-medium">{'CroudQ'}</h3>
                 <p className="text-muted-foreground text-xs sm:text-sm">
                   Connected YouTube channel
                 </p>

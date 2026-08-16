@@ -121,6 +121,7 @@ export const disconnectYoutubeAccount = async (userId: string) => {
   await clearYoutubeDataForUser(userId);
 };
 
+// Fetches youtube data and retries access token refreshing if expired
 const fetchYoutubeJsonWithRefresh = async (
   path: string,
   account: { accessToken: string; refreshToken: string | null; userId: string },
@@ -240,6 +241,7 @@ export const syncYoutubeAccount = async ({
 
   const syncedAt = new Date();
 
+  // Fetches vidoes from upload playlist
   const videosResponse = (await fetchYoutubeJson(
     `/playlistItems?part=snippet&playlistId=${encodeURIComponent(uploadsPlaylistId)}&maxResults=${maxVideoResults}`,
     accessToken,
@@ -261,6 +263,8 @@ export const syncYoutubeAccount = async ({
     .filter((video) => video.youtubeVideoId);
 
   const videoIds = recentVideos.map((video) => video.youtubeVideoId);
+
+  // Fetches video meta data like comments/likes counts
   const videoDetailsById = await fetchVideoDetailsByIds(
     videoIds,
     accessToken,
@@ -278,6 +282,7 @@ export const syncYoutubeAccount = async ({
       duration: details?.duration ?? null,
     };
   });
+
   const youtubeAccountUpdate = {
     channelId: channel.id,
     channelName: channel.snippet?.title || null,
@@ -343,8 +348,6 @@ export const syncYoutubeAccount = async ({
     orderBy: [desc(videos.publishedAt), desc(videos.id)],
   });
 
-  const dashboardAnalysisVideoId = storedVideos[0]?.id ?? null;
-
   const videosForCommentSync = storedVideos.slice(0, commentSyncVideoLimit);
 
   for (const storedVideo of videosForCommentSync) {
@@ -383,12 +386,9 @@ export const syncYoutubeAccount = async ({
       id: channel.id,
       title: channel.snippet?.title || null,
     },
-    videos: storedVideos.slice(0, maxVideoResults).map((video) =>
-      buildVideoSummary({
-        ...video,
-        isUsedInDashboardAnalysis: dashboardAnalysisVideoId === video.id,
-      }),
-    ),
+    videos: storedVideos
+      .slice(0, maxVideoResults)
+      .map((video) => buildVideoSummary(video)),
     commentsCount: commentsCount,
     lastSyncedAt: syncedAt,
   });
@@ -530,8 +530,6 @@ export const getStoredYoutubeData = async ({
     ? storedVideos.slice(0, pageSize)
     : storedVideos;
 
-  const dashboardAnalysisVideoId = storedVideos[0]?.id ?? null;
-
   const lastVideo = pageVideos.at(-1);
 
   return youtubeDataResponseSchema.parse({
@@ -539,12 +537,7 @@ export const getStoredYoutubeData = async ({
       id: account.channelId,
       title: account.channelName,
     },
-    videos: pageVideos.map((video) =>
-      buildVideoSummary({
-        ...video,
-        isUsedInDashboardAnalysis: dashboardAnalysisVideoId === video.id,
-      }),
-    ),
+    videos: pageVideos.map((video) => buildVideoSummary(video)),
     nextCursor:
       hasNextPage && lastVideo
         ? {

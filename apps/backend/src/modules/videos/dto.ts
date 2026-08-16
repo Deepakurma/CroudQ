@@ -37,6 +37,5 @@ export type VideoSummaryInput = {
   favoriteCount: number | null;
   commentCount: number | null;
   duration: string | null;
-  isUsedInDashboardAnalysis?: boolean;
   updatedAt: Date | null;
 };

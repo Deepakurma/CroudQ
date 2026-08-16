@@ -28,13 +28,12 @@ import {
   SYNC_VIDEO_METRICS_FETCH_LIMIT,
   COMMENTS_LIMIT,
 } from "../../modules/youtube-sync/constants";
-import { refreshYoutubeInsightsForUser } from "../../modules/insights/controller";
+import { getStoredInsightState } from "../../modules/insights/controller";
 import { createTRPCRouter, protectedProcedure } from "../../server/trpc";
 import { encryptSecret } from "../../utils/secrets";
 import {
   youtubeAuthUrlQuerySchema,
   youtubeCallbackQuerySchema,
-  youtubeDisconnectResponseSchema,
   youtubeDataParamsSchema,
   youtubeSyncParamsSchema,
 } from "./dto";
@@ -65,6 +64,7 @@ const sendYoutubeError = (
   });
 };
 
+// OuthState Creation
 export const youtubeRouter = createTRPCRouter({
   OAuthUrl: protectedProcedure
     .input(youtubeAuthUrlQuerySchema)
@@ -114,8 +114,10 @@ export const youtubeRouter = createTRPCRouter({
           commentsPerVideo: COMMENTS_LIMIT,
         });
 
-        void refreshYoutubeInsightsForUser({
+        // Lets ai insights run in the background while the youtube sync finishes
+        void getStoredInsightState({
           userId: ctx.user.userId,
+          forceRefresh: true,
         }).catch(() => {
           // Keep YouTube sync successful even if the AI refresh fails.
         });
@@ -130,10 +132,10 @@ export const youtubeRouter = createTRPCRouter({
     try {
       await disconnectYoutubeAccount(ctx.user.userId);
 
-      return youtubeDisconnectResponseSchema.parse({
+      return {
         success: true,
         message: "YouTube account disconnected.",
-      });
+      };
     } catch (error) {
       throw toYoutubeTRPCError(error);
     }

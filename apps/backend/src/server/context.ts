@@ -1,5 +1,4 @@
 import "@fastify/cookie";
-import "../utils/fastify-jwt";
 import type { FastifyReply, FastifyRequest } from "fastify";
 
 interface ExtendedContextOptions {

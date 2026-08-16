@@ -57,26 +57,14 @@ CREATE TABLE "users" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "feedback" (
-	"id" text PRIMARY KEY NOT NULL,
-	"user_id" text NOT NULL,
-	"name" text,
-	"email" text NOT NULL,
-	"message" text NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
 CREATE TABLE "insight_artifacts" (
 	"id" text PRIMARY KEY NOT NULL,
 	"user_id" text NOT NULL,
-	"source_hash" text NOT NULL,
 	"model" text NOT NULL,
 	"prompt_version" text NOT NULL,
 	"status" text DEFAULT 'completed' NOT NULL,
 	"payload_json" jsonb,
-	"raw_input_json" jsonb NOT NULL,
-	"raw_output_json" text,
+	"analyzed_comment_count" integer DEFAULT 0 NOT NULL,
 	"error_message" text,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
@@ -126,7 +114,6 @@ CREATE TABLE "youtube_accounts" (
 ALTER TABLE "oauth_states" ADD CONSTRAINT "oauth_states_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "password_reset_tokens" ADD CONSTRAINT "password_reset_tokens_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_credentials" ADD CONSTRAINT "user_credentials_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "feedback" ADD CONSTRAINT "feedback_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "insight_artifacts" ADD CONSTRAINT "insight_artifacts_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "comments" ADD CONSTRAINT "comments_video_id_videos_id_fk" FOREIGN KEY ("video_id") REFERENCES "public"."videos"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "videos" ADD CONSTRAINT "videos_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -142,8 +129,6 @@ CREATE INDEX "signup_email_otps_email_idx" ON "signup_email_otps" USING btree ("
 CREATE INDEX "signup_email_otps_code_hash_idx" ON "signup_email_otps" USING btree ("code_hash");--> statement-breakpoint
 CREATE INDEX "signup_email_otps_expires_at_idx" ON "signup_email_otps" USING btree ("expires_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "users_email_lower_unique_idx" ON "users" USING btree (lower("email"));--> statement-breakpoint
-CREATE INDEX "feedback_user_id_idx" ON "feedback" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "feedback_created_at_idx" ON "feedback" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX "insight_artifacts_user_id_idx" ON "insight_artifacts" USING btree ("user_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "insight_artifacts_latest_unique_idx" ON "insight_artifacts" USING btree ("user_id");--> statement-breakpoint
 CREATE UNIQUE INDEX "comments_youtube_comment_id_idx" ON "comments" USING btree ("youtube_comment_id");--> statement-breakpoint

@@ -21,6 +21,7 @@ export const fetchVideoDetailsByIds = async (
     accessToken,
   )) as YoutubeVideosListResponse;
 
+  // Tranforms into key value pairs
   return new Map(
     (response.items || []).map((item) => [
       item.id || "",
@@ -54,6 +55,5 @@ export const buildVideoSummary = (video: VideoSummaryInput) => ({
   favoriteCount: video.favoriteCount ?? null,
   commentCount: video.commentCount ?? null,
   duration: video.duration ?? null,
-  isUsedInDashboardAnalysis: video.isUsedInDashboardAnalysis ?? false,
   updatedAt: video.updatedAt,
 });

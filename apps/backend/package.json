@@ -43,12 +43,10 @@
     "lint:fix": "eslint src --ext .ts --fix",
     "pre-commit": "lint-staged",
     "docker:build": "docker build -t croudq-backend .",
-    "docker:run": "docker run --rm -p 4000:4000 croudq-backend",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
-    "db:reset": "bun --env-file=.env scripts/reset-app-data.ts --yes",
-    "db:seed-admin": "bun --env-file=.env scripts/create-first-admin.ts"
+    "db:clear": "bun --env-file=.env scripts/clear-db.ts --yes"
   },
   "lint-staged": {
     "*.{js,ts}": [

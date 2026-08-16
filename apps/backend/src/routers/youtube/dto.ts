@@ -21,10 +21,6 @@ export const youtubeDataParamsSchema = z.object({
 });
 
 export const youtubeSyncParamsSchema = z.object({});
-export const youtubeDisconnectResponseSchema = z.object({
-  success: z.literal(true),
-  message: z.string(),
-});
 
 export const youtubeVideoSummarySchema = z.object({
   id: z.string(),
@@ -37,7 +33,6 @@ export const youtubeVideoSummarySchema = z.object({
   favoriteCount: z.number().int().nonnegative().nullable(),
   commentCount: z.number().int().nonnegative().nullable(),
   duration: z.string().nullable(),
-  isUsedInDashboardAnalysis: z.boolean(),
   updatedAt: z.date(),
 });
 
