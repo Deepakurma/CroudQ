@@ -410,29 +410,6 @@ export const updateProfileWithPassword = async (
   }
 };
 
-export const updateChannelType = async (userId: string) => {
-  const existingUser = await db.query.users.findFirst({
-    where: eq(users.id, userId),
-  });
-
-  if (!existingUser) {
-    throw new TRPCError({
-      code: "UNAUTHORIZED",
-      message: "Not authenticated",
-    });
-  }
-
-  const [updatedUser] = await db
-    .update(users)
-    .set({
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, userId))
-    .returning();
-
-  return toAuthUser(updatedUser);
-};
-
 export const requestPasswordReset = async (input: {
   email: string;
   redirectTo?: string | null;
@@ -507,25 +484,27 @@ export const resetPassword = async (input: {
   const passwordHash = await bcrypt.hash(input.password, PASSWORD_SALT_ROUNDS);
   const now = new Date();
 
-  await db
-    .update(userCredentials)
-    .set({
-      passwordHash,
-      updatedAt: now,
-    })
-    .where(eq(userCredentials.userId, resetToken.userId));
+  await db.transaction(async (tx) => {
+    await tx
+      .update(userCredentials)
+      .set({
+        passwordHash,
+        updatedAt: now,
+      })
+      .where(eq(userCredentials.userId, resetToken.userId));
 
-  await db
-    .update(passwordResetTokens)
-    .set({
-      usedAt: now,
-    })
-    .where(
-      and(
-        eq(passwordResetTokens.userId, resetToken.userId),
-        isNull(passwordResetTokens.usedAt),
-      ),
-    );
+    await tx
+      .update(passwordResetTokens)
+      .set({
+        usedAt: now,
+      })
+      .where(
+        and(
+          eq(passwordResetTokens.userId, resetToken.userId),
+          isNull(passwordResetTokens.usedAt),
+        ),
+      );
+  });
 
   return {
     success: true,

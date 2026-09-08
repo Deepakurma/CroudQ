@@ -121,74 +121,6 @@ export const disconnectYoutubeAccount = async (userId: string) => {
   await clearYoutubeDataForUser(userId);
 };
 
-// Fetches youtube data and retries access token refreshing if expired
-const fetchYoutubeJsonWithRefresh = async (
-  path: string,
-  account: { accessToken: string; refreshToken: string | null; userId: string },
-): Promise<{ payload: unknown; accessToken: string }> => {
-  const currentAccessToken = decryptSecret(account.accessToken);
-
-  try {
-    return {
-      payload: await fetchYoutubeJson(path, currentAccessToken),
-      accessToken: currentAccessToken,
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "";
-    const refreshToken = account.refreshToken
-      ? decryptSecret(account.refreshToken)
-      : null;
-    const shouldRefresh =
-      refreshToken &&
-      (message.includes("401") ||
-        message.toLowerCase().includes("invalid credentials"));
-
-    if (!shouldRefresh) {
-      if (
-        message.includes("401") ||
-        message.toLowerCase().includes("invalid credentials")
-      ) {
-        await clearYoutubeDataForUser(account.userId);
-        throw new YoutubeRouteError("YouTube account is not connected", 404);
-      }
-
-      throw error;
-    }
-
-    let nextAccessToken = "";
-    let nextExpiresAt: Date | null = null;
-
-    try {
-      const refreshed = await refreshYoutubeAccessToken(refreshToken);
-      nextAccessToken = refreshed.access_token!;
-      nextExpiresAt = refreshed.expires_in
-        ? new Date(Date.now() + refreshed.expires_in * 1000)
-        : null;
-    } catch (refreshError) {
-      if (isYoutubeAuthorizationRevokedError(refreshError)) {
-        await clearYoutubeDataForUser(account.userId);
-        throw new YoutubeRouteError("YouTube account is not connected", 404);
-      }
-
-      throw refreshError;
-    }
-
-    await db
-      .update(youtubeAccounts)
-      .set({
-        accessToken: encryptSecret(nextAccessToken),
-        expiresAt: nextExpiresAt,
-        updatedAt: new Date(),
-      })
-      .where(eq(youtubeAccounts.userId, account.userId));
-
-    return {
-      payload: await fetchYoutubeJson(path, nextAccessToken),
-      accessToken: nextAccessToken,
-    };
-  }
-};
-
 export const ensureUserExists = async (userId: string) => {
   const existingUser = await db.query.users.findFirst({
     where: eq(users.id, userId),
@@ -394,79 +326,71 @@ export const syncYoutubeAccount = async ({
   });
 };
 
-export const syncStoredVideoCommentsForAnalysis = async (input: {
-  userId: string;
-  videoId: string;
-  commentsPerVideo: number;
-  cooldownMs: number;
-}) => {
-  const account = await db.query.youtubeAccounts.findFirst({
-    where: eq(youtubeAccounts.userId, input.userId),
-  });
+// Fetches youtube data and retries access token refreshing if expired
+const fetchYoutubeJsonWithRefresh = async (
+  path: string,
+  account: { accessToken: string; refreshToken: string | null; userId: string },
+): Promise<{ payload: unknown; accessToken: string }> => {
+  const currentAccessToken = decryptSecret(account.accessToken);
 
-  if (!account) {
-    throw new YoutubeRouteError("YouTube account is not connected", 404);
-  }
+  try {
+    return {
+      payload: await fetchYoutubeJson(path, currentAccessToken),
+      accessToken: currentAccessToken,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    const refreshToken = account.refreshToken
+      ? decryptSecret(account.refreshToken)
+      : null;
+    const shouldRefresh =
+      refreshToken &&
+      (message.includes("401") ||
+        message.toLowerCase().includes("invalid credentials"));
 
-  const selectedVideo = await db.query.videos.findFirst({
-    where: and(eq(videos.userId, input.userId), eq(videos.id, input.videoId)),
-  });
+    if (!shouldRefresh) {
+      if (
+        message.includes("401") ||
+        message.toLowerCase().includes("invalid credentials")
+      ) {
+        await clearYoutubeDataForUser(account.userId);
+        throw new YoutubeRouteError("YouTube account is not connected", 404);
+      }
 
-  if (!selectedVideo) {
-    throw new YoutubeRouteError("Video not found", 404);
-  }
-
-  if (selectedVideo.lastManualCommentsSyncAt) {
-    const elapsedMs =
-      Date.now() - new Date(selectedVideo.lastManualCommentsSyncAt).getTime();
-    if (elapsedMs < input.cooldownMs) {
-      throw new YoutubeRouteError(
-        "Regeneration for this video can be done once every 24hr.",
-        429,
-      );
+      throw error;
     }
-  }
 
-  const syncedAt = new Date();
-  const { accessToken } = await fetchYoutubeJsonWithRefresh(
-    `/videos?part=id&id=${encodeURIComponent(selectedVideo.youtubeVideoId)}`,
-    {
-      accessToken: account.accessToken,
-      refreshToken: account.refreshToken,
-      userId: account.userId,
-    },
-  );
+    let nextAccessToken = "";
+    let nextExpiresAt: Date | null = null;
 
-  const latestVideoDetails = await fetchVideoDetailsByIds(
-    [selectedVideo.youtubeVideoId],
-    accessToken,
-    fetchYoutubeJson,
-  );
-  const nextVideoDetails = latestVideoDetails.get(selectedVideo.youtubeVideoId);
+    try {
+      const refreshed = await refreshYoutubeAccessToken(refreshToken);
+      nextAccessToken = refreshed.access_token!;
+      nextExpiresAt = refreshed.expires_in
+        ? new Date(Date.now() + refreshed.expires_in * 1000)
+        : null;
+    } catch (refreshError) {
+      if (isYoutubeAuthorizationRevokedError(refreshError)) {
+        await clearYoutubeDataForUser(account.userId);
+        throw new YoutubeRouteError("YouTube account is not connected", 404);
+      }
 
-  await db
-    .update(videos)
-    .set({
-      viewCount: nextVideoDetails?.viewCount ?? selectedVideo.viewCount,
-      likeCount: nextVideoDetails?.likeCount ?? selectedVideo.likeCount,
-      favoriteCount:
-        nextVideoDetails?.favoriteCount ?? selectedVideo.favoriteCount,
-      commentCount:
-        nextVideoDetails?.commentCount ?? selectedVideo.commentCount,
-      duration: nextVideoDetails?.duration ?? selectedVideo.duration,
-      lastManualCommentsSyncAt: syncedAt,
-      updatedAt: syncedAt,
-    })
-    .where(eq(videos.id, selectedVideo.id));
+      throw refreshError;
+    }
 
-  const didRefreshComments = await syncCommentsForVideo({
-    videoId: selectedVideo.id,
-    youtubeVideoId: selectedVideo.youtubeVideoId,
-    commentsPerVideo: input.commentsPerVideo,
-  });
+    await db
+      .update(youtubeAccounts)
+      .set({
+        accessToken: encryptSecret(nextAccessToken),
+        expiresAt: nextExpiresAt,
+        updatedAt: new Date(),
+      })
+      .where(eq(youtubeAccounts.userId, account.userId));
 
-  if (didRefreshComments) {
-    await markVideoCommentsSynced(selectedVideo.id, syncedAt);
+    return {
+      payload: await fetchYoutubeJson(path, nextAccessToken),
+      accessToken: nextAccessToken,
+    };
   }
 };
 

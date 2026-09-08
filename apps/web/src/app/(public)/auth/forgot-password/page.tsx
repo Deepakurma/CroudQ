@@ -59,7 +59,7 @@ export default function Signup() {
       <Card className="w-full sm:max-w-md">
         <CardHeader>
           <CardTitle>Create Account</CardTitle>
-          <CardDescription>Fill in your details to create a new account.</CardDescription>
+          <CardDescription>Fill in your details to reset password.</CardDescription>
         </CardHeader>
 
         <CardContent>
@@ -90,7 +90,7 @@ export default function Signup() {
         <CardFooter>
           <Field orientation="horizontal">
             <Button type="submit" form="reset-form">
-              Create Account
+              Sumbit
             </Button>
           </Field>
         </CardFooter>

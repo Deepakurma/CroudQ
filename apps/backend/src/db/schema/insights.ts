@@ -10,6 +10,7 @@ import {
 import { relations } from "drizzle-orm";
 
 import { users } from "./auth";
+import { videos } from "./youtube";
 
 export const insightArtifacts = pgTable(
   "insight_artifacts",
@@ -20,6 +21,11 @@ export const insightArtifacts = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    videoId: text("video_id")
+      .notNull()
+      .references(() => videos.id, {
+        onDelete: "cascade",
+      }),
     model: text("model").notNull(),
     promptVersion: text("prompt_version").notNull(),
     status: text("status").default("completed").notNull(),

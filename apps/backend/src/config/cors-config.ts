@@ -6,10 +6,6 @@ const ALLOWED_ORIGINS = [
   "https://croudq.com",
 ];
 
-export const isAllowedOrigin = (origin: string) => {
-  return ALLOWED_ORIGINS.includes(origin);
-};
-
 export const CorsConfig: FastifyCorsOptions = {
   origin: ALLOWED_ORIGINS,
   credentials: true,

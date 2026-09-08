@@ -157,12 +157,14 @@ ${JSON.stringify(payload, null, 2)}
 const saveInsight = async (input: {
   userId: string;
   analyzedCommentCount: number;
+  videoId: string;
   payload: unknown;
 }) => {
   const now = new Date();
   const artifact = {
     userId: input.userId,
     model: MODEL,
+    videoId: input.videoId,
     promptVersion: PROMPT_VERSION,
     status: "completed",
     payloadJson: input.payload,
@@ -205,8 +207,15 @@ export const generateInsightForUser = async (
 
   const payload = InsightPayloadSchema.parse(result.parsedJson);
 
+  const videoId = state.rawInput.video?.id;
+
+  if (!videoId) {
+    throw new Error("No video available for insight generation");
+  }
+
   await saveInsight({
     userId: userId,
+    videoId,
     analyzedCommentCount: state.currentCommentCount,
     payload,
   });
@@ -357,6 +366,7 @@ const loadInsightContext = async (userId: string) => {
     },
     video: latestVideo
       ? {
+          id: latestVideo.id,
           title: latestVideo.title,
           publishedAt: latestVideo.publishedAt?.toISOString() ?? null,
           viewCount: latestVideo.viewCount,

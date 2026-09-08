@@ -45,14 +45,6 @@ export default function DashboardPage() {
   );
 
   useEffect(() => {
-    console.log('DASHBOARD MOUNT');
-
-    return () => {
-      console.log('DASHBOARD UNMOUNT');
-    };
-  }, []);
-
-  useEffect(() => {
     console.log('CALLING refreshInsights');
     refreshInsights({ forceRefresh: false });
   }, []);
