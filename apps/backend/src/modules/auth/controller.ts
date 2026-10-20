@@ -5,12 +5,7 @@ import bcrypt from "bcrypt";
 import { and, desc, eq, gt, isNull } from "drizzle-orm";
 
 import { db } from "../../db";
-import {
-  passwordResetTokens,
-  signupEmailOtps,
-  userCredentials,
-  users,
-} from "../../db/schema";
+import { passwordResetTokens, signupEmailOtps, users } from "../../db/schema";
 import { sendEmail } from "../email/controller";
 
 type AuthUser = {
@@ -18,14 +13,11 @@ type AuthUser = {
   name: string | null;
   email: string;
   handle: string | null;
-  deletionRequestedAt: string | null;
-  scheduledDeletionAt: string | null;
 };
 
 const RESET_TOKEN_TTL_MS = 10 * 60 * 1000;
 const SIGNUP_OTP_TTL_MS = 10 * 60 * 1000;
 const PASSWORD_SALT_ROUNDS = 12;
-const ACCOUNT_DELETION_GRACE_PERIOD_MS = 3 * 24 * 60 * 60 * 1000;
 
 const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
@@ -33,16 +25,12 @@ const toAuthUser = (user: {
   id: string;
   name: string | null;
   email: string;
-  deletionRequestedAt?: Date | null;
-  scheduledDeletionAt?: Date | null;
 }): AuthUser => {
   return {
     id: user.id,
     name: user.name,
     email: user.email,
     handle: null,
-    deletionRequestedAt: user.deletionRequestedAt?.toISOString() ?? null,
-    scheduledDeletionAt: user.scheduledDeletionAt?.toISOString() ?? null,
   };
 };
 
@@ -166,12 +154,12 @@ export const verifySignupOtp = async (input: {
   code: string;
 }) => {
   const email = normalizeEmail(input.email);
-  // const code = input.code.trim();
+  const code = input.code.trim();
 
   const signupOtp = await db.query.signupEmailOtps.findFirst({
     where: and(
       eq(signupEmailOtps.email, email),
-      // eq(signupEmailOtps.codeHash, hashSignupOtp(email, code)),
+      eq(signupEmailOtps.codeHash, hashSignupOtp(email, code)),
       isNull(signupEmailOtps.usedAt),
       gt(signupEmailOtps.expiresAt, new Date()),
     ),
@@ -216,15 +204,10 @@ export const verifySignupOtp = async (input: {
           email,
           emailVerifiedAt: now,
           name: signupOtp.name?.trim() || null,
+          passwordHash: signupOtp.passwordHash,
           updatedAt: now,
         })
         .returning();
-
-      await tx.insert(userCredentials).values({
-        userId: createdUser.id,
-        passwordHash: signupOtp.passwordHash,
-        updatedAt: now,
-      });
 
       return {
         user: toAuthUser(createdUser),
@@ -258,20 +241,9 @@ export const loginWithEmail = async (input: {
     });
   }
 
-  const credentials = await db.query.userCredentials.findFirst({
-    where: eq(userCredentials.userId, user.id),
-  });
-
-  if (!credentials) {
-    throw new TRPCError({
-      code: "UNAUTHORIZED",
-      message: "Invalid email or password",
-    });
-  }
-
   const passwordMatches = await bcrypt.compare(
     input.password,
-    credentials.passwordHash,
+    user.passwordHash,
   );
 
   if (!passwordMatches) {
@@ -281,69 +253,7 @@ export const loginWithEmail = async (input: {
     });
   }
 
-  return credentials;
-};
-
-export const requestAccountDeletion = async (userId: string) => {
-  const existingUser = await db.query.users.findFirst({
-    where: eq(users.id, userId),
-  });
-
-  if (!existingUser) {
-    throw new TRPCError({
-      code: "UNAUTHORIZED",
-      message: "Not authenticated",
-    });
-  }
-
-  if (
-    existingUser.scheduledDeletionAt &&
-    existingUser.scheduledDeletionAt.getTime() > Date.now()
-  ) {
-    return toAuthUser(existingUser);
-  }
-
-  const now = new Date();
-  const scheduledDeletionAt = new Date(
-    now.getTime() + ACCOUNT_DELETION_GRACE_PERIOD_MS,
-  );
-
-  const [updatedUser] = await db
-    .update(users)
-    .set({
-      deletionRequestedAt: now,
-      scheduledDeletionAt,
-      updatedAt: now,
-    })
-    .where(eq(users.id, userId))
-    .returning();
-
-  return toAuthUser(updatedUser);
-};
-
-export const cancelAccountDeletion = async (userId: string) => {
-  const existingUser = await db.query.users.findFirst({
-    where: eq(users.id, userId),
-  });
-
-  if (!existingUser) {
-    throw new TRPCError({
-      code: "UNAUTHORIZED",
-      message: "Not authenticated",
-    });
-  }
-
-  const [updatedUser] = await db
-    .update(users)
-    .set({
-      deletionRequestedAt: null,
-      scheduledDeletionAt: null,
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, userId))
-    .returning();
-
-  return toAuthUser(updatedUser);
+  return user.id;
 };
 
 export const updateProfileWithPassword = async (
@@ -364,20 +274,9 @@ export const updateProfileWithPassword = async (
     });
   }
 
-  const credentials = await db.query.userCredentials.findFirst({
-    where: eq(userCredentials.userId, user.id),
-  });
-
-  if (!credentials) {
-    throw new TRPCError({
-      code: "UNAUTHORIZED",
-      message: "Not authenticated",
-    });
-  }
-
   const passwordMatches = await bcrypt.compare(
     input.currentPassword,
-    credentials.passwordHash,
+    user.passwordHash,
   );
 
   if (!passwordMatches) {
@@ -431,22 +330,24 @@ export const requestPasswordReset = async (input: {
   const resetLink = buildResetLink(rawToken);
   const now = new Date();
 
-  await db
-    .update(passwordResetTokens)
-    .set({
-      usedAt: now,
-    })
-    .where(
-      and(
-        eq(passwordResetTokens.userId, user.id),
-        isNull(passwordResetTokens.usedAt),
-      ),
-    );
+  await db.transaction(async (tx) => {
+    await tx
+      .update(passwordResetTokens)
+      .set({
+        usedAt: now,
+      })
+      .where(
+        and(
+          eq(passwordResetTokens.userId, user.id),
+          isNull(passwordResetTokens.usedAt),
+        ),
+      );
 
-  await db.insert(passwordResetTokens).values({
-    userId: user.id,
-    tokenHash,
-    expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
+    await tx.insert(passwordResetTokens).values({
+      userId: user.id,
+      tokenHash,
+      expiresAt: new Date(Date.now() + RESET_TOKEN_TTL_MS),
+    });
   });
 
   await sendEmail(user.email, "Reset your CroudQ password", "reset-password", {
@@ -486,12 +387,12 @@ export const resetPassword = async (input: {
 
   await db.transaction(async (tx) => {
     await tx
-      .update(userCredentials)
+      .update(users)
       .set({
         passwordHash,
         updatedAt: now,
       })
-      .where(eq(userCredentials.userId, resetToken.userId));
+      .where(eq(users.id, resetToken.userId));
 
     await tx
       .update(passwordResetTokens)

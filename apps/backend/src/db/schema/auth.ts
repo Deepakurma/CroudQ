@@ -19,12 +19,7 @@ export const users = pgTable(
     emailVerifiedAt: timestamp("email_verified_at", {
       withTimezone: true,
     }),
-    deletionRequestedAt: timestamp("deletion_requested_at", {
-      withTimezone: true,
-    }),
-    scheduledDeletionAt: timestamp("scheduled_deletion_at", {
-      withTimezone: true,
-    }),
+    passwordHash: text("password_hash").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
@@ -38,19 +33,6 @@ export const users = pgTable(
     ),
   }),
 );
-
-export const userCredentials = pgTable("user_credentials", {
-  userId: text("user_id")
-    .primaryKey()
-    .references(() => users.id, { onDelete: "cascade" }),
-  passwordHash: text("password_hash").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
-});
 
 export const passwordResetTokens = pgTable(
   "password_reset_tokens",
@@ -150,10 +132,6 @@ export const authRateLimits = pgTable(
 );
 
 export const usersRelations = relations(users, ({ one, many }) => ({
-  credentials: one(userCredentials, {
-    fields: [users.id],
-    references: [userCredentials.userId],
-  }),
   passwordResetTokens: many(passwordResetTokens),
   oauthStates: many(oauthStates),
   youtubeAccount: one(youtubeAccounts, {
@@ -162,16 +140,6 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   }),
   videos: many(videos),
 }));
-
-export const userCredentialsRelations = relations(
-  userCredentials,
-  ({ one }) => ({
-    user: one(users, {
-      fields: [userCredentials.userId],
-      references: [users.id],
-    }),
-  }),
-);
 
 export const passwordResetTokensRelations = relations(
   passwordResetTokens,

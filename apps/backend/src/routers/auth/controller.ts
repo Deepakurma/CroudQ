@@ -1,7 +1,5 @@
 import {
-  cancelAccountDeletion,
   loginWithEmail,
-  requestAccountDeletion,
   requestPasswordReset,
   requestSignupOtp,
   resetPassword,
@@ -78,7 +76,7 @@ export const authRouter = createTRPCRouter({
       const result = await loginWithEmail(input);
 
       const token = await ctx.res.jwtSign({
-        userId: result.userId,
+        userId: result,
       });
 
       ctx.res.setCookie("token", token, {
@@ -100,16 +98,9 @@ export const authRouter = createTRPCRouter({
     }),
 
   getSession: publicProcedure.query(async ({ ctx }) => {
-    console.log("getSession called");
     return ctx.user;
   }),
 
-  requestAccountDeletion: protectedProcedure.mutation(async ({ ctx }) => {
-    return await requestAccountDeletion(ctx.user.userId);
-  }),
-  cancelAccountDeletion: protectedProcedure.mutation(async ({ ctx }) => {
-    return await cancelAccountDeletion(ctx.user.userId);
-  }),
   updateProfile: protectedProcedure
     .input(updateProfileInputSchema)
     .mutation(async ({ ctx, input }) => {

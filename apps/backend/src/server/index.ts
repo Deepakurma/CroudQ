@@ -81,12 +81,11 @@ export async function createServer(
     trpcOptions: {
       router: appRouter,
       createContext,
-      onError({ path, error }: { path: string | undefined; error: Error }) {
-        const trpcCode = (error as { code?: string }).code;
+      onError({ path, error }) {
         server.log.error(
           {
             path,
-            code: trpcCode ?? "UNKNOWN",
+            code: error.code ?? "UNKNOWN",
             name: error.name,
             message: error.message,
           },

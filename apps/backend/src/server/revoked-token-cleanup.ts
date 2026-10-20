@@ -1,4 +1,4 @@
-import { and, inArray, isNotNull, lt, lte, or } from "drizzle-orm";
+import { isNotNull, lt, or } from "drizzle-orm";
 import type { FastifyInstance } from "fastify";
 
 import { db } from "../db";
@@ -6,9 +6,7 @@ import {
   authRateLimits,
   passwordResetTokens,
   signupEmailOtps,
-  users,
 } from "../db/schema";
-import { disconnectYoutubeAccount } from "../modules/youtube-sync/controller";
 
 const getCleanupIntervalMs = () => {
   const rawMinutes = Number(
@@ -49,40 +47,6 @@ export const registerRevokedTokenCleanup = (server: FastifyInstance) => {
         ),
       )
       .returning({ id: signupEmailOtps.id });
-    const usersPendingDeletion = await db.query.users.findMany({
-      where: and(
-        isNotNull(users.scheduledDeletionAt),
-        lte(users.scheduledDeletionAt, now),
-      ),
-      columns: {
-        id: true,
-      },
-    });
-
-    for (const user of usersPendingDeletion) {
-      try {
-        await disconnectYoutubeAccount(user.id);
-      } catch (error) {
-        server.log.warn(
-          { error, userId: user.id },
-          "Failed to disconnect YouTube during scheduled account deletion",
-        );
-      }
-    }
-
-    const deletedUsers =
-      usersPendingDeletion.length > 0
-        ? await db
-            .delete(users)
-            .where(
-              inArray(
-                users.id,
-                usersPendingDeletion.map((user) => user.id),
-              ),
-            )
-            .returning({ id: users.id })
-        : [];
-
     if (deletedAuthRateLimits.length > 0) {
       server.log.info(
         { deletedCount: deletedAuthRateLimits.length },
@@ -101,13 +65,6 @@ export const registerRevokedTokenCleanup = (server: FastifyInstance) => {
       server.log.info(
         { deletedCount: deletedSignupEmailOtps.length },
         "Expired or used signup email OTPs cleaned up",
-      );
-    }
-
-    if (deletedUsers.length > 0) {
-      server.log.info(
-        { deletedCount: deletedUsers.length },
-        "Scheduled account deletions processed",
       );
     }
   };

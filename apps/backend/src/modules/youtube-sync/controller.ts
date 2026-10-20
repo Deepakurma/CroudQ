@@ -66,7 +66,9 @@ const fetchYoutubeJson = async (path: string, accessToken: string) => {
   });
 
   if (!response.ok) {
-    throw new Error(await response.text());
+    throw Object.assign(new Error(await response.text()), {
+      status: response.status,
+    });
   }
 
   return response.json();
@@ -218,7 +220,6 @@ export const syncYoutubeAccount = async ({
   const youtubeAccountUpdate = {
     channelId: channel.id,
     channelName: channel.snippet?.title || null,
-    accessToken: encryptSecret(accessToken),
     lastSyncedAt: syncedAt,
     updatedAt: syncedAt,
   };
@@ -327,6 +328,8 @@ export const syncYoutubeAccount = async ({
 };
 
 // Fetches youtube data and retries access token refreshing if expired
+const refreshLocks = new Map<string, Promise<string>>();
+
 const fetchYoutubeJsonWithRefresh = async (
   path: string,
   account: { accessToken: string; refreshToken: string | null; userId: string },
@@ -339,53 +342,74 @@ const fetchYoutubeJsonWithRefresh = async (
       accessToken: currentAccessToken,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "";
     const refreshToken = account.refreshToken
       ? decryptSecret(account.refreshToken)
       : null;
+
     const shouldRefresh =
       refreshToken &&
-      (message.includes("401") ||
-        message.toLowerCase().includes("invalid credentials"));
+      error instanceof Error &&
+      "status" in error &&
+      error.status === 401;
 
     if (!shouldRefresh) {
-      if (
-        message.includes("401") ||
-        message.toLowerCase().includes("invalid credentials")
-      ) {
-        await clearYoutubeDataForUser(account.userId);
-        throw new YoutubeRouteError("YouTube account is not connected", 404);
-      }
-
       throw error;
     }
 
     let nextAccessToken = "";
+    let nextRefreshToken = "";
     let nextExpiresAt: Date | null = null;
 
-    try {
-      const refreshed = await refreshYoutubeAccessToken(refreshToken);
-      nextAccessToken = refreshed.access_token!;
-      nextExpiresAt = refreshed.expires_in
-        ? new Date(Date.now() + refreshed.expires_in * 1000)
-        : null;
-    } catch (refreshError) {
-      if (isYoutubeAuthorizationRevokedError(refreshError)) {
-        await clearYoutubeDataForUser(account.userId);
-        throw new YoutubeRouteError("YouTube account is not connected", 404);
-      }
+    const existingRequest = refreshLocks.get(account.userId);
 
-      throw refreshError;
+    if (existingRequest) {
+      const nextAccessToken = await existingRequest;
+
+      return {
+        payload: await fetchYoutubeJson(path, nextAccessToken),
+        accessToken: nextAccessToken,
+      };
     }
 
-    await db
-      .update(youtubeAccounts)
-      .set({
-        accessToken: encryptSecret(nextAccessToken),
-        expiresAt: nextExpiresAt,
-        updatedAt: new Date(),
-      })
-      .where(eq(youtubeAccounts.userId, account.userId));
+    const request = (async () => {
+      try {
+        const refreshed = await refreshYoutubeAccessToken(refreshToken);
+        nextAccessToken = refreshed.access_token!;
+        nextRefreshToken = refreshed.refresh_token ?? refreshToken;
+        nextExpiresAt = refreshed.expires_in
+          ? new Date(Date.now() + refreshed.expires_in * 1000)
+          : null;
+      } catch (refreshError) {
+        if (isYoutubeAuthorizationRevokedError(refreshError)) {
+          await clearYoutubeDataForUser(account.userId);
+          throw new YoutubeRouteError("YouTube account is not connected", 404);
+        }
+
+        throw refreshError;
+      }
+
+      await db
+        .update(youtubeAccounts)
+        .set({
+          accessToken: encryptSecret(nextAccessToken),
+          refreshToken: nextRefreshToken
+            ? encryptSecret(nextRefreshToken)
+            : account.refreshToken,
+          expiresAt: nextExpiresAt,
+          updatedAt: new Date(),
+        })
+        .where(eq(youtubeAccounts.userId, account.userId));
+
+      return nextAccessToken;
+    })();
+
+    refreshLocks.set(account.userId, request);
+
+    try {
+      nextAccessToken = await request;
+    } finally {
+      refreshLocks.delete(account.userId);
+    }
 
     return {
       payload: await fetchYoutubeJson(path, nextAccessToken),

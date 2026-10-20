@@ -17,9 +17,7 @@ type InsightState = {
   videoTitle: string | null;
   hasYoutubeAccount: boolean;
   artifact: ReturnType<typeof formatArtifact> | null;
-  hasAnalysis: boolean;
   currentCommentCount: number;
-  regenerationThreshold: number;
   canRegenerate: boolean;
 };
 
@@ -257,9 +255,7 @@ export const getStoredInsightState = async (input: {
         videoTitle: null,
         hasYoutubeAccount: false,
         artifact: null,
-        hasAnalysis: false,
         currentCommentCount: 0,
-        regenerationThreshold: 0,
         canRegenerate: false,
       };
     }
@@ -272,7 +268,6 @@ export const getStoredInsightState = async (input: {
       videoTitle: state.rawInput.video?.title ?? null,
       hasYoutubeAccount: true,
       currentCommentCount: state.currentCommentCount,
-      regenerationThreshold: state.regenerationThreshold,
       canRegenerate: state.canRegenerate,
     };
 
@@ -280,26 +275,24 @@ export const getStoredInsightState = async (input: {
       return {
         ...baseState,
         artifact: null,
-        hasAnalysis: false,
         canRegenerate: false,
       };
     }
 
     if (
       !state.existing?.payloadJson ||
+      state.existing.videoId !== state.rawInput.video?.id ||
       (input.forceRefresh && state.canRegenerate)
     ) {
       return {
         ...baseState,
         artifact: await generateInsightForUser(input.userId, state),
-        hasAnalysis: true,
       };
     }
 
     return {
       ...baseState,
       artifact: formatArtifact(state.existing),
-      hasAnalysis: true,
     };
   })();
 
@@ -332,9 +325,8 @@ const getInsightState = async (userId: string) => {
     canRegenerate:
       !existing ||
       existing.promptVersion !== PROMPT_VERSION ||
-      existing.model !== MODEL ||
-      newCommentsSinceLastAnalysis >= REGEN_THRESHOLD,
-    regenerationThreshold: REGEN_THRESHOLD,
+      newCommentsSinceLastAnalysis >= REGEN_THRESHOLD ||
+      existing.videoId !== rawInput.video?.id,
   };
 };
 

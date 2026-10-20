@@ -1,5 +1,5 @@
 {
-  "id": "d863c209-096e-45df-a74a-e3b90a225664",
+  "id": "25877e2e-51b1-4dab-8e8d-d49747271d32",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -418,59 +418,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.user_credentials": {
-      "name": "user_credentials",
-      "schema": "",
-      "columns": {
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "password_hash": {
-          "name": "password_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "user_credentials_user_id_users_id_fk": {
-          "name": "user_credentials_user_id_users_id_fk",
-          "tableFrom": "user_credentials",
-          "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.users": {
       "name": "users",
       "schema": "",
@@ -498,6 +445,12 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
+        },
+        "password_hash": {
+          "name": "password_hash",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
         },
         "deletion_requested_at": {
           "name": "deletion_requested_at",
@@ -562,6 +515,12 @@
         },
         "user_id": {
           "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "video_id": {
+          "name": "video_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true
@@ -658,6 +617,19 @@
           "tableTo": "users",
           "columnsFrom": [
             "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "insight_artifacts_video_id_videos_id_fk": {
+          "name": "insight_artifacts_video_id_videos_id_fk",
+          "tableFrom": "insight_artifacts",
+          "tableTo": "videos",
+          "columnsFrom": [
+            "video_id"
           ],
           "columnsTo": [
             "id"

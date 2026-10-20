@@ -1,35 +1,28 @@
-import { randomUUID } from "crypto";
 import Fastify from "fastify";
 
 const app = Fastify({
-    maxParamLength: 2500,
-    logger:
-        process.env.NODE_ENV === "production"
-            ? true
-            : {
-                transport: {
-                    target: "pino-pretty",
-                    options: {
-                        translateTime: "HH:MM:ss Z",
-                        ignore: "pid,hostname",
-                    },
-                },
-                serializers: {
-                    req(req) {
-                        return {
-                            id: req.id,
-                            method: req.method,
-                            url: req.url,
-                        };
-                    },
-                },
+  maxParamLength: 2500,
+  logger:
+    process.env.NODE_ENV === "production"
+      ? true
+      : {
+          transport: {
+            target: "pino-pretty",
+            options: {
+              translateTime: "SYS:standard",
+              colorize: true,
             },
-    genReqId: (req) => {
-        const headerValue = req.headers["x-request-id"];
-        return typeof headerValue === "string" && headerValue.trim().length > 0
-            ? headerValue
-            : randomUUID();
-    },
+          },
+          serializers: {
+            req(req) {
+              return {
+                id: req.id,
+                method: req.method,
+                url: req.url,
+              };
+            },
+          },
+        },
 });
 
 export const logger = app.log;

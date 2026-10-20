@@ -5,8 +5,15 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1786895303705,
-      "tag": "0000_fast_captain_universe",
+      "when": 1792516479569,
+      "tag": "0000_wide_sunspot",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1792516643931,
+      "tag": "0001_remove_scheduled_account_deletion",
       "breakpoints": true
     }
   ]
